@@ -1,18 +1,18 @@
-
 'use client';
 
 import React, { ReactNode, useEffect, useState } from 'react';
-import { initializeFirebase } from './index';
+import { initializeFirebase, FirebaseInstances } from './index';
 import { FirebaseProvider } from './provider';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 export function FirebaseClientProvider({ children }: { children: ReactNode }) {
-  const [instances, setInstances] = useState<ReturnType<typeof initializeFirebase> | null>(null);
+  const [instances, setInstances] = useState<FirebaseInstances | null>(null);
 
   useEffect(() => {
     setInstances(initializeFirebase());
   }, []);
 
+  // On attend que l'initialisation soit tentée
   if (!instances) return null;
 
   return (
