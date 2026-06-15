@@ -1,6 +1,7 @@
 /**
  * Configuration Firebase de l'application.
  * Les valeurs sont récupérées exclusivement depuis les variables d'environnement.
+ * Assurez-vous que ces variables sont définies dans votre environnement ou fichier .env.
  */
 export const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,

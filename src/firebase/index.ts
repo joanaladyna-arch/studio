@@ -13,33 +13,41 @@ export type FirebaseInstances = {
 
 /**
  * Initialise les services Firebase de manière robuste.
- * Vérifie la présence de la clé API avant toute tentative d'initialisation
- * pour éviter l'erreur auth/invalid-api-key.
+ * Vérifie la validité des clés avant toute tentative pour éviter l'erreur auth/invalid-api-key.
  */
 export function initializeFirebase(): FirebaseInstances {
-  // Vérification stricte de la configuration
   const { apiKey, projectId } = firebaseConfig;
-  const isConfigValid = !!apiKey && apiKey !== "undefined" && !!projectId;
+  
+  // Vérification stricte : si la clé est absente, "undefined" (string) ou vide, on n'initialise pas.
+  const isConfigValid = 
+    !!apiKey && 
+    apiKey !== "undefined" && 
+    apiKey !== "" && 
+    !!projectId && 
+    projectId !== "undefined" && 
+    projectId !== "";
 
   if (!isConfigValid) {
     if (typeof window !== 'undefined') {
       console.warn(
         "PLUME : Configuration Firebase manquante ou clé API invalide.\n" +
-        "Veuillez vérifier vos variables d'environnement NEXT_PUBLIC_FIREBASE_*.\n" +
-        "L'authentification et Firestore sont désactivés pour le moment."
+        "L'application fonctionne en mode hors-ligne. Connectez votre projet dans l'onglet Firebase pour activer l'authentification."
       );
     }
     return { app: null, db: null, auth: null };
   }
 
   try {
+    // initializeApp accepte parfois des configs invalides sans crash immédiat...
     const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    
+    // ...mais c'est ici (getAuth) que le crash auth/invalid-api-key survient si l'API Key est mauvaise.
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
     return { app, db, auth };
   } catch (error) {
-    console.error("PLUME : Erreur critique lors de l'initialisation de Firebase", error);
+    console.error("PLUME : Erreur lors de l'accès aux services Firebase. Vérifiez vos clés API.", error);
     return { app: null, db: null, auth: null };
   }
 }
