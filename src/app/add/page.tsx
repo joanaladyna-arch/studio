@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info } from "lucide-react";
+import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +13,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function AddBookPage() {
   const { user } = useUser();
@@ -21,6 +21,7 @@ export default function AddBookPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -29,63 +30,97 @@ export default function AddBookPage() {
 
     setIsSearching(true);
     setResults([]);
+    setErrorDetails(null);
     
-    const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`;
-    
-    console.log(`[PLUME] Début de recherche pour: "${query}"`);
-    console.log(`[PLUME] URL de requête: ${searchUrl}`);
+    // Tentative avec Google Books
+    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`;
+    console.log(`[PLUME] Appel Google Books: ${googleUrl}`);
 
     try {
-      const response = await fetch(searchUrl);
-      
-      console.log(`[PLUME] Statut de la réponse: ${response.status} ${response.statusText}`);
+      const response = await fetch(googleUrl);
+      console.log(`[PLUME] Google Books Status: ${response.status}`);
       
       if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status}`);
+        throw new Error(`Google Books API Error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log(`[PLUME] Données reçues:`, data);
-      
-      const formattedResults = data.items?.map((item: any) => {
-        const info = item.volumeInfo;
-        return {
-          id: item.id,
-          title: info.title || "Titre inconnu",
-          author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
-          publisher: info.publisher || "Éditeur inconnu",
-          // Conversion HTTP -> HTTPS pour les couvertures Google
-          cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
-          pages: info.pageCount || 0,
-          description: info.description || "Aucun résumé disponible.",
-          publicationDate: info.publishedDate || "Date inconnue",
-          genres: info.categories || [],
-          isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
-                info.industryIdentifiers?.[0]?.identifier || 
-                "N/A",
-          series: info.series || "",
-          volume: info.volume || ""
-        };
-      }) || [];
+      console.log(`[PLUME] Google Books Data Received:`, data);
 
-      console.log(`[PLUME] Nombre de résultats formatés: ${formattedResults.length}`);
-      setResults(formattedResults);
-      
-      if (formattedResults.length === 0) {
-        toast({ 
-          title: "Aucun résultat", 
-          description: "Désolé, nous n'avons trouvé aucun livre correspondant à votre recherche." 
+      if (data.items && data.items.length > 0) {
+        const formattedResults = data.items.map((item: any) => {
+          const info = item.volumeInfo;
+          return {
+            id: item.id,
+            source: 'google',
+            title: info.title || "Titre inconnu",
+            author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
+            publisher: info.publisher || "Éditeur inconnu",
+            cover: info.imageLinks?.thumbnail?.replace("http://", "https://") || null,
+            pages: info.pageCount || 0,
+            description: info.description || "Aucun résumé disponible.",
+            publicationDate: info.publishedDate || "Date inconnue",
+            genres: info.categories || [],
+            isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
+                  info.industryIdentifiers?.[0]?.identifier || 
+                  "N/A",
+            series: "", // Google Books expose peu la série directement
+            volume: ""
+          };
         });
+        setResults(formattedResults);
+      } else {
+        console.log(`[PLUME] Aucun résultat Google Books. Tentative Open Library...`);
+        await searchOpenLibrary(query);
       }
     } catch (error: any) {
-      console.error(`[PLUME] Erreur lors de la recherche:`, error);
-      toast({ 
-        variant: "destructive", 
-        title: "Erreur de connexion", 
-        description: "Impossible de contacter le service Google Books. Vérifiez votre connexion." 
-      });
+      console.error(`[PLUME] Erreur Google Books:`, error);
+      setErrorDetails(`Google Books indisponible (${error.message}). Tentative de secours...`);
+      await searchOpenLibrary(query);
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  const searchOpenLibrary = async (q: string) => {
+    const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10`;
+    console.log(`[PLUME] Appel Open Library: ${olUrl}`);
+
+    try {
+      const response = await fetch(olUrl);
+      console.log(`[PLUME] Open Library Status: ${response.status}`);
+      
+      if (!response.ok) {
+        throw new Error(`Open Library API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(`[PLUME] Open Library Data:`, data);
+
+      const formattedResults = data.docs?.map((doc: any) => ({
+        id: doc.key,
+        source: 'openlibrary',
+        title: doc.title || "Titre inconnu",
+        author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
+        publisher: doc.publisher ? doc.publisher[0] : "Éditeur inconnu",
+        cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
+        pages: doc.number_of_pages_median || 0,
+        description: doc.first_sentence ? doc.first_sentence[0] : "Résumé non disponible via Open Library.",
+        publicationDate: doc.first_publish_year ? doc.first_publish_year.toString() : "Date inconnue",
+        genres: doc.subject ? doc.subject.slice(0, 5) : [],
+        isbn: doc.isbn ? doc.isbn[0] : "N/A",
+        series: "",
+        volume: ""
+      })) || [];
+
+      setResults((prev) => [...prev, ...formattedResults]);
+      
+      if (formattedResults.length === 0 && results.length === 0) {
+        setErrorDetails("Aucun résultat trouvé sur Google Books ni Open Library.");
+      }
+    } catch (error: any) {
+      console.error(`[PLUME] Erreur Open Library:`, error);
+      setErrorDetails(`Échec critique : Les services de recherche sont injoignables.`);
     }
   };
 
@@ -121,8 +156,6 @@ export default function AddBookPage() {
 
     const booksRef = collection(db, "users", user.uid, "books");
 
-    console.log(`[PLUME] Ajout du livre à Firestore:`, book.title);
-
     addDoc(booksRef, bookData)
       .then(() => {
         toast({
@@ -131,7 +164,6 @@ export default function AddBookPage() {
         });
       })
       .catch(async (e) => {
-        console.error(`[PLUME] Erreur Firestore lors de l'ajout:`, e);
         const permissionError = new FirestorePermissionError({
           path: booksRef.path,
           operation: 'create',
@@ -173,6 +205,16 @@ export default function AddBookPage() {
       </form>
 
       <div className="max-w-3xl mx-auto space-y-6 px-4">
+        {errorDetails && (
+          <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="font-headline italic">Information de recherche</AlertTitle>
+            <AlertDescription className="text-xs italic">
+              {errorDetails}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {results.length > 0 ? (
           results.map((book) => (
             <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group border-none">
@@ -186,6 +228,9 @@ export default function AddBookPage() {
                     data-ai-hint="book cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  <Badge className="absolute top-2 left-2 bg-black/40 text-[8px] border-none font-bold uppercase">
+                    {book.source}
+                  </Badge>
                 </div>
                 
                 <div className="p-6 flex flex-col flex-1 gap-3">
@@ -228,7 +273,7 @@ export default function AddBookPage() {
               </CardContent>
             </Card>
           ))
-        ) : !isSearching && (
+        ) : !isSearching && !errorDetails && (
           <div className="py-24 text-center space-y-6">
             <BookPlus className="h-20 w-20 mx-auto text-primary/10 animate-pulse" />
             <div className="space-y-2">
