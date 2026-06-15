@@ -44,7 +44,11 @@ export default function RootLayout({
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    console.log("PLUME - Domaine actuel (hostname) :", window.location.hostname);
+    // Affichage du domaine pour configuration Firebase
+    console.log("-----------------------------------------");
+    console.log("PLUME - CONFIGURATION DOMAINE");
+    console.log("Domaine à ajouter (Authorized Domain) :", window.location.hostname);
+    console.log("-----------------------------------------");
   }, []);
 
   useEffect(() => {
