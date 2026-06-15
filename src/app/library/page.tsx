@@ -1,19 +1,23 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
 import { Navigation } from "@/components/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw } from "lucide-react";
+import { Search, Filter, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Pencil, X, Check } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCollection, useUser, useFirestore } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
+import { collection, doc, updateDoc } from "firebase/firestore";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "@/hooks/use-toast";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
-export type EmotionBadgeType = 'obsession' | 'larmes' | 'doudou' | 'epicee' | 'plot-twist' | 'addictif' | 'inoubliable' | 'reflexion' | 'romance-mem' | 'fantasy';
 export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
 
 export interface Book {
@@ -24,11 +28,34 @@ export interface Book {
   favorite: boolean;
   cover: string;
   rank?: RankType;
-  badges?: EmotionBadgeType[];
+  genres?: string[];
+  tropes?: string[];
   review?: string;
   citation?: string;
   progress?: number;
+  totalPages?: number;
+  pagesRead?: number;
 }
+
+export const GENRES_LIST = [
+  "Dark Romance", "Romance", "Rom-Com", "Romantic Suspense", "Thriller", "Mystery", "Polar", "Cozy Mystery", 
+  "Fantasy", "Romantasy", "Urban Fantasy", "Dystopian", "Science Fiction", "Young Adult", "New Adult", 
+  "Contemporary", "Historical Fiction", "Horror", "Paranormal", "Paranormal Romance", "Vampire Romance", 
+  "Werewolf Romance", "Mafia Romance", "Sports Romance", "Billionaire Romance", "Royal Romance", 
+  "Dark Academia", "Literary Fiction", "Classics", "Manga", "Graphic Novel", "Biography", "Memoir", 
+  "Self Help", "Non Fiction", "True Crime"
+];
+
+export const TROPES_LIST = [
+  "Soulmates", "Holiday Romance", "Forbidden Love", "Love at First Sight", "Age Gap", "Enemies to Lovers", 
+  "Fake Dating", "Forced Proximity", "Found Family", "Friends to Lovers", "Gay for You", "Grumpy x Sunshine", 
+  "Harem", "Reverse Harem", "Unexpected Hero", "He Falls First", "He Falls First and Harder", "Arranged Marriage", 
+  "One Bed", "Rivals to Lovers", "Second Chance", "Slow Burn", "Small Town", "Strangers to Lovers", 
+  "The Chosen One", "Touch Her and You Die", "Love Triangle", "Who Did This to You", "Marriage of Convenience", 
+  "Secret Identity", "Billionaire Romance", "Mafia Romance", "Sports Romance", "Dark Academia", "Fated Mates", 
+  "Vampire Romance", "Werewolf Romance", "Monster Romance", "Opposites Attract", "Hurt/Comfort", 
+  "Redemption Arc", "Morally Grey Hero"
+];
 
 export const RANKS: Record<RankType, { label: string, icon: any, color: string, description: string }> = {
   diamant: { label: "Diamant de Plume", icon: Diamond, color: "text-cyan-400", description: "Coup de cœur absolu" },
@@ -39,19 +66,6 @@ export const RANKS: Record<RankType, { label: string, icon: any, color: string, 
   froissee: { label: "Plume Froissée", icon: Wind, color: "text-muted-foreground", description: "Avis mitigé" },
   brisee: { label: "Plume Brisée", icon: Trash2, color: "text-destructive", description: "Je n'ai pas aimé" },
   dnf: { label: "DNF", icon: DoorOpen, color: "text-slate-800", description: "Livre non terminé ou pas aimé" },
-};
-
-export const EMOTIONS: Record<EmotionBadgeType, { label: string, color: string, icon: string }> = {
-  obsession: { label: "Obsession Littéraire", color: "bg-purple-50 text-purple-700 border-purple-100", icon: "🔥" },
-  larmes: { label: "Larmes Garanties", color: "bg-blue-50 text-blue-700 border-blue-100", icon: "😭" },
-  doudou: { label: "Livre Doudou", color: "bg-green-50 text-green-700 border-green-100", icon: "☕" },
-  epicee: { label: "Romance Épicée", color: "bg-red-50 text-red-700 border-red-100", icon: "🌶️" },
-  "plot-twist": { label: "Plot Twist Mémorable", color: "bg-orange-50 text-orange-700 border-orange-100", icon: "🎭" },
-  addictif: { label: "Univers Addictif", color: "bg-indigo-50 text-indigo-700 border-indigo-100", icon: "🌍" },
-  inoubliable: { label: "Personnages Inoubliables", color: "bg-pink-50 text-pink-700 border-pink-100", icon: "🫶" },
-  reflexion: { label: "M'a fait réfléchir", color: "bg-emerald-50 text-emerald-700 border-emerald-100", icon: "🧠" },
-  "romance-mem": { label: "Romance mémorable", color: "bg-rose-50 text-rose-700 border-rose-100", icon: "💘" },
-  fantasy: { label: "Fantasy immersive", color: "bg-sky-50 text-sky-700 border-sky-100", icon: "🐉" },
 };
 
 export const STATUSES: Record<BookStatus, { label: string, icon: any, color: string }> = {
@@ -79,6 +93,7 @@ export default function LibraryPage() {
   const db = useFirestore();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -117,6 +132,18 @@ export default function LibraryPage() {
     });
   }, [activeTab, searchQuery, books]);
 
+  const handleUpdateBook = async (updatedData: Partial<Book>) => {
+    if (!db || !user || !editingBook) return;
+    try {
+      const bookRef = doc(db, "users", user.uid, "books", editingBook.id);
+      await updateDoc(bookRef, updatedData);
+      setEditingBook(null);
+      toast({ title: "Livre mis à jour", description: "Vos modifications ont été enregistrées." });
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de mettre à jour le livre." });
+    }
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
       <Navigation />
@@ -137,9 +164,6 @@ export default function LibraryPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="h-12 w-12 flex items-center justify-center bg-white/40 border border-white/60 rounded-2xl hover:bg-white/60 transition-all shadow-sm">
-            <Filter className="h-5 w-5 text-primary/40" />
-          </button>
         </div>
       </header>
 
@@ -165,7 +189,9 @@ export default function LibraryPage() {
           ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
               {filteredBooks.map((book) => (
-                <BookCard key={book.id} book={book as Book} />
+                <div key={book.id} onClick={() => setEditingBook(book as Book)} className="cursor-pointer">
+                  <BookCard book={book as Book} />
+                </div>
               ))}
             </div>
           ) : (
@@ -176,7 +202,157 @@ export default function LibraryPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {editingBook && (
+        <EditBookDialog 
+          book={editingBook} 
+          onClose={() => setEditingBook(null)} 
+          onSave={handleUpdateBook} 
+        />
+      )}
     </div>
+  );
+}
+
+function EditBookDialog({ book, onClose, onSave }: { book: Book, onClose: () => void, onSave: (data: Partial<Book>) => void }) {
+  const [genres, setGenres] = useState<string[]>(book.genres || []);
+  const [tropes, setTropes] = useState<string[]>(book.tropes || []);
+  const [status, setStatus] = useState<BookStatus>(book.status);
+  const [rank, setRank] = useState<RankType | undefined>(book.rank);
+  const [favorite, setFavorite] = useState(book.favorite);
+  const [progress, setProgress] = useState(book.progress || 0);
+
+  const toggleItem = (list: string[], setList: (l: string[]) => void, item: string) => {
+    if (list.includes(item)) setList(list.filter(i => i !== item));
+    else setList([...list, item]);
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden">
+        <DialogHeader className="p-6 border-b border-primary/5">
+          <DialogTitle className="font-headline text-3xl italic">Personnaliser ma lecture</DialogTitle>
+        </DialogHeader>
+        
+        <ScrollArea className="flex-1 p-6">
+          <div className="space-y-8">
+            <div className="flex gap-6 items-start">
+               <div className="relative w-24 aspect-[2/3] rounded-xl overflow-hidden shadow-md">
+                  <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-cover" />
+               </div>
+               <div className="space-y-1">
+                  <h3 className="text-xl font-headline italic">{book.title}</h3>
+                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Statut</label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(STATUSES).map(([key, val]) => (
+                    <Button 
+                      key={key} 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setStatus(key as BookStatus)}
+                      className={cn("rounded-full border-primary/10", status === key && "bg-primary text-white border-primary")}
+                    >
+                      {val.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Rang Plume</label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(RANKS).map(([key, val]) => {
+                    const Icon = val.icon;
+                    return (
+                      <Button 
+                        key={key} 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setRank(key as RankType)}
+                        className={cn("rounded-full border-primary/10", rank === key && "bg-primary/10 text-primary border-primary")}
+                      >
+                        <Icon className="h-3 w-3 mr-1" /> {val.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+               <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Genres Literaires</label>
+                  <span className="text-[10px] font-medium opacity-40">{genres.length} sélectionnés</span>
+               </div>
+               <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-primary/5 border border-primary/10 min-h-[60px]">
+                  {GENRES_LIST.map(g => (
+                    <button 
+                      key={g} 
+                      onClick={() => toggleItem(genres, setGenres, g)}
+                      className={cn(
+                        "text-[10px] px-3 py-1.5 rounded-full border transition-all",
+                        genres.includes(g) 
+                          ? "bg-primary text-white border-primary shadow-sm" 
+                          : "bg-white/50 text-muted-foreground border-transparent hover:border-primary/20"
+                      )}
+                    >
+                      {g}
+                    </button>
+                  ))}
+               </div>
+            </div>
+
+            <div className="space-y-4">
+               <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Tropes</label>
+                  <span className="text-[10px] font-medium opacity-40">{tropes.length} sélectionnés</span>
+               </div>
+               <div className="flex flex-wrap gap-2 p-4 rounded-2xl bg-secondary/10 border border-secondary/20 min-h-[60px]">
+                  {TROPES_LIST.map(t => (
+                    <button 
+                      key={t} 
+                      onClick={() => toggleItem(tropes, setTropes, t)}
+                      className={cn(
+                        "text-[10px] px-3 py-1.5 rounded-full border transition-all",
+                        tropes.includes(t) 
+                          ? "bg-secondary text-secondary-foreground border-secondary shadow-sm" 
+                          : "bg-white/50 text-muted-foreground border-transparent hover:border-secondary/20"
+                      )}
+                    >
+                      {t}
+                    </button>
+                  ))}
+               </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+               <Button 
+                variant="ghost" 
+                onClick={() => setFavorite(!favorite)}
+                className={cn("rounded-full", favorite && "text-primary")}
+               >
+                 <Heart className={cn("h-5 w-5 mr-2", favorite && "fill-primary")} /> {favorite ? "Favori" : "Ajouter aux favoris"}
+               </Button>
+            </div>
+          </div>
+        </ScrollArea>
+
+        <DialogFooter className="p-6 border-t border-primary/5 bg-white/40">
+           <Button variant="ghost" onClick={onClose} className="rounded-xl">Annuler</Button>
+           <Button 
+            onClick={() => onSave({ genres, tropes, status, rank, favorite, progress })} 
+            className="rounded-xl bg-primary hover:bg-primary/90"
+           >
+             Enregistrer les pépites
+           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -218,9 +394,9 @@ export function BookCard({ book }: { book: Book }) {
 
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/30 backdrop-blur-md border-t border-white/40 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
            <div className="flex flex-wrap gap-1.5">
-              {book.badges?.slice(0, 2).map(b => (
-                <span key={b} className="text-[9px] px-2 py-1 rounded-full bg-white/80 text-foreground shadow-sm flex items-center gap-1 font-bold">
-                  {EMOTIONS[b]?.icon} {EMOTIONS[b]?.label.split(' ')[0]}
+              {book.genres?.slice(0, 2).map(g => (
+                <span key={g} className="text-[9px] px-2 py-1 rounded-full bg-white/80 text-foreground shadow-sm flex items-center gap-1 font-bold">
+                  ✨ {g}
                 </span>
               ))}
            </div>
