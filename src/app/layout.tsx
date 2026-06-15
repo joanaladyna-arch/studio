@@ -13,35 +13,29 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
   const pathname = usePathname();
   const router = useRouter();
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    if (!loading) {
-      setReady(true);
-    }
-    const timer = setTimeout(() => {
-      setReady(true);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [loading]);
-
-  useEffect(() => {
-    if (!ready) return;
+    if (loading) return;
 
     const isAuthPage = pathname === "/login" || pathname === "/signup";
 
     if (!user && !isAuthPage) {
-      console.log("Plume AuthGuard: Pas d'utilisateur, redirection vers /login");
+      console.log("Plume AuthGuard: Redirection vers /login");
       router.replace("/login");
     } 
     else if (user && isAuthPage) {
-      console.log("Plume AuthGuard: Utilisateur connecté, redirection vers l'accueil");
+      console.log("Plume AuthGuard: Redirection vers /");
       router.replace("/");
     }
-  }, [user, ready, pathname, router]);
+  }, [user, loading, pathname, router]);
 
-  // Pendant le chargement initial, on n'affiche rien pour éviter les flashs
-  if (loading && !ready) return null;
+  // Si on charge, on attend
+  if (loading) return null;
+
+  // On évite d'afficher le contenu si une redirection est en cours
+  const isAuthPage = pathname === "/login" || pathname === "/signup";
+  if (!user && !isAuthPage) return null;
+  if (user && isAuthPage) return null;
 
   return <>{children}</>;
 }
@@ -52,13 +46,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [showSplash, setShowSplash] = useState(true);
-
-  useEffect(() => {
-    console.log("-----------------------------------------");
-    console.log("PLUME - CONFIGURATION DOMAINE");
-    console.log("Domaine actuel :", typeof window !== 'undefined' ? window.location.hostname : 'serveur');
-    console.log("-----------------------------------------");
-  }, []);
 
   useEffect(() => {
     const hasVisited = sessionStorage.getItem("plume-visited");

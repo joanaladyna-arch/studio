@@ -16,7 +16,7 @@ import { useRouter } from "next/navigation";
 export default function SignupPage() {
   const auth = useAuth();
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
   const [name, setName] = useState("");
@@ -24,12 +24,12 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Redirection automatique si déjà connecté
   useEffect(() => {
-    if (user) {
-      console.log("Plume Signup: Utilisateur détecté, redirection...");
+    if (user && !authLoading) {
       router.replace("/");
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,33 +37,36 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      await updateProfile(user, { displayName: name });
-      const userDocRef = doc(db, "users", user.uid);
+      const firebaseUser = userCredential.user;
+      await updateProfile(firebaseUser, { displayName: name });
+      
+      const userDocRef = doc(db, "users", firebaseUser.uid);
       await setDoc(userDocRef, {
-        uid: user.uid,
+        uid: firebaseUser.uid,
         name: name,
         email: email,
         annualGoal: 24,
         provider: "password",
-        photoURL: `https://picsum.photos/seed/${user.uid}/200`,
+        photoURL: `https://picsum.photos/seed/${firebaseUser.uid}/200`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+
       toast({
         title: "Bienvenue sur Plume !",
         description: `Votre sanctuaire littéraire est prêt, ${name}.`,
       });
+      
       router.replace("/");
     } catch (error: any) {
       console.error("Plume Signup Error:", error.code, error.message);
-      let message = "Erreur lors de la création du compte.";
-      if (error.code === 'auth/email-already-in-use') message = "Cet email est déjà utilisé.";
-      toast({ variant: "destructive", title: "Erreur d'inscription", description: message });
+      toast({ variant: "destructive", title: "Erreur d'inscription", description: error.message });
     } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading) return null;
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4 animate-in fade-in duration-1000">

@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const auth = useAuth();
   const db = useFirestore();
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const { toast } = useToast();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -29,27 +29,28 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
+  // Redirection automatique si déjà connecté
   useEffect(() => {
-    if (user) {
-      console.log("Plume Login: Utilisateur déjà détecté, redirection...");
+    if (user && !authLoading) {
+      console.log("Plume Login: Utilisateur déjà connecté, redirection forcée...");
       router.replace("/");
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
-  const syncUserProfile = async (user: any, provider: string) => {
+  const syncUserProfile = async (firebaseUser: any, provider: string) => {
     if (!db) return;
     try {
-      const userRef = doc(db, "users", user.uid);
+      const userRef = doc(db, "users", firebaseUser.uid);
       await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        name: user.displayName || user.email?.split('@')[0] || "Utilisateur Plume",
-        photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+        uid: firebaseUser.uid,
+        email: firebaseUser.email,
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Utilisateur Plume",
+        photoURL: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/200`,
         provider: provider,
         updatedAt: serverTimestamp(),
       }, { merge: true });
     } catch (e) {
-      console.error("Plume : Erreur lors de la synchronisation Firestore :", e);
+      console.error("Plume Sync Error:", e);
     }
   };
 
@@ -64,9 +65,7 @@ export default function LoginPage() {
       router.replace("/");
     } catch (error: any) {
       console.error("Plume Login Error:", error.code, error.message);
-      let message = "Email ou mot de passe incorrect.";
-      if (error.code === 'auth/invalid-credential') message = "Identifiants invalides.";
-      toast({ variant: "destructive", title: "Erreur de connexion", description: message });
+      toast({ variant: "destructive", title: "Erreur de connexion", description: "Identifiants incorrects ou compte inexistant." });
     } finally {
       setLoading(false);
     }
@@ -99,6 +98,8 @@ export default function LoginPage() {
     }
   };
 
+  if (authLoading) return null;
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4 animate-in fade-in duration-1000">
       <Card className="glass-card w-full max-w-md border-none shadow-2xl">
@@ -113,7 +114,7 @@ export default function LoginPage() {
           {user ? (
             <div className="space-y-6 text-center py-8">
               <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                <p className="text-sm italic text-primary">Connexion active détectée.</p>
+                <p className="text-sm italic text-primary">Vous êtes déjà connecté sous : <b>{user.email}</b></p>
               </div>
               <Button onClick={() => router.replace("/")} className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90">
                 Entrer dans PLUME <ArrowRight className="ml-2 h-4 w-4" />
