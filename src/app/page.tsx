@@ -108,6 +108,7 @@ export default function Home() {
                     alt={currentRead.title}
                     fill
                     className="object-cover group-hover:scale-110 transition-transform duration-1000"
+                    sizes="200px"
                   />
                   <div className="absolute inset-0 bg-black/10 mix-blend-overlay" />
                 </div>

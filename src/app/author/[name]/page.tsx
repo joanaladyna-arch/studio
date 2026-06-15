@@ -138,7 +138,7 @@ export default function AuthorPage() {
                 <CardContent className="p-0 flex flex-col sm:flex-row">
                   <div className="relative w-full sm:w-40 aspect-[2/3] shrink-0 overflow-hidden bg-secondary/5 flex items-center justify-center p-3">
                     <div className="relative w-full h-full">
-                      <Image src={book.cover || "https://picsum.photos/seed/p/200/300"} alt={book.title} fill className="object-contain" />
+                      <Image src={book.cover || "https://picsum.photos/seed/p/200/300"} alt={book.title} fill className="object-contain" sizes="200px" />
                     </div>
                   </div>
                   <div className="p-6 flex flex-col flex-1 justify-between">

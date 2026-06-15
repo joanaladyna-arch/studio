@@ -40,6 +40,7 @@ export default function SignupPage() {
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
+      const userSeed = firebaseUser.uid || firebaseUser.email || "plume-user";
       const userDocRef = doc(db, "users", firebaseUser.uid);
       await setDoc(userDocRef, {
         uid: firebaseUser.uid,
@@ -47,7 +48,7 @@ export default function SignupPage() {
         email: email,
         annualGoal: 24,
         provider: "password",
-        photoURL: `https://picsum.photos/seed/${firebaseUser.uid}/200`,
+        photoURL: `https://picsum.photos/seed/${userSeed}/200/200`,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

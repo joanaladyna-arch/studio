@@ -39,13 +39,14 @@ export default function LoginPage() {
 
   const syncUserProfile = async (firebaseUser: any, provider: string) => {
     if (!db) return;
+    const userSeed = firebaseUser.uid || firebaseUser.email || "plume-user";
     try {
       const userRef = doc(db, "users", firebaseUser.uid);
       await setDoc(userRef, {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
         name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Lectrice Plume",
-        photoURL: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/200`,
+        photoURL: firebaseUser.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`,
         provider: provider,
         updatedAt: serverTimestamp(),
       }, { merge: true });

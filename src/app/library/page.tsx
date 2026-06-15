@@ -316,6 +316,7 @@ export function BookCard({ book }: { book: Book }) {
             fill 
             className="object-contain transition-transform duration-1000 group-hover:scale-105" 
             data-ai-hint="book cover"
+            sizes="200px"
           />
         </div>
         
@@ -415,7 +416,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                 <div className="flex flex-col md:flex-row gap-10 items-start">
                    <div className="relative w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl bg-secondary/5 p-4 flex items-center justify-center shrink-0 border border-white/50">
                       <div className="relative w-full h-full">
-                        <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-contain" />
+                        <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-contain" sizes="200px" />
                       </div>
                    </div>
                    <div className="space-y-6 flex-1">

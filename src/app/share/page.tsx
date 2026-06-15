@@ -58,7 +58,7 @@ export default function SharePage() {
                     selectedBook?.id === book.id ? "border-primary scale-95 shadow-xl" : "border-transparent opacity-60 hover:opacity-100"
                   )}
                 >
-                  <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-cover" />
+                  <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-cover" sizes="200px" />
                 </button>
               ))}
             </div>
@@ -74,7 +74,7 @@ export default function SharePage() {
                 {selectedBook && (
                   <>
                     <div className="relative w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border-4 border-white rotate-1">
-                      <Image src={selectedBook.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={selectedBook.title} fill className="object-cover" />
+                      <Image src={selectedBook.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={selectedBook.title} fill className="object-cover" sizes="200px" />
                     </div>
 
                     <div className="space-y-1">

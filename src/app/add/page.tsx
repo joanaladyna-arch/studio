@@ -264,6 +264,7 @@ export default function AddBookPage() {
                         fill 
                         className="object-contain transition-transform duration-1000 group-hover:scale-105" 
                         data-ai-hint="book cover"
+                        sizes="200px"
                       />
                     </div>
                   </div>

@@ -22,7 +22,8 @@ const TITLES = [
 export default function PassportPage() {
   const { user } = useUser();
   const userName = user?.displayName || user?.email?.split('@')[0] || "Lectrice Plume";
-  const userPhoto = user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200/200`;
+  const userSeed = user?.uid || user?.email || "plume-user";
+  const userPhoto = user?.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
@@ -42,7 +43,7 @@ export default function PassportPage() {
         <Card className="bg-gradient-to-br from-primary/10 to-accent/10 border-none shadow-none rounded-[3rem]">
           <CardContent className="p-8 flex flex-col md:flex-row gap-8 items-center text-center md:text-left">
             <div className="h-32 w-32 relative rounded-2xl overflow-hidden border-4 border-white shadow-xl rotate-3">
-              <Image src={userPhoto} alt="Avatar" fill className="object-cover" />
+              <Image src={userPhoto} alt="Avatar" fill className="object-cover" sizes="200px" />
             </div>
             <div className="space-y-2">
               <h2 className="text-3xl font-headline italic">{userName}</h2>

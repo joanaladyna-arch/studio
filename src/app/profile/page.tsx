@@ -49,7 +49,8 @@ export default function ProfilePage() {
   const [showPwaInfo, setShowPwaInfo] = useState(false);
 
   const userName = user?.displayName || user?.email?.split('@')[0] || "Lectrice Plume";
-  const userPhoto = user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200`;
+  const userSeed = user?.uid || user?.email || "plume-user";
+  const userPhoto = user?.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`;
 
   const profileRef = useMemo(() => {
     if (!db || !user) return null;
