@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Plume - Journal de Lecture IA',
-  description: 'Votre compagnon de lecture intelligent et élégant.',
+  title: 'Plume',
+  description: 'Ton journal de lecture personnel.',
 };
 
 export default function RootLayout({

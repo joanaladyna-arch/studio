@@ -2,7 +2,7 @@
 
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, Crown, Star, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +34,7 @@ const PLANS = [
       "Export PDF de ton journal", 
       "Badges émotionnels avancés", 
       "Statistiques détaillées", 
-      "Passeport de Lectrice avancé"
+      "Passeport de Lectrice complet"
     ],
     button: "Choisir Plus",
     popular: true
@@ -48,7 +48,7 @@ const PLANS = [
       "Tout Plume Plus", 
       "Templates BookTok/Insta premium", 
       "Collections privées illimitées", 
-      "Sauvegarde Cloud premium", 
+      "Sauvegarde sécurisée", 
       "Personnalisation avancée", 
       "Archives annuelles de lecture"
     ],

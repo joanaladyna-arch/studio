@@ -5,9 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Star, Clock, Trophy, PenTool, Sparkles } from "lucide-react";
+import { BookOpen, Star, Clock, Trophy, PenTool } from "lucide-react";
 import Image from "next/image";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -35,12 +34,12 @@ export default function Home() {
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-4xl font-headline text-foreground">Bonjour, Léa</h1>
-            <p className="text-muted-foreground italic mt-1">“Tes lectures, tes mots, tes émotions.”</p>
+            <p className="text-muted-foreground italic mt-1 font-medium text-lg">“Tes lectures, tes mots, tes émotions.”</p>
           </div>
         </div>
-        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
-          <p className="text-sm text-primary-foreground/80 font-medium">
-            Plume est un journal de lecture authentique, sans IA obligatoire, pensé pour garder une trace sincère de tes lectures.
+        <div className="p-5 rounded-2xl bg-primary/5 border border-primary/10 shadow-sm">
+          <p className="text-sm text-primary/80 font-medium leading-relaxed">
+            Plume est un journal de lecture authentique, pensé pour garder une trace sincère de tes lectures, de ta PAL et de ton parcours de lectrice.
           </p>
         </div>
       </header>
