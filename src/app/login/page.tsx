@@ -32,7 +32,7 @@ export default function LoginPage() {
   // Redirection automatique si déjà connecté
   useEffect(() => {
     if (user && !authLoading) {
-      console.log("PLUME Login: Utilisateur détecté, redirection...");
+      console.log("PLUME Login Redirect: Utilisateur présent, direction l'accueil.");
       router.replace("/");
     }
   }, [user, authLoading, router]);
@@ -51,7 +51,7 @@ export default function LoginPage() {
         updatedAt: serverTimestamp(),
       }, { merge: true });
     } catch (e) {
-      console.error("PLUME Sync Error:", e);
+      console.error("PLUME Profile Sync Error:", e);
     }
   };
 
@@ -60,12 +60,14 @@ export default function LoginPage() {
     if (!auth) return;
     setLoading(true);
     try {
+      console.log("PLUME Auth: Tentative de connexion (Email/Pass)...");
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("PLUME Auth: Connexion réussie - UID:", userCredential.user.uid);
       await syncUserProfile(userCredential.user, "password");
       toast({ title: "Bon retour !", description: "Heureux de vous revoir sur Plume." });
       router.replace("/");
     } catch (error: any) {
-      console.error("PLUME Login Error:", error.code, error.message);
+      console.error("PLUME Auth: Erreur de connexion", error.code, error.message);
       toast({ variant: "destructive", title: "Erreur de connexion", description: "Identifiants incorrects ou compte inexistant." });
     } finally {
       setLoading(false);
@@ -76,12 +78,14 @@ export default function LoginPage() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
+      console.log("PLUME Auth: Tentative de connexion Google...");
       const result = await signInWithPopup(auth, provider);
+      console.log("PLUME Auth: Google OK - UID:", result.user.uid);
       await syncUserProfile(result.user, "google.com");
       toast({ title: "Connexion réussie", description: "Bienvenue sur votre carnet de lecture." });
       router.replace("/");
     } catch (error: any) {
-      console.error("PLUME Google Error:", error.code, error.message);
+      console.error("PLUME Auth: Erreur Google", error.code, error.message);
       toast({ variant: "destructive", title: "Erreur Google", description: error.message });
     }
   };
@@ -113,7 +117,7 @@ export default function LoginPage() {
           {user ? (
             <div className="space-y-6 text-center py-8">
               <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                <p className="text-sm italic text-primary">Vous êtes connecté : <b>{user.email}</b></p>
+                <p className="text-sm italic text-primary">Vous êtes déjà connecté : <b>{user.email}</b></p>
               </div>
               <Button onClick={() => router.replace("/")} className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-lg shadow-lg shadow-primary/20">
                 Entrer dans PLUME <ArrowRight className="ml-2 h-5 w-5" />

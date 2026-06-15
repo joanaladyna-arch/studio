@@ -107,13 +107,15 @@ export default function ProfilePage() {
   }, [books]);
 
   const handleLogout = async () => {
+    console.log("PLUME Auth: Déconnexion demandée depuis le profil.");
     if (!auth) return;
     try {
       await signOut(auth);
+      console.log("PLUME Auth: Déconnexion réussie.");
       toast({ title: 'Déconnexion', description: 'À bientôt sur Plume !' });
       router.push('/login');
     } catch (error) {
-      console.error('Logout error', error);
+      console.error('PLUME Auth: Erreur de déconnexion', error);
     }
   };
 

@@ -26,16 +26,18 @@ export function Navigation() {
   const { toast } = useToast();
 
   const handleLogout = async () => {
+    console.log("PLUME Auth: Déconnexion demandée depuis la navigation.");
     if (!auth) return;
     try {
       await signOut(auth);
+      console.log("PLUME Auth: Déconnexion réussie.");
       toast({
         title: "Déconnexion",
         description: "À bientôt sur Plume !",
       });
       router.push("/login");
     } catch (error) {
-      console.error("Logout error", error);
+      console.error("PLUME Auth: Erreur lors de la déconnexion", error);
     }
   };
 
