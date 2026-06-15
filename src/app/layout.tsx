@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -15,7 +16,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Timeout de sécurité : on affiche l'app après 2 secondes max quoi qu'il arrive
     const timer = setTimeout(() => {
       setReady(true);
     }, 2000);
@@ -28,7 +28,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [loading]);
 
   useEffect(() => {
-    // Redirection vers login si non connecté (sauf pages d'auth)
     if (ready && !user && pathname !== "/login" && pathname !== "/signup") {
       router.push("/login");
     }
@@ -43,6 +42,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    console.log("PLUME - Domaine actuel (hostname) :", window.location.hostname);
+  }, []);
 
   useEffect(() => {
     const hasVisited = sessionStorage.getItem("plume-visited");
@@ -67,7 +70,6 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen pb-20 md:pb-0 overflow-x-hidden relative">
         <FirebaseClientProvider>
-          {/* Effet papier superposé */}
           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
           
           {showSplash ? (
