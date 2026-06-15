@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -16,9 +15,10 @@ import {
   Sparkles,
   Library,
   User as UserIcon,
+  Plus,
   Loader2,
   ChevronRight
-} from 'lucide-react';
+} from "lucide-react";
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
