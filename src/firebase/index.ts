@@ -1,17 +1,24 @@
 
 'use client';
 
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getFirestore, Firestore } from 'firebase/firestore';
-import { getAuth, Auth } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { firebaseConfig } from './config';
 
 export function initializeFirebase() {
-  // Vérification de la validité de la config avant initialisation
-  if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "placeholder-key") {
-    console.warn("Firebase API Key is missing or invalid. Please check your environment variables.");
+  // Vérification de la présence de la clé API pour éviter le crash au démarrage
+  const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== "";
+
+  if (!isConfigValid) {
+    console.warn(
+      "PLUME : La configuration Firebase est incomplète. " +
+      "Vérifiez que vous avez bien connecté votre projet dans le panneau latéral de Firebase Studio " +
+      "et que les variables d'environnement sont définies."
+    );
   }
 
+  // Initialisation sécurisée
   const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
