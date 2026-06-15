@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag } from "lucide-react";
+import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -29,7 +29,7 @@ export default function AddBookPage() {
 
     setIsSearching(true);
     try {
-      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10`);
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`);
       const data = await response.json();
       
       const formattedResults = data.items?.map((item: any) => {
@@ -67,8 +67,9 @@ export default function AddBookPage() {
     const bookData = {
       title: book.title,
       author: book.author,
+      isbn: book.isbn,
       cover: book.cover || "https://picsum.photos/seed/placeholder/200/300",
-      status: "pal",
+      status: "pal", // Default status
       favorite: false,
       totalPages: book.totalPages,
       pagesRead: 0,
@@ -76,7 +77,9 @@ export default function AddBookPage() {
       description: book.description,
       publishedDate: book.publishedDate,
       genres: book.genres,
-      createdAt: serverTimestamp()
+      tropes: [],
+      createdAt: serverTimestamp(),
+      dateAdded: new Date().toISOString()
     };
 
     const booksRef = collection(db, "users", user.uid, "books");
@@ -99,75 +102,77 @@ export default function AddBookPage() {
   };
 
   return (
-    <div className="space-y-8 animate-paper pb-12">
+    <div className="space-y-10 animate-paper pb-20">
       <header className="text-center space-y-4 pt-4">
-        <Sparkles className="h-10 w-10 text-primary/40 mx-auto animate-float" />
-        <h1 className="text-5xl font-headline italic tracking-tight">Ajouter une pépite</h1>
-        <p className="text-primary/60 italic font-medium">Recherchez par titre, auteur ou ISBN dans le catalogue mondial.</p>
+        <div className="flex justify-center">
+          <Sparkles className="h-10 w-10 text-primary/40 animate-float" />
+        </div>
+        <h1 className="text-5xl font-headline italic tracking-tight">Nouvelle Pépite</h1>
+        <p className="text-primary/60 italic font-medium max-w-md mx-auto">Recherchez votre prochain voyage littéraire par titre, auteur ou ISBN.</p>
       </header>
 
-      <form onSubmit={handleSearch} className="max-w-2xl mx-auto flex gap-3">
+      <form onSubmit={handleSearch} className="max-w-2xl mx-auto flex gap-3 px-4">
         <div className="relative flex-1 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40 group-focus-within:text-primary transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40 group-focus-within:text-primary transition-colors" />
           <Input 
-            placeholder="Ex: L'élégance du hérisson, 978..." 
+            placeholder="Titre, auteur ou ISBN..." 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-11 h-14 bg-white/40 border-white/60 focus-visible:ring-primary/30 rounded-2xl shadow-sm text-lg italic"
+            className="pl-12 h-14 bg-white/60 border-white shadow-sm rounded-2xl text-lg italic focus-visible:ring-primary/20"
           />
         </div>
         <Button type="submit" className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 font-headline italic text-lg" disabled={isSearching}>
-          {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Trouver"}
+          {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Chercher"}
         </Button>
       </form>
 
-      <div className="grid gap-6">
+      <div className="max-w-3xl mx-auto space-y-6 px-4">
         {results.length > 0 ? (
           results.map((book) => (
-            <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group">
+            <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group border-none">
               <CardContent className="p-0 flex flex-col sm:flex-row">
-                <div className="relative w-full sm:w-48 aspect-[2/3] shrink-0 overflow-hidden">
+                <div className="relative w-full sm:w-40 aspect-[2/3] shrink-0 overflow-hidden bg-muted">
                   <Image 
                     src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
                     alt={book.title} 
                     fill 
                     className="object-cover transition-transform duration-1000 group-hover:scale-110" 
                   />
-                  <div className="absolute inset-0 bg-black/5 mix-blend-overlay" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 </div>
                 
-                <div className="p-8 flex flex-col flex-1 gap-4">
+                <div className="p-6 flex flex-col flex-1 gap-3">
                   <div className="space-y-1">
-                    <h3 className="text-2xl font-headline italic leading-tight group-hover:text-primary transition-colors">{book.title}</h3>
-                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                    <h3 className="text-xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
+                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
                   </div>
 
-                  <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-widest opacity-60">
+                  <div className="flex flex-wrap gap-3 text-[9px] font-bold uppercase tracking-widest opacity-60">
                     <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publishedDate.split('-')[0]}</div>
                     <div className="flex items-center gap-1.5"><Tag className="h-3 w-3" /> {book.totalPages} pages</div>
                   </div>
 
-                  <ScrollArea className="h-20">
-                    <p className="text-sm text-muted-foreground italic leading-relaxed line-clamp-3">
+                  <ScrollArea className="h-20 pr-4">
+                    <p className="text-xs text-muted-foreground italic leading-relaxed">
                       {book.description.replace(/<[^>]*>?/gm, '')}
                     </p>
                   </ScrollArea>
 
-                  <div className="flex flex-wrap gap-2 pt-2">
+                  <div className="flex flex-wrap gap-1.5 pt-2">
                     {book.genres.slice(0, 3).map((g: string) => (
-                      <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[9px] font-bold">
+                      <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-bold uppercase">
                         {g}
                       </Badge>
                     ))}
                   </div>
 
-                  <div className="pt-4 flex justify-end">
+                  <div className="pt-2 flex justify-end">
                     <Button 
                       onClick={() => addBook(book)} 
-                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 h-11 px-6 font-headline italic text-md flex gap-2"
+                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-10 px-6 font-headline italic text-sm flex gap-2"
                     >
                       <Plus className="h-4 w-4" />
-                      Ajouter à ma PAL
+                      Ajouter à ma bibliothèque
                     </Button>
                   </div>
                 </div>
@@ -178,8 +183,8 @@ export default function AddBookPage() {
           <div className="py-24 text-center space-y-6">
             <BookPlus className="h-20 w-20 mx-auto text-primary/10 animate-pulse" />
             <div className="space-y-2">
-              <p className="italic font-headline text-2xl text-primary/40">Le catalogue mondial à votre portée.</p>
-              <p className="text-sm text-muted-foreground italic">Recherchez votre prochaine lecture coup de cœur.</p>
+              <p className="italic font-headline text-2xl text-primary/40">Le monde entier dans votre carnet.</p>
+              <p className="text-sm text-muted-foreground italic">Recherchez et capturez vos futures lectures.</p>
             </div>
           </div>
         )}
