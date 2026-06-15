@@ -2,13 +2,15 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { 
   signInWithEmailAndPassword, 
   signInWithPopup, 
   GoogleAuthProvider, 
-  sendPasswordResetEmail 
+  sendPasswordResetEmail,
+  fetchSignInMethodsForEmail
 } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -19,12 +21,26 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
+  const syncUserProfile = async (user: any, provider: string) => {
+    if (!db) return;
+    const userRef = doc(db, "users", user.uid);
+    await setDoc(userRef, {
+      uid: user.uid,
+      email: user.email,
+      name: user.displayName || user.email?.split('@')[0] || "Utilisateur Plume",
+      photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+      provider: provider,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +54,8 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await syncUserProfile(userCredential.user, "password");
       router.push("/");
     } catch (error: any) {
       toast({
@@ -62,10 +79,10 @@ export default function LoginPage() {
     }
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      await syncUserProfile(result.user, "google.com");
       router.push("/");
     } catch (error: any) {
-      // Affichage de l'erreur exacte demandée par l'utilisateur
       toast({
         variant: "destructive",
         title: "Erreur Google",
@@ -86,6 +103,15 @@ export default function LoginPage() {
     if (!auth) return;
     setResetLoading(true);
     try {
+      // Vérifier d'abord les méthodes de connexion
+      const methods = await fetchSignInMethodsForEmail(auth, email);
+      if (methods.length === 0) {
+        throw new Error("Aucun compte n'est associé à cet email.");
+      }
+      if (!methods.includes("password")) {
+        throw new Error(`Ce compte utilise la connexion via : ${methods.join(', ')}. Connectez-vous avec ce service.`);
+      }
+
       await sendPasswordResetEmail(auth, email);
       toast({
         title: "Email envoyé",

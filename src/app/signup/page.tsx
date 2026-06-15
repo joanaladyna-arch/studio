@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useAuth, useFirestore } from "@/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile, fetchSignInMethodsForEmail } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,18 @@ export default function SignupPage() {
     if (!auth || !db) return;
     setLoading(true);
     try {
+      // Vérification proactive de l'email
+      const existingMethods = await fetchSignInMethodsForEmail(auth, email);
+      if (existingMethods.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Compte déjà existant",
+          description: `Vous avez déjà un compte via : ${existingMethods.join(', ')}. Veuillez vous connecter.`,
+        });
+        router.push("/login");
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -36,10 +48,14 @@ export default function SignupPage() {
 
       // Create User Profile in Firestore
       await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
         name: name,
         email: email,
         annualGoal: 24,
+        provider: "password",
+        photoURL: `https://picsum.photos/seed/${user.uid}/200`,
         createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
 
       toast({
