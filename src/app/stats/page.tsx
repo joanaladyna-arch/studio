@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star } from "lucide-react";
+import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star, Landmark } from "lucide-react";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 
@@ -34,12 +34,22 @@ export default function StatsPage() {
     const totalPages = books.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
     const favorites = books.filter(b => b.favorite).length;
     
+    // Most read publisher
+    const publisherCounts: Record<string, number> = {};
+    read.forEach(b => {
+      if (b.publisher) {
+        publisherCounts[b.publisher] = (publisherCounts[b.publisher] || 0) + 1;
+      }
+    });
+    const topPublisher = Object.entries(publisherCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Aucun";
+
     return {
       readCount: read.length,
       progressCount: progress.length,
       dnfCount: dnf.length,
       totalPages,
-      favorites
+      favorites,
+      topPublisher
     };
   }, [books]);
 
@@ -48,7 +58,7 @@ export default function StatsPage() {
   const cards = [
     { label: "Livres lus", value: stats.readCount, icon: BookOpen, color: "text-primary", bg: "bg-primary/5" },
     { label: "Pages parcourues", value: stats.totalPages.toLocaleString(), icon: FileText, color: "text-emerald-500", bg: "bg-emerald-50" },
-    { label: "Coups de cœur", value: stats.favorites, icon: Star, color: "text-amber-500", bg: "bg-amber-50" },
+    { label: "Maison d'édition favorite", value: stats.topPublisher, icon: Landmark, color: "text-indigo-500", bg: "bg-indigo-50" },
   ];
 
   return (
@@ -72,7 +82,7 @@ export default function StatsPage() {
                     <card.icon className="h-6 w-6" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-3xl font-headline italic">{card.value}</p>
+                    <p className="text-2xl font-headline italic line-clamp-1 px-4">{card.value}</p>
                     <p className="text-[10px] uppercase tracking-[0.2em] font-bold opacity-60">{card.label}</p>
                   </div>
                 </CardContent>
@@ -107,13 +117,13 @@ export default function StatsPage() {
 
             <Card className="glass-card p-8 border-none shadow-sm flex flex-col justify-center text-center space-y-6">
                <div className="space-y-2">
-                  <Clock className="h-10 w-10 mx-auto text-primary/20" />
-                  <h3 className="text-xl font-headline italic">Temps d'écoute</h3>
-                  <p className="text-4xl font-headline italic text-primary/80">0h 00m</p>
-                  <p className="text-xs text-muted-foreground italic">Statistique issue de votre journal d'écoute.</p>
+                  <Star className="h-10 w-10 mx-auto text-amber-300" />
+                  <h3 className="text-xl font-headline italic">Coups de cœur</h3>
+                  <p className="text-4xl font-headline italic text-primary/80">{stats.favorites}</p>
+                  <p className="text-xs text-muted-foreground italic">Lectures gravées dans votre cœur de plume.</p>
                </div>
                <div className="pt-6 border-t border-primary/5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Bientôt : Analyse par genre</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Bientôt : Top genres et thématiques</p>
                </div>
             </Card>
           </section>

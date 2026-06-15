@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info } from "lucide-react";
+import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info, Bookmark } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -38,11 +38,11 @@ export default function AddBookPage() {
           id: item.id,
           title: info.title,
           author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
-          publisher: info.publisher || "Inconnu",
+          publisher: info.publisher || "Éditeur inconnu",
           cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
           pages: info.pageCount || 0,
           description: info.description || "Aucun résumé disponible.",
-          publicationDate: info.publishedDate || "N/A",
+          publicationDate: info.publishedDate || "Date inconnue",
           genres: info.categories || [],
           isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || info.industryIdentifiers?.[0]?.identifier || "N/A",
           series: info.series || "",
@@ -80,7 +80,6 @@ export default function AddBookPage() {
       genres: book.genres,
       tropes: [],
       pages: book.pages,
-      // Internal app defaults
       status: "pal",
       favorite: false,
       progress: 0,
@@ -137,29 +136,31 @@ export default function AddBookPage() {
           results.map((book) => (
             <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group border-none">
               <CardContent className="p-0 flex flex-col sm:flex-row">
-                <div className="relative w-full sm:w-40 aspect-[2/3] shrink-0 overflow-hidden bg-muted">
+                <div className="relative w-full sm:w-44 aspect-[2/3] shrink-0 overflow-hidden bg-muted">
                   <Image 
                     src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
                     alt={book.title} 
                     fill 
                     className="object-cover transition-transform duration-1000 group-hover:scale-110" 
+                    data-ai-hint="book cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
                 </div>
                 
                 <div className="p-6 flex flex-col flex-1 gap-3">
                   <div className="space-y-1">
-                    <h3 className="text-xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
-                    {book.publisher && <p className="text-[8px] text-muted-foreground italic">Éditeur : {book.publisher}</p>}
+                    <h3 className="text-2xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                    <p className="text-[10px] text-primary/60 font-bold italic">{book.publisher}</p>
                   </div>
 
-                  <div className="flex flex-wrap gap-3 text-[9px] font-bold uppercase tracking-widest opacity-60">
-                    <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publicationDate.split('-')[0]}</div>
+                  <div className="flex flex-wrap gap-4 text-[9px] font-bold uppercase tracking-widest opacity-60">
+                    <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publicationDate}</div>
                     <div className="flex items-center gap-1.5"><Tag className="h-3 w-3" /> {book.pages} pages</div>
+                    <div className="flex items-center gap-1.5"><Info className="h-3 w-3" /> ISBN: {book.isbn}</div>
                   </div>
 
-                  <ScrollArea className="h-20 pr-4">
+                  <ScrollArea className="h-24 pr-4 border-l-2 border-primary/5 pl-4 mt-2">
                     <p className="text-xs text-muted-foreground italic leading-relaxed">
                       {book.description.replace(/<[^>]*>?/gm, '')}
                     </p>
@@ -176,7 +177,7 @@ export default function AddBookPage() {
                   <div className="pt-2 flex justify-end">
                     <Button 
                       onClick={() => addBook(book)} 
-                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-10 px-6 font-headline italic text-sm flex gap-2"
+                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-12 px-8 font-headline italic text-sm flex gap-2"
                     >
                       <Plus className="h-4 w-4" />
                       Ajouter à ma bibliothèque
@@ -191,7 +192,7 @@ export default function AddBookPage() {
             <BookPlus className="h-20 w-20 mx-auto text-primary/10 animate-pulse" />
             <div className="space-y-2">
               <p className="italic font-headline text-2xl text-primary/40">Le monde entier dans votre carnet.</p>
-              <p className="text-sm text-muted-foreground italic">Recherchez et capturez vos futures lectures.</p>
+              <p className="text-sm text-muted-foreground italic">Recherchez et capturez vos futures lectures avec précision.</p>
             </div>
           </div>
         )}

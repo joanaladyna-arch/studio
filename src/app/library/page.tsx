@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { Label } from "@/components/ui/label";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
 export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
@@ -244,6 +245,7 @@ export function BookCard({ book }: { book: Book }) {
           alt={book.title} 
           fill 
           className="object-cover transition-transform duration-1000 group-hover:scale-110" 
+          data-ai-hint="book cover"
         />
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
@@ -267,13 +269,16 @@ export function BookCard({ book }: { book: Book }) {
           )}
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/40 backdrop-blur-md border-t border-white/20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-           <div className="flex flex-wrap gap-1">
-              {book.genres?.slice(0, 2).map(g => (
-                <span key={g} className="text-[8px] px-2 py-0.5 rounded-full bg-white/80 text-foreground font-bold uppercase tracking-tighter">
-                  {g}
-                </span>
-              ))}
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/60 backdrop-blur-md border-t border-white/20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+           <div className="flex flex-col gap-1">
+              <span className="text-[7px] text-primary/80 font-bold uppercase truncate">{book.publisher}</span>
+              <div className="flex flex-wrap gap-1">
+                {book.genres?.slice(0, 2).map(g => (
+                  <span key={g} className="text-[7px] px-2 py-0.5 rounded-full bg-white/80 text-foreground font-bold uppercase tracking-tighter">
+                    {g}
+                  </span>
+                ))}
+              </div>
            </div>
         </div>
       </div>
@@ -291,6 +296,8 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
   const [rank, setRank] = useState<RankType | undefined>(book.rank);
   const [favorite, setFavorite] = useState(book.favorite);
   const [progress, setProgress] = useState(book.progress || 0);
+  const [publisher, setPublisher] = useState(book.publisher || "");
+  const [pages, setPages] = useState(book.pages || 0);
 
   const toggleItem = (list: string[], setList: (l: string[]) => void, item: string) => {
     if (list.includes(item)) setList(list.filter(i => i !== item));
@@ -299,25 +306,52 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-background/95">
+      <DialogContent className="max-w-3xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-background/95">
         <DialogHeader className="p-6 border-b border-primary/5">
           <DialogTitle className="font-headline text-3xl italic">Éditer ma pépite</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 p-6">
-          <div className="space-y-8">
-            <div className="flex gap-6 items-start">
-               <div className="relative w-24 aspect-[2/3] rounded-xl overflow-hidden shadow-md bg-muted">
+        <ScrollArea className="flex-1 p-8">
+          <div className="space-y-10">
+            <div className="flex flex-col sm:flex-row gap-8 items-start">
+               <div className="relative w-32 aspect-[2/3] rounded-2xl overflow-hidden shadow-xl bg-muted shrink-0">
                   <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-cover" />
                </div>
-               <div className="space-y-1">
-                  <h3 className="text-xl font-headline italic">{book.title}</h3>
-                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
-                  {book.isbn && <p className="text-[10px] text-muted-foreground">ISBN: {book.isbn}</p>}
+               <div className="space-y-4 flex-1">
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-headline italic">{book.title}</h3>
+                    <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-50">Éditeur</Label>
+                      <Input 
+                        value={publisher} 
+                        onChange={(e) => setPublisher(e.target.value)} 
+                        className="h-10 rounded-xl bg-white/40 border-none italic text-sm"
+                        placeholder="Nom de l'éditeur"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-50">Nombre de pages</Label>
+                      <Input 
+                        type="number"
+                        value={pages} 
+                        onChange={(e) => setPages(parseInt(e.target.value) || 0)} 
+                        className="h-10 rounded-xl bg-white/40 border-none italic text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest opacity-40 italic">
+                    <div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {book.publicationDate}</div>
+                    <div className="flex items-center gap-1.5"><Info className="h-3.5 w-3.5" /> ISBN: {book.isbn}</div>
+                  </div>
                </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Statut de lecture</label>
                 <div className="flex flex-wrap gap-2">
@@ -327,7 +361,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                       variant="outline" 
                       size="sm"
                       onClick={() => setStatus(key as BookStatus)}
-                      className={cn("rounded-full border-primary/10 text-[10px] font-bold h-8 px-4", status === key ? "bg-primary text-white border-primary" : "hover:border-primary/40")}
+                      className={cn("rounded-full border-primary/10 text-[10px] font-bold h-9 px-4", status === key ? "bg-primary text-white border-primary" : "hover:border-primary/40")}
                     >
                       {val.label}
                     </Button>
@@ -346,14 +380,21 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                         variant="outline" 
                         size="sm"
                         onClick={() => setRank(key as RankType)}
-                        className={cn("rounded-full border-primary/10 h-8 px-3 text-[10px]", rank === key ? "bg-primary/10 text-primary border-primary" : "hover:border-primary/40")}
+                        className={cn("rounded-full border-primary/10 h-9 px-3 text-[10px]", rank === key ? "bg-primary/10 text-primary border-primary" : "hover:border-primary/40")}
                       >
-                        <Icon className="h-3 w-3 mr-1.5" /> {val.label}
+                        <Icon className="h-4 w-4 mr-2" /> {val.label}
                       </Button>
                     );
                   })}
                 </div>
               </div>
+            </div>
+
+            <div className="space-y-4">
+               <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Résumé de l'œuvre</label>
+               <ScrollArea className="h-32 p-4 bg-white/30 rounded-2xl italic text-xs leading-relaxed text-muted-foreground border border-white/40">
+                 {book.description?.replace(/<[^>]*>?/gm, '') || "Aucun résumé disponible."}
+               </ScrollArea>
             </div>
 
             <div className="space-y-4">
@@ -364,9 +405,9 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                       key={g} 
                       onClick={() => toggleItem(genres, setGenres, g)}
                       className={cn(
-                        "text-[10px] px-3 py-1.5 rounded-full border transition-all font-bold uppercase",
+                        "text-[10px] px-4 py-2 rounded-full border transition-all font-bold uppercase",
                         genres.includes(g) 
-                          ? "bg-primary text-white border-primary" 
+                          ? "bg-primary text-white border-primary shadow-sm" 
                           : "bg-white/50 text-muted-foreground border-transparent hover:border-primary/20"
                       )}
                     >
@@ -376,27 +417,27 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                </div>
             </div>
 
-            <div className="pt-4 flex items-center justify-between">
+            <div className="pt-6 border-t border-primary/5 flex items-center justify-between">
                <Button 
                 variant="ghost" 
                 onClick={() => setFavorite(!favorite)}
-                className={cn("rounded-2xl h-12 px-6", favorite && "text-primary bg-primary/5")}
+                className={cn("rounded-2xl h-14 px-8 text-sm", favorite && "text-primary bg-primary/5")}
                >
-                 <Heart className={cn("h-5 w-5 mr-2", favorite && "fill-primary")} /> {favorite ? "Coup de cœur" : "Ajouter aux favoris"}
+                 <Heart className={cn("h-6 w-6 mr-3", favorite && "fill-primary")} /> {favorite ? "Coup de cœur absolu" : "Ajouter aux favoris"}
                </Button>
 
-               <Button variant="ghost" className="text-destructive hover:bg-destructive/5" onClick={() => onDelete(book.id)}>
-                 <Trash2 className="h-4 w-4 mr-2" /> Supprimer
+               <Button variant="ghost" className="text-destructive hover:bg-destructive/5 h-14 px-8" onClick={() => onDelete(book.id)}>
+                 <Trash2 className="h-5 w-5 mr-2" /> Retirer de ma collection
                </Button>
             </div>
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-6 border-t border-primary/5 bg-white/40">
-           <Button variant="ghost" onClick={onClose} className="rounded-xl">Annuler</Button>
+        <DialogFooter className="p-8 border-t border-primary/5 bg-white/40 backdrop-blur-md">
+           <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-6">Annuler</Button>
            <Button 
-            onClick={() => onSave({ genres, status, rank, favorite, progress })} 
-            className="rounded-xl bg-primary hover:bg-primary/90 font-headline italic text-lg px-8 h-12"
+            onClick={() => onSave({ genres, status, rank, favorite, progress, publisher, pages })} 
+            className="rounded-xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-10 h-14 shadow-lg shadow-primary/20"
            >
              Enregistrer mes pépites
            </Button>
