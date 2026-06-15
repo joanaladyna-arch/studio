@@ -106,6 +106,8 @@ const CATEGORIES = [
   { id: "pal", label: "PAL" },
   { id: "progress", label: "En cours" },
   { id: "read", label: "Lu" },
+  { id: "dnf", label: "DNF" },
+  { id: "pause", label: "Pause" },
   { id: "favorite", label: "Favoris" },
 ];
 
@@ -133,11 +135,13 @@ export default function LibraryPage() {
   const { data: books = [], loading } = useCollection(booksQuery);
 
   const counts = useMemo(() => {
-    const res: Record<string, number> = { all: books.length, pal: 0, progress: 0, read: 0, favorite: 0 };
+    const res: Record<string, number> = { all: books.length, pal: 0, progress: 0, read: 0, dnf: 0, pause: 0, favorite: 0 };
     books.forEach(b => {
       if (b.status === 'pal') res.pal++;
       if (b.status === 'progress') res.progress++;
       if (b.status === 'read') res.read++;
+      if (b.status === 'dnf') res.dnf++;
+      if (b.status === 'pause') res.pause++;
       if (b.favorite) res.favorite++;
     });
     return res;
