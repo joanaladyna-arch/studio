@@ -2,8 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const auth = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
   const router = useRouter();
   const [name, setName] = useState("");
@@ -23,14 +25,26 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth || !db) return;
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName: name });
+      const user = userCredential.user;
+
+      // Update Firebase Auth profile
+      await updateProfile(user, { displayName: name });
+
+      // Create User Profile in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        name: name,
+        email: email,
+        annualGoal: 24,
+        createdAt: serverTimestamp(),
+      });
+
       toast({
-        title: "Compte créé !",
-        description: `Bienvenue parmi nous, ${name}.`,
+        title: "Bienvenue sur Plume !",
+        description: `Votre sanctuaire littéraire est prêt, ${name}.`,
       });
       router.push("/");
     } catch (error: any) {
@@ -96,7 +110,7 @@ export default function SignupPage() {
               </div>
             </div>
             <Button type="submit" className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90" disabled={loading}>
-              {loading ? "Création..." : "Créer mon compte"}
+              {loading ? "Création du carnet..." : "Créer mon compte"}
             </Button>
           </form>
         </CardContent>
