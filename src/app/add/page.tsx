@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
@@ -11,16 +10,12 @@ import {
   Loader2, 
   Sparkles, 
   Calendar, 
-  Tag, 
   Info, 
   AlertCircle,
   Building2,
   Hash,
-  Languages,
   BookOpen,
-  CheckCircle2,
-  Bookmark,
-  Layers
+  CheckCircle2
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -63,11 +58,11 @@ export default function AddBookPage() {
 
   const searchOpenLibrary = async (q: string) => {
     const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=15`;
-    console.log(`[PLUME] Recherche Open Library: ${olUrl}`);
+    console.log(`[PLUME] Recherche (Backup Source): ${olUrl}`);
 
     try {
       const response = await fetch(olUrl);
-      if (!response.ok) throw new Error(`Erreur Open Library: ${response.status}`);
+      if (!response.ok) throw new Error(`Erreur Source: ${response.status}`);
 
       const data = await response.json();
       return data.docs?.map((doc: any) => ({
@@ -87,7 +82,7 @@ export default function AddBookPage() {
         volume: null
       })) || [];
     } catch (error) {
-      console.error(`[PLUME] Erreur Open Library:`, error);
+      console.error(`[PLUME] Erreur Source:`, error);
       return [];
     }
   };
@@ -114,7 +109,7 @@ export default function AddBookPage() {
     
     // 1. Essayer Google Books
     const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15`;
-    console.log(`[PLUME] Recherche Google Books: ${googleUrl}`);
+    console.log(`[PLUME] Recherche (Primary Source): ${googleUrl}`);
 
     try {
       const response = await fetch(googleUrl);
@@ -140,7 +135,7 @@ export default function AddBookPage() {
             isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
                   info.industryIdentifiers?.[0]?.identifier || 
                   "N/A",
-            series: null, // Google Books ne sépare pas toujours proprement la série
+            series: null,
             volume: null
           };
         });
@@ -226,7 +221,7 @@ export default function AddBookPage() {
         </div>
         <h1 className="text-5xl font-headline italic tracking-tight">Nouvelle Pépite</h1>
         <p className="text-primary/60 italic font-medium max-w-md mx-auto">
-          Explorez Google Books & Open Library pour enrichir votre sanctuaire.
+          Recherchez votre prochaine lecture par titre, auteur ou ISBN.
         </p>
       </header>
 
@@ -274,9 +269,6 @@ export default function AddBookPage() {
                         data-ai-hint="book cover"
                       />
                     </div>
-                    <Badge className="absolute top-2 left-2 bg-black/40 text-[8px] border-none font-bold uppercase backdrop-blur-sm">
-                      {book.source}
-                    </Badge>
                   </div>
                   
                   <div className="p-6 flex flex-col flex-1 gap-4">
