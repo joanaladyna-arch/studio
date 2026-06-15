@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Settings, FileText, TrendingUp, BookOpenCheck, Share2, Link2, Palette, Crown, BadgeCheck, FileArchive } from "lucide-react";
+import { Calendar, Settings, FileText, TrendingUp, BookOpenCheck, Share2, Link2, Palette, Crown, BadgeCheck, FileArchive, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
