@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Instagram, Music, Library, BookOpen, Globe, Headphones, ExternalLink } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const PLATFORMS = [
   { name: "Instagram", icon: Instagram, color: "text-pink-500", desc: "Partagez vos lectures en Story" },

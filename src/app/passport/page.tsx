@@ -3,7 +3,9 @@
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Star, Book, Flame, Map, Search, Crown } from "lucide-react";
+import { Trophy, Star, Book, Flame, Map, Search, Crown, Heart } from "lucide-react";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 const TITLES = [
   { name: "Exploratrice Littéraire", icon: Search, color: "bg-blue-100 text-blue-600", desc: "Avoir cherché 50 livres" },
@@ -67,5 +69,3 @@ export default function PassportPage() {
     </div>
   );
 }
-
-import { Heart } from "lucide-react";
