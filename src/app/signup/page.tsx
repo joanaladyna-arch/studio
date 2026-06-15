@@ -1,21 +1,22 @@
 
 "use client";
 
-import { useState } from "react";
-import { useAuth, useFirestore } from "@/firebase";
+import { useState, useEffect } from "react";
+import { useAuth, useFirestore, useUser } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Feather, Mail, Lock, User } from "lucide-react";
+import { Feather, Mail, Lock, User, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const auth = useAuth();
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const router = useRouter();
   const [name, setName] = useState("");
@@ -23,24 +24,21 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+      console.log("Plume Signup: Utilisateur détecté, redirection...");
+      router.replace("/");
+    }
+  }, [user, router]);
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !db) {
-      toast({ variant: "destructive", title: "Erreur", description: "Les services Firebase ne sont pas prêts." });
-      return;
-    }
+    if (!auth || !db) return;
     setLoading(true);
     try {
-      console.log("Plume : Tentative d'inscription pour :", email);
-      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      console.log("Plume : Inscription réussie (Auth) :", user.uid);
-
-      // Mise à jour du profil Auth
       await updateProfile(user, { displayName: name });
-
-      // Création du profil Firestore
       const userDocRef = doc(db, "users", user.uid);
       await setDoc(userDocRef, {
         uid: user.uid,
@@ -52,33 +50,16 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      
-      console.log("Plume : Profil Firestore créé.");
-
       toast({
         title: "Bienvenue sur Plume !",
         description: `Votre sanctuaire littéraire est prêt, ${name}.`,
       });
-
-      // Redirection immédiate vers l'accueil
-      router.push("/");
+      router.replace("/");
     } catch (error: any) {
-      console.error("Plume : Erreur d'inscription", error.code, error.message);
-      
-      let message = "Une erreur est survenue lors de la création du compte.";
-      if (error.code === 'auth/email-already-in-use') {
-        message = "Cette adresse email est déjà utilisée. Veuillez vous connecter.";
-      } else if (error.code === 'auth/invalid-email') {
-        message = "L'adresse email n'est pas valide.";
-      } else if (error.code === 'auth/weak-password') {
-        message = "Le mot de passe est trop faible (6 caractères minimum).";
-      }
-
-      toast({
-        variant: "destructive",
-        title: "Erreur d'inscription",
-        description: message,
-      });
+      console.error("Plume Signup Error:", error.code, error.message);
+      let message = "Erreur lors de la création du compte.";
+      if (error.code === 'auth/email-already-in-use') message = "Cet email est déjà utilisé.";
+      toast({ variant: "destructive", title: "Erreur d'inscription", description: message });
     } finally {
       setLoading(false);
     }
@@ -95,50 +76,61 @@ export default function SignupPage() {
           <CardDescription className="italic">Créez votre journal de lecture personnel.</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="space-y-2">
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Votre nom ou pseudo" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-10 bg-white/50 border-none h-12"
-                  required
-                />
+          {user ? (
+            <div className="space-y-6 text-center py-8">
+              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                <p className="text-sm italic text-primary">Compte créé avec succès.</p>
               </div>
+              <Button onClick={() => router.replace("/")} className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90">
+                Entrer dans PLUME <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
-            <div className="space-y-2">
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  type="email" 
-                  placeholder="Email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 bg-white/50 border-none h-12"
-                  required
-                />
+          ) : (
+            <form onSubmit={handleSignup} className="space-y-4">
+              <div className="space-y-2">
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Votre nom ou pseudo" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="pl-10 bg-white/50 border-none h-12"
+                    required
+                  />
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  type="password" 
-                  placeholder="Mot de passe (min. 6 caractères)" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 bg-white/50 border-none h-12"
-                  required
-                  minLength={6}
-                />
+              <div className="space-y-2">
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="email" 
+                    placeholder="Email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 bg-white/50 border-none h-12"
+                    required
+                  />
+                </div>
               </div>
-            </div>
-            <Button type="submit" className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90" disabled={loading}>
-              {loading ? "Création du carnet..." : "Créer mon compte"}
-            </Button>
-          </form>
+              <div className="space-y-2">
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="password" 
+                    placeholder="Mot de passe (min. 6 caractères)" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 bg-white/50 border-none h-12"
+                    required
+                    minLength={6}
+                  />
+                </div>
+              </div>
+              <Button type="submit" className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90" disabled={loading}>
+                {loading ? "Création du carnet..." : "Créer mon compte"}
+              </Button>
+            </form>
+          )}
         </CardContent>
         <CardFooter className="justify-center">
           <p className="text-sm text-muted-foreground italic">

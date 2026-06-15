@@ -16,30 +16,32 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // On considère que l'auth est prête dès que le chargement Firebase est fini
     if (!loading) {
       setReady(true);
     }
-    // Timeout de sécurité de 3 secondes pour ne pas bloquer l'utilisateur
     const timer = setTimeout(() => {
       setReady(true);
     }, 3000);
-
     return () => clearTimeout(timer);
   }, [loading]);
 
   useEffect(() => {
     if (!ready) return;
 
-    // Si pas d'utilisateur et pas sur une page d'auth -> redirection login
-    if (!user && pathname !== "/login" && pathname !== "/signup") {
-      router.push("/login");
+    const isAuthPage = pathname === "/login" || pathname === "/signup";
+
+    if (!user && !isAuthPage) {
+      console.log("Plume AuthGuard: Pas d'utilisateur, redirection vers /login");
+      router.replace("/login");
     } 
-    // Si utilisateur connecté et sur une page d'auth -> redirection accueil
-    else if (user && (pathname === "/login" || pathname === "/signup")) {
-      router.push("/");
+    else if (user && isAuthPage) {
+      console.log("Plume AuthGuard: Utilisateur connecté, redirection vers l'accueil");
+      router.replace("/");
     }
   }, [user, ready, pathname, router]);
+
+  // Pendant le chargement initial, on n'affiche rien pour éviter les flashs
+  if (loading && !ready) return null;
 
   return <>{children}</>;
 }
@@ -52,10 +54,9 @@ export default function RootLayout({
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // Affichage du domaine pour configuration Firebase
     console.log("-----------------------------------------");
     console.log("PLUME - CONFIGURATION DOMAINE");
-    console.log("Domaine à ajouter (Authorized Domain) :", window.location.hostname);
+    console.log("Domaine actuel :", typeof window !== 'undefined' ? window.location.hostname : 'serveur');
     console.log("-----------------------------------------");
   }, []);
 
