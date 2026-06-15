@@ -1,13 +1,12 @@
 /**
- * Configuration Firebase de l'application.
- * Les valeurs sont ici inscrites en dur pour le projet plume-f3424
- * afin de garantir le fonctionnement immédiat de l'authentification.
+ * Configuration Firebase officielle pour le projet plume-f3424.
+ * Les valeurs sont récupérées via les variables d'environnement injectées par le Studio.
  */
 export const firebaseConfig = {
-  apiKey: "AIzaSyBw-placeholder-key-plume-f3424", // Note: Remplacez par votre clé réelle si l'erreur persiste
-  authDomain: "plume-f3424.firebaseapp.com",
-  projectId: "plume-f3424",
-  storageBucket: "plume-f3424.appspot.com",
-  messagingSenderId: "456789012345",
-  appId: "1:456789012345:web:abcdef1234567890"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "plume-f3424.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "plume-f3424",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "plume-f3424.appspot.com",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };

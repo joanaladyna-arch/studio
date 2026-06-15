@@ -41,6 +41,9 @@ export const useFirebaseApp = () => useContext(FirebaseContext).app;
 export const useFirestore = () => useContext(FirebaseContext).db;
 export const useAuth = () => useContext(FirebaseContext).auth;
 
+/**
+ * Hook personnalisé pour accéder à l'utilisateur actuel.
+ */
 export function useUser() {
   const { auth } = useFirebase();
   return useUserHook(auth);
