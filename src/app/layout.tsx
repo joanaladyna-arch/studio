@@ -16,20 +16,28 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setReady(true);
-    }, 2000);
-
+    // On considère que l'auth est prête dès que le chargement Firebase est fini
     if (!loading) {
       setReady(true);
     }
+    // Timeout de sécurité de 3 secondes pour ne pas bloquer l'utilisateur
+    const timer = setTimeout(() => {
+      setReady(true);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, [loading]);
 
   useEffect(() => {
-    if (ready && !user && pathname !== "/login" && pathname !== "/signup") {
+    if (!ready) return;
+
+    // Si pas d'utilisateur et pas sur une page d'auth -> redirection login
+    if (!user && pathname !== "/login" && pathname !== "/signup") {
       router.push("/login");
+    } 
+    // Si utilisateur connecté et sur une page d'auth -> redirection accueil
+    else if (user && (pathname === "/login" || pathname === "/signup")) {
+      router.push("/");
     }
   }, [user, ready, pathname, router]);
 

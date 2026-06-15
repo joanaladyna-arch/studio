@@ -31,17 +31,18 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
-      console.log("Tentative d'inscription pour :", email);
+      console.log("Plume : Tentative d'inscription pour :", email);
       
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      console.log("Inscription réussie (Auth) :", user.uid);
+      console.log("Plume : Inscription réussie (Auth) :", user.uid);
 
-      // Update Firebase Auth profile
+      // Mise à jour du profil Auth
       await updateProfile(user, { displayName: name });
 
-      // Create User Profile in Firestore
-      await setDoc(doc(db, "users", user.uid), {
+      // Création du profil Firestore
+      const userDocRef = doc(db, "users", user.uid);
+      await setDoc(userDocRef, {
         uid: user.uid,
         name: name,
         email: email,
@@ -52,16 +53,17 @@ export default function SignupPage() {
         updatedAt: serverTimestamp(),
       });
       
-      console.log("Profil Firestore créé pour :", user.uid);
+      console.log("Plume : Profil Firestore créé.");
 
       toast({
         title: "Bienvenue sur Plume !",
         description: `Votre sanctuaire littéraire est prêt, ${name}.`,
       });
+
+      // Redirection immédiate vers l'accueil
       router.push("/");
     } catch (error: any) {
-      console.error("CODE ERREUR FIREBASE (Signup) :", error.code);
-      console.error("MESSAGE ERREUR FIREBASE (Signup) :", error.message);
+      console.error("Plume : Erreur d'inscription", error.code, error.message);
       
       let message = "Une erreur est survenue lors de la création du compte.";
       if (error.code === 'auth/email-already-in-use') {

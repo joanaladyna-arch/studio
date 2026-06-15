@@ -41,7 +41,7 @@ export default function LoginPage() {
         updatedAt: serverTimestamp(),
       }, { merge: true });
     } catch (e) {
-      console.error("Erreur lors de la synchronisation Firestore :", e);
+      console.error("Plume : Erreur lors de la synchronisation Firestore :", e);
     }
   };
 
@@ -53,14 +53,15 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
-      console.log("Tentative de connexion pour :", email);
+      console.log("Plume : Tentative de connexion pour :", email);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log("Connexion réussie :", userCredential.user.uid);
+      console.log("Plume : Connexion réussie :", userCredential.user.uid);
       await syncUserProfile(userCredential.user, "password");
+      
+      toast({ title: "Bon retour !", description: "Heureux de vous revoir sur Plume." });
       router.push("/");
     } catch (error: any) {
-      console.error("CODE ERREUR FIREBASE (Login) :", error.code);
-      console.error("MESSAGE ERREUR FIREBASE (Login) :", error.message);
+      console.error("Plume : Erreur de connexion", error.code, error.message);
       
       let message = "Email ou mot de passe incorrect.";
       if (error.code === 'auth/invalid-credential') {
@@ -88,14 +89,15 @@ export default function LoginPage() {
     }
     const provider = new GoogleAuthProvider();
     try {
-      console.log("Tentative de connexion Google...");
+      console.log("Plume : Tentative de connexion Google...");
       const result = await signInWithPopup(auth, provider);
-      console.log("Connexion Google réussie :", result.user.uid);
+      console.log("Plume : Connexion Google réussie :", result.user.uid);
       await syncUserProfile(result.user, "google.com");
+      
+      toast({ title: "Connexion réussie", description: "Bienvenue sur votre carnet de lecture." });
       router.push("/");
     } catch (error: any) {
-      console.error("CODE ERREUR FIREBASE (Google) :", error.code);
-      console.error("MESSAGE ERREUR FIREBASE (Google) :", error.message);
+      console.error("Plume : Erreur Google", error.code, error.message);
       toast({
         variant: "destructive",
         title: "Erreur Google",
@@ -112,11 +114,9 @@ export default function LoginPage() {
     if (!auth) return;
     setResetLoading(true);
     try {
-      console.log("Demande de réinitialisation pour :", email);
       await sendPasswordResetEmail(auth, email);
       toast({ title: "Email envoyé", description: "Consultez votre boîte de réception pour réinitialiser votre mot de passe." });
     } catch (error: any) {
-      console.error("CODE ERREUR FIREBASE (Reset) :", error.code);
       toast({
         variant: "destructive",
         title: "Erreur",
