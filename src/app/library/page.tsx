@@ -14,7 +14,7 @@ const CATEGORIES = [
   { id: "pal", label: "PAL" },
   { id: "progress", label: "En cours" },
   { id: "read", label: "Lu" },
-  { id: "dnf", label: "DNF" },
+  { id: "dnf", label: "DNF (Livre non terminé ou pas aimé)" },
   { id: "favorite", label: "Favoris" },
 ];
 
@@ -92,7 +92,7 @@ export default function LibraryPage() {
             >
               {cat.label}
               <Badge variant="secondary" className="h-5 px-1.5 min-w-[1.25rem] flex items-center justify-center text-[10px] bg-muted group-data-[state=active]:bg-primary group-data-[state=active]:text-primary-foreground">
-                {counts[cat.id as keyof typeof counts]}
+                {counts[cat.id as keyof typeof counts] || 0}
               </Badge>
             </TabsTrigger>
           ))}
@@ -137,11 +137,11 @@ function StatusBadge({ status }: { status: string }) {
     pal: { label: "PAL", className: "bg-slate-500/90 text-white" },
     progress: { label: "Lecture", className: "bg-blue-500/90 text-white" },
     read: { label: "Lu", className: "bg-emerald-500/90 text-white" },
-    dnf: { label: "DNF", className: "bg-rose-500/90 text-white" }
+    dnf: { label: "DNF (Livre non terminé ou pas aimé)", className: "bg-rose-500/90 text-white" }
   };
   const config = configs[status];
   return (
-    <Badge className={cn("text-[9px] font-bold border-none px-1.5 py-0", config.className)}>
+    <Badge className={cn("text-[9px] font-bold border-none px-1.5 py-0 text-center", config.className)}>
       {config.label}
     </Badge>
   );
