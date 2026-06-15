@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,50 +5,6 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SplashScreen } from "@/components/splash-screen";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
-import { useUser } from "@/firebase";
-import { usePathname, useRouter } from "next/navigation";
-
-/**
- * Gère la protection des routes et les redirections automatiques.
- */
-function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useUser();
-  const pathname = usePathname();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (loading) return;
-
-    const isAuthPage = pathname === "/login" || pathname === "/signup";
-
-    if (!user && !isAuthPage) {
-      console.log("AuthGuard: Redirection vers /login");
-      router.replace("/login");
-    } 
-    else if (user && isAuthPage) {
-      console.log("AuthGuard: Redirection vers /");
-      router.replace("/");
-    }
-  }, [user, loading, pathname, router]);
-
-  // Si on est en train de charger l'état auth, on affiche un indicateur minimaliste
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background italic text-primary/40">
-        Chargement du sanctuaire...
-      </div>
-    );
-  }
-
-  const isAuthPage = pathname === "/login" || pathname === "/signup";
-
-  // Si connecté et sur une page auth, on ne rend rien (redirection en cours)
-  if (user && isAuthPage) return null;
-  // Si non connecté et pas sur une page auth, on ne rend rien (redirection en cours)
-  if (!user && !isAuthPage) return null;
-
-  return <>{children}</>;
-}
 
 export default function RootLayout({
   children,
@@ -87,11 +42,9 @@ export default function RootLayout({
           {showSplash ? (
             <SplashScreen onFinish={handleSplashFinish} />
           ) : (
-            <AuthGuard>
-              <main className="max-w-4xl mx-auto px-6 py-12 md:py-16">
-                {children}
-              </main>
-            </AuthGuard>
+            <main className="max-w-4xl mx-auto px-6 py-12 md:py-16">
+              {children}
+            </main>
           )}
           <Toaster />
         </FirebaseClientProvider>

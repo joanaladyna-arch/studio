@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from "react";
@@ -67,9 +66,12 @@ export default function Home() {
       
       <header className="space-y-6 pt-8 text-center relative">
         <div className="absolute top-0 right-0 p-4">
-           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-100">
+           <div className={cn(
+             "flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+             user ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+           )}>
               <CheckCircle2 className="h-3 w-3" />
-              PLUME est connecté
+              {user ? "PLUME est connecté" : "Mode Visiteur"}
            </div>
         </div>
 
@@ -85,6 +87,17 @@ export default function Home() {
             <span className="italic">Ton journal de lecture personnel.</span>
           </div>
         </div>
+        
+        {!user && (
+          <div className="flex justify-center gap-4 mt-4">
+            <Button asChild variant="outline" className="rounded-2xl border-primary/20 text-primary">
+              <Link href="/login">Se connecter</Link>
+            </Button>
+            <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90">
+              <Link href="/signup">S'inscrire</Link>
+            </Button>
+          </div>
+        )}
         
         <div className="max-w-xl mx-auto p-8 rounded-[2.5rem] bg-white/40 border border-white/60 shadow-inner backdrop-blur-sm">
           <p className="text-sm text-muted-foreground leading-relaxed italic">
@@ -176,16 +189,18 @@ export default function Home() {
                 </div>
                 <span className="font-headline text-xl italic">Cœur de Plume</span>
               </Link>
-              <Button 
-                onClick={handleLogout}
-                variant="ghost" 
-                className="w-full flex items-center justify-start gap-5 p-6 rounded-[2rem] bg-red-50/10 border border-red-100 hover:bg-red-50/20 transition-all group shadow-sm h-auto"
-              >
-                <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <LogOut className="h-5 w-5 text-red-400" />
-                </div>
-                <span className="font-headline text-xl italic text-red-500">Déconnexion</span>
-              </Button>
+              {user && (
+                <Button 
+                  onClick={handleLogout}
+                  variant="ghost" 
+                  className="w-full flex items-center justify-start gap-5 p-6 rounded-[2rem] bg-red-50/10 border border-red-100 hover:bg-red-50/20 transition-all group shadow-sm h-auto"
+                >
+                  <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                    <LogOut className="h-5 w-5 text-red-400" />
+                  </div>
+                  <span className="font-headline text-xl italic text-red-500">Déconnexion</span>
+                </Button>
+              )}
             </div>
           </div>
 
