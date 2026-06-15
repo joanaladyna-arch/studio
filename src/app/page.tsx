@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from "react";
@@ -58,16 +57,16 @@ export default function Home() {
         </div>
         
         <div className="space-y-2">
-          <h1 className="text-6xl font-headline text-foreground tracking-tight italic">Bonjour, {user?.displayName?.split(' ')[0] || "Plume"}</h1>
+          <h1 className="text-6xl font-headline text-foreground tracking-tight italic">PLUME</h1>
           <div className="flex items-center justify-center gap-2 text-primary/60 font-medium">
             <Coffee className="h-4 w-4" />
-            <span className="italic">Une pause, un thé, une page.</span>
+            <span className="italic">Ton journal de lecture personnel.</span>
           </div>
         </div>
         
         <div className="max-w-xl mx-auto p-8 rounded-[2.5rem] bg-white/40 border border-white/60 shadow-inner backdrop-blur-sm">
           <p className="text-sm text-muted-foreground leading-relaxed italic">
-            Plume est ton sanctuaire littéraire. Un espace doux pour garder une trace sincère de tes lectures, de tes émotions et de ton parcours de lectrice.
+            Plume est un journal de lecture authentique, sans IA obligatoire, pensé pour garder une trace sincère de tes lectures, de tes émotions et de ton parcours de lectrice.
           </p>
         </div>
       </header>
@@ -162,7 +161,7 @@ export default function Home() {
             <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12">
                <Feather className="h-24 w-24" />
             </div>
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 mb-4">La pépite du jour</h3>
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary/60 mb-4">Tes lectures, tes mots, tes émotions.</h3>
             <p className="text-lg italic text-foreground/80 leading-relaxed font-headline">
               "Le mouvement de la vie n'a d'intérêt que si on le regarde de l'intérieur."
             </p>

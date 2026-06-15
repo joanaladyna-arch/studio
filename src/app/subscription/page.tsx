@@ -63,7 +63,7 @@ export default function SubscriptionPage() {
 
       <header className="text-center space-y-2 py-8">
         <h1 className="text-4xl font-headline">Sublime ton expérience Plume</h1>
-        <p className="text-muted-foreground max-w-lg mx-auto italic">“Garde une trace précieuse de ton voyage littéraire avec nos outils premium.”</p>
+        <p className="text-muted-foreground max-w-lg mx-auto italic">“Garde une trace précieuse de ton voyage littéraire avec nos outils authentiques.”</p>
       </header>
 
       <div className="grid gap-6 md:grid-cols-3">
