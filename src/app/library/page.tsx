@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon, MessageSquare, Quote, PersonStanding, MapPin, Smile, Layers, Book as BookIcon, Tablet, Headphones, SlidersHorizontal } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar, Hash, MessageSquare, Quote, PersonStanding, MapPin } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -334,9 +334,12 @@ export function BookCard({ book }: { book: Book }) {
           )}
         </div>
       </div>
-      <div className="text-center px-1">
-        <h3 className="text-[13px] font-headline line-clamp-1 italic text-foreground/90">{book.title}</h3>
-        <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5 opacity-80">{book.author}</p>
+      <div className="text-center px-1 space-y-0.5">
+        <h3 className="text-[13px] font-headline line-clamp-1 italic text-foreground/90 leading-tight">{book.title}</h3>
+        <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-80">{book.author}</p>
+        {book.publisher && (
+          <p className="text-[7px] text-primary/40 font-bold uppercase tracking-[0.2em] italic truncate">{book.publisher}</p>
+        )}
       </div>
     </div>
   );
@@ -677,4 +680,3 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
     </Dialog>
   );
 }
-

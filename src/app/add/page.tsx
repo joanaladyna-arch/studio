@@ -11,12 +11,12 @@ import {
   Loader2, 
   Sparkles, 
   Calendar, 
-  Info, 
   AlertCircle,
   Building2,
   Hash,
   BookOpen,
-  CheckCircle2
+  CheckCircle2,
+  Book as BookIcon
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +28,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 // Simple cache structure
 const searchCache: Record<string, any[]> = {};
@@ -67,7 +68,6 @@ export default function AddBookPage() {
       const data = await response.json();
       return data.docs?.map((doc: any) => ({
         id: doc.key,
-        source: 'Open Library',
         title: doc.title || "Titre inconnu",
         author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
         publisher: doc.publisher ? doc.publisher[0] : "Éditeur inconnu",
@@ -78,8 +78,6 @@ export default function AddBookPage() {
         genres: doc.subject ? doc.subject.slice(0, 5) : [],
         isbn: doc.isbn ? doc.isbn[0] : "N/A",
         language: doc.language ? doc.language[0]?.toUpperCase() : "FR",
-        series: null,
-        volume: null
       })) || [];
     } catch (error) {
       console.error(`[PLUME] Erreur Source:`, error);
@@ -107,7 +105,6 @@ export default function AddBookPage() {
     setResults([]);
     setErrorDetails(null);
     
-    // 1. Essayer Google Books
     const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15`;
 
     try {
@@ -121,7 +118,6 @@ export default function AddBookPage() {
           const info = item.volumeInfo;
           return {
             id: item.id,
-            source: 'Google Books',
             title: info.title || "Titre inconnu",
             author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
             publisher: info.publisher || "Éditeur inconnu",
@@ -134,12 +130,9 @@ export default function AddBookPage() {
             isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
                   info.industryIdentifiers?.[0]?.identifier || 
                   "N/A",
-            series: null,
-            volume: null
           };
         });
       } else {
-        // 2. Fallback Open Library si Google ne trouve rien
         finalResults = await searchOpenLibrary(cleanQuery);
       }
 
@@ -151,7 +144,6 @@ export default function AddBookPage() {
       }
     } catch (error) {
       console.error("[PLUME] Erreur de recherche:", error);
-      // Tentative de secours immédiate en cas d'erreur réseau sur Google
       const fallbackResults = await searchOpenLibrary(cleanQuery);
       if (fallbackResults.length > 0) {
         setResults(fallbackResults);
@@ -184,10 +176,8 @@ export default function AddBookPage() {
       description: book.description,
       genres: book.genres,
       pages: book.pages,
-      series: book.series || "",
-      volume: book.volume || "",
       status: "pal",
-      format: "papier", // Format par défaut à l'ajout
+      format: "papier",
       favorite: false,
       progress: 0,
       pagesRead: 0,
@@ -272,16 +262,23 @@ export default function AddBookPage() {
                   </div>
                   
                   <div className="p-6 flex flex-col flex-1 gap-4">
-                    <div className="space-y-1">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <Badge className="bg-orange-50 text-orange-700 border-orange-100 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase">
+                           <BookIcon className="h-2 w-2 mr-1" /> Papier
+                        </Badge>
+                      </div>
                       <h3 className="text-2xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
-                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                      <div className="space-y-0.5">
+                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                        <p className="text-[10px] text-primary/40 font-bold uppercase tracking-widest italic">{book.publisher}</p>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[9px] font-bold uppercase tracking-widest opacity-60">
-                      <div className="flex items-center gap-1.5"><Building2 className="h-3 w-3" /> {book.publisher}</div>
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[9px] font-bold uppercase tracking-widest opacity-60 pt-2">
                       <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publicationDate}</div>
-                      <div className="flex items-center gap-1.5"><Hash className="h-3 w-3" /> {book.isbn}</div>
                       <div className="flex items-center gap-1.5"><BookOpen className="h-3 w-3" /> {book.pages} pages</div>
+                      <div className="flex items-center gap-1.5 col-span-2"><Hash className="h-3 w-3" /> ISBN: {book.isbn}</div>
                     </div>
 
                     <ScrollArea className="h-20 pr-4 border-l-2 border-primary/5 pl-4 mt-1">
