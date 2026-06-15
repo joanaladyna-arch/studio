@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,38 +5,40 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SplashScreen } from "@/components/splash-screen";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
-import { useUser } from "@/firebase";
+import { useUser, useAuth } from "@/firebase";
 import { usePathname, useRouter } from "next/navigation";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
-  const [timedOut, setTimedOut] = useState(false);
+  const auth = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // Timeout de sécurité : on affiche l'app après 2 secondes max
     const timer = setTimeout(() => {
-      setTimedOut(true);
-    }, 3000);
+      setReady(true);
+    }, 2000);
+
+    if (!loading) {
+      setReady(true);
+    }
+
     return () => clearTimeout(timer);
-  }, []);
+  }, [loading]);
 
   useEffect(() => {
-    if (!loading && !user && pathname !== "/login" && pathname !== "/signup") {
+    if (ready && !user && pathname !== "/login" && pathname !== "/signup") {
       router.push("/login");
     }
-  }, [user, loading, pathname, router]);
+  }, [user, ready, pathname, router]);
 
-  // On affiche le spinner seulement si on charge ET que le timeout n'est pas atteint
-  if (loading && !timedOut) {
-    return (
-      <div className="fixed inset-0 bg-background flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-          <p className="text-primary italic font-headline">Ouverture du journal...</p>
-        </div>
-      </div>
-    );
+  // Si Firebase n'est pas configuré du tout (pas d'auth instance)
+  if (!auth && ready) {
+    return <div className="p-8 text-center bg-destructive/10 text-destructive rounded-xl m-4 italic font-headline border border-destructive/20">
+      La configuration Firebase est manquante. Veuillez vérifier vos clés API.
+    </div>;
   }
 
   return <>{children}</>;
@@ -73,7 +74,6 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen pb-20 md:pb-0 overflow-x-hidden relative">
         <FirebaseClientProvider>
-          {/* Filtre Grain / Texture Papier Global */}
           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
           
           {showSplash ? (
