@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { ReactNode, useEffect, useState } from 'react';
@@ -16,7 +17,12 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
   if (!instances) return null;
 
   return (
-    <FirebaseProvider app={instances.app} db={instances.db} auth={instances.auth}>
+    <FirebaseProvider 
+      app={instances.app} 
+      db={instances.db} 
+      auth={instances.auth} 
+      storage={instances.storage}
+    >
       <FirebaseErrorListener />
       {children}
     </FirebaseProvider>
