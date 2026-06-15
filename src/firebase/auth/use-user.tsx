@@ -9,11 +9,15 @@ export function useUser(auth: Auth | null) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) return;
-    return onAuthStateChanged(auth, (user) => {
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
+    return () => unsubscribe();
   }, [auth]);
 
   return { user, loading };

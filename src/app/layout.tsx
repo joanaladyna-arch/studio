@@ -11,8 +11,16 @@ import { usePathname, useRouter } from "next/navigation";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
+  const [timedOut, setTimedOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user && pathname !== "/login" && pathname !== "/signup") {
@@ -20,7 +28,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, pathname, router]);
 
-  if (loading) {
+  // On affiche le spinner seulement si on charge ET que le timeout n'est pas atteint
+  if (loading && !timedOut) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
         <div className="animate-pulse flex flex-col items-center gap-4">
