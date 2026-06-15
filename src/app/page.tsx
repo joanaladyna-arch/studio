@@ -5,10 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Star, Clock, Trophy, Sparkles, PenTool } from "lucide-react";
+import { BookOpen, Star, Clock, Trophy, PenTool } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 export default function Home() {
   const currentRead = {
@@ -33,10 +34,7 @@ export default function Home() {
       <header className="flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-headline text-foreground">Bonjour, Lecteur</h1>
-          <p className="text-muted-foreground">Prêt pour une nouvelle aventure littéraire ?</p>
-        </div>
-        <div className="bg-primary/10 p-2 rounded-full">
-          <Sparkles className="h-6 w-6 text-primary" />
+          <p className="text-muted-foreground">Votre bibliothèque personnelle à portée de main.</p>
         </div>
       </header>
 
@@ -90,9 +88,11 @@ export default function Home() {
                 </div>
               </div>
               <div className="flex gap-2 pt-4">
-                <Button variant="default" className="flex-1 bg-accent hover:bg-accent/90">
-                  <PenTool className="mr-2 h-4 w-4" />
-                  Noter mes pensées
+                <Button asChild variant="default" className="flex-1 bg-accent hover:bg-accent/90">
+                  <Link href="/journal">
+                    <PenTool className="mr-2 h-4 w-4" />
+                    Noter mes pensées
+                  </Link>
                 </Button>
                 <Button variant="outline" size="icon">
                   <Star className="h-4 w-4" />
@@ -106,10 +106,12 @@ export default function Home() {
       <section className="space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-headline">Dernières pépites</h2>
-          <Button variant="link" className="text-primary p-0">Voir tout</Button>
+          <Button variant="link" asChild className="text-primary p-0">
+            <Link href="/library">Voir tout</Link>
+          </Button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {[1, 2, 3].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} className="group cursor-pointer">
               <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300">
                 <Image 
