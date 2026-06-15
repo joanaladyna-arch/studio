@@ -1,30 +1,52 @@
+
 "use client";
 
+import { useMemo } from "react";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Star, Clock, Trophy, PenTool, Heart, Bookmark, Coffee, Feather } from "lucide-react";
+import { BookOpen, Clock, Trophy, PenTool, Heart, Bookmark, Coffee, Feather } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import { collection, query, where, limit } from "firebase/firestore";
 
 export default function Home() {
-  const currentRead = {
-    title: "L'élégance du hérisson",
-    author: "Muriel Barbery",
-    progress: 65,
-    pagesRead: 210,
-    totalPages: 320,
-    cover: "https://picsum.photos/seed/book1/600/900"
-  };
+  const { user } = useUser();
+  const db = useFirestore();
 
-  const stats = [
-    { label: "Livres Lus", value: 12, icon: BookOpen, color: "text-primary" },
-    { label: "En cours", value: 2, icon: Clock, color: "text-secondary" },
-    { label: "Objectif 2024", value: "12/24", icon: Trophy, color: "text-accent" },
-  ];
+  // Fetch current reads
+  const currentReadQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "users", user.uid, "books"),
+      where("status", "==", "progress"),
+      limit(1)
+    );
+  }, [db, user]);
+
+  const { data: currentReads = [] } = useCollection(currentReadQuery);
+  const currentRead = currentReads[0];
+
+  // Fetch all books for stats
+  const allBooksQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return collection(db, "users", user.uid, "books");
+  }, [db, user]);
+
+  const { data: allBooks = [] } = useCollection(allBooksQuery);
+
+  const stats = useMemo(() => {
+    const readCount = allBooks.filter(b => b.status === 'read').length;
+    const progressCount = allBooks.filter(b => b.status === 'progress').length;
+    return [
+      { label: "Livres Lus", value: readCount, icon: BookOpen, color: "text-primary" },
+      { label: "En cours", value: progressCount, icon: Clock, color: "text-secondary" },
+      { label: "Objectif 2024", value: `${readCount}/24`, icon: Trophy, color: "text-accent" },
+    ];
+  }, [allBooks]);
 
   return (
     <div className="space-y-12 animate-paper">
@@ -36,7 +58,7 @@ export default function Home() {
         </div>
         
         <div className="space-y-2">
-          <h1 className="text-6xl font-headline text-foreground tracking-tight italic">Bonjour, Léa</h1>
+          <h1 className="text-6xl font-headline text-foreground tracking-tight italic">Bonjour, {user?.displayName?.split(' ')[0] || "Plume"}</h1>
           <div className="flex items-center justify-center gap-2 text-primary/60 font-medium">
             <Coffee className="h-4 w-4" />
             <span className="italic">Une pause, un thé, une page.</span>
@@ -67,44 +89,52 @@ export default function Home() {
           <h2 className="text-3xl font-headline flex items-center gap-3 italic">
             <Clock className="h-6 w-6 text-secondary" /> En ce moment
           </h2>
-          <Card className="glass-card overflow-hidden border-none group transition-all duration-700 hover:shadow-2xl">
-            <div className="grid sm:grid-cols-[200px_1fr] gap-0">
-              <div className="relative aspect-[2/3] overflow-hidden">
-                <Image 
-                  src={currentRead.cover} 
-                  alt={currentRead.title}
-                  fill
-                  className="object-cover group-hover:scale-105 transition-transform duration-1000"
-                  data-ai-hint="book cover"
-                />
-                <div className="absolute inset-0 bg-black/5" />
-              </div>
-              <CardContent className="p-10 flex flex-col justify-between bg-gradient-to-br from-white/80 to-transparent">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-3xl font-headline italic leading-tight">{currentRead.title}</h3>
-                    <p className="text-primary/70 font-medium mt-1">{currentRead.author}</p>
-                  </div>
-                  <div className="pt-4 space-y-4">
-                    <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-60">
-                      <span>Progression</span>
-                      <span>{currentRead.progress}%</span>
+          {currentRead ? (
+            <Card className="glass-card overflow-hidden border-none group transition-all duration-700 hover:shadow-2xl">
+              <div className="grid sm:grid-cols-[200px_1fr] gap-0">
+                <div className="relative aspect-[2/3] overflow-hidden">
+                  <Image 
+                    src={currentRead.cover || "https://picsum.photos/seed/placeholder/600/900"} 
+                    alt={currentRead.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-1000"
+                  />
+                  <div className="absolute inset-0 bg-black/5" />
+                </div>
+                <CardContent className="p-10 flex flex-col justify-between bg-gradient-to-br from-white/80 to-transparent">
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-3xl font-headline italic leading-tight">{currentRead.title}</h3>
+                      <p className="text-primary/70 font-medium mt-1">{currentRead.author}</p>
                     </div>
-                    <Progress value={currentRead.progress} className="h-2 bg-primary/5" />
-                    <p className="text-xs text-muted-foreground italic">{currentRead.pagesRead} pages lues sur {currentRead.totalPages}</p>
+                    <div className="pt-4 space-y-4">
+                      <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest opacity-60">
+                        <span>Progression</span>
+                        <span>{currentRead.progress || 0}%</span>
+                      </div>
+                      <Progress value={currentRead.progress || 0} className="h-2 bg-primary/5" />
+                      <p className="text-xs text-muted-foreground italic">{currentRead.pagesRead || 0} pages lues sur {currentRead.totalPages || 0}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-3 pt-10">
-                  <Button asChild className="flex-1 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/10 py-6">
-                    <Link href="/journal">
-                      <PenTool className="mr-2 h-4 w-4" />
-                      Journal de bord
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </div>
-          </Card>
+                  <div className="flex gap-3 pt-10">
+                    <Button asChild className="flex-1 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/10 py-6">
+                      <Link href="/journal">
+                        <PenTool className="mr-2 h-4 w-4" />
+                        Journal de bord
+                      </Link>
+                    </Button>
+                  </div>
+                </CardContent>
+              </div>
+            </Card>
+          ) : (
+            <Card className="glass-card p-12 text-center border-dashed border-primary/20 bg-white/20">
+              <p className="text-muted-foreground italic">Aucune lecture en cours. <br/>Il est temps de commencer un nouveau voyage !</p>
+              <Button asChild variant="outline" className="mt-6 rounded-2xl border-primary/20 text-primary">
+                <Link href="/library">Explorer ma PAL</Link>
+              </Button>
+            </Card>
+          )}
         </section>
 
         <section className="space-y-8">

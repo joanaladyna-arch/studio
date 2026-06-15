@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -8,16 +9,21 @@ import { Search, Plus, Barcode, BookPlus } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useFirestore } from "@/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function AddBookPage() {
+  const { user } = useUser();
+  const db = useFirestore();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const { toast } = useToast();
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, fetch from Google Books API
-    // Mocking results for now
+    // Simulate API search
     setResults([
       { id: "1", title: "Le Petit Prince", author: "Antoine de Saint-Exupéry", cover: "https://picsum.photos/seed/pp/200/300" },
       { id: "2", title: "L'Alchimiste", author: "Paulo Coelho", cover: "https://picsum.photos/seed/alc/200/300" },
@@ -26,10 +32,37 @@ export default function AddBookPage() {
   };
 
   const addBook = (book: any) => {
-    toast({
-      title: "Livre ajouté !",
-      description: `${book.title} a été ajouté à votre bibliothèque.`,
-    });
+    if (!db || !user) {
+      toast({ variant: "destructive", title: "Erreur", description: "Vous devez être connecté pour ajouter un livre." });
+      return;
+    }
+
+    const bookData = {
+      title: book.title,
+      author: book.author,
+      cover: book.cover,
+      status: "pal",
+      favorite: false,
+      createdAt: serverTimestamp()
+    };
+
+    const booksRef = collection(db, "users", user.uid, "books");
+
+    addDoc(booksRef, bookData)
+      .then(() => {
+        toast({
+          title: "Livre ajouté !",
+          description: `${book.title} a été ajouté à votre bibliothèque (PAL).`,
+        });
+      })
+      .catch(async (e) => {
+        const permissionError = new FirestorePermissionError({
+          path: booksRef.path,
+          operation: 'create',
+          requestResourceData: bookData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (

@@ -1,14 +1,17 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
 import { Navigation } from "@/components/navigation";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/tabs";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useCollection, useUser, useFirestore } from "@/firebase";
+import { collection, query, where, orderBy } from "firebase/firestore";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
 export type EmotionBadgeType = 'obsession' | 'larmes' | 'doudou' | 'epicee' | 'plot-twist' | 'addictif' | 'inoubliable' | 'reflexion' | 'romance-mem' | 'fantasy';
@@ -72,41 +75,48 @@ export const CATEGORIES = [
   { id: "favorite", label: "Favoris" },
 ];
 
-export const MOCK_BOOKS: Book[] = [
-  { id: "1", title: "L'élégance du hérisson", author: "Muriel Barbery", status: "progress", favorite: true, cover: "https://picsum.photos/seed/10/200/300", rank: 'diamant', badges: ['obsession', 'inoubliable', 'reflexion'], citation: "Le mouvement de la vie n'a d'intérêt que si on le regarde...", progress: 65 },
-  { id: "2", title: "La vérité sur l'affaire Harry Quebert", author: "Joël Dicker", status: "read", favorite: true, cover: "https://picsum.photos/seed/11/200/300", rank: 'royale', badges: ['plot-twist', 'addictif'] },
-  { id: "3", title: "Sapiens", author: "Yuval Noah Harari", status: "pal", favorite: false, cover: "https://picsum.photos/seed/12/200/300", rank: 'simple' },
-  { id: "4", title: "Moby Dick", author: "Herman Melville", status: "dnf", favorite: false, cover: "https://picsum.photos/seed/13/200/300", rank: 'dnf' },
-  { id: "5", title: "Fourth Wing", author: "Rebecca Yarros", status: "read", favorite: true, cover: "https://picsum.photos/seed/14/200/300", rank: 'diamant', badges: ['fantasy', 'epicee', 'addictif'] },
-  { id: "6", title: "The Seven Husbands of Evelyn Hugo", author: "Taylor Jenkins Reid", status: "read", favorite: true, cover: "https://picsum.photos/seed/15/200/300", rank: 'royale', badges: ['larmes', 'inoubliable'] },
-];
-
 export default function LibraryPage() {
+  const { user } = useUser();
+  const db = useFirestore();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const counts = useMemo(() => ({
-    all: MOCK_BOOKS.length,
-    pal: MOCK_BOOKS.filter(b => b.status === 'pal').length,
-    progress: MOCK_BOOKS.filter(b => b.status === 'progress').length,
-    read: MOCK_BOOKS.filter(b => b.status === 'read').length,
-    dnf: MOCK_BOOKS.filter(b => b.status === 'dnf').length,
-    pause: MOCK_BOOKS.filter(b => b.status === 'pause').length,
-    reread: MOCK_BOOKS.filter(b => b.status === 'reread').length,
-    favorite: MOCK_BOOKS.filter(b => b.favorite).length,
-  }), []);
+  const booksQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return collection(db, "users", user.uid, "books");
+  }, [db, user]);
+
+  const { data: books = [], loading } = useCollection(booksQuery);
+
+  const counts = useMemo(() => {
+    const res: Record<string, number> = {
+      all: books.length,
+      pal: 0,
+      progress: 0,
+      read: 0,
+      dnf: 0,
+      pause: 0,
+      reread: 0,
+      favorite: 0,
+    };
+    books.forEach(b => {
+      if (b.status) res[b.status]++;
+      if (b.favorite) res.favorite++;
+    });
+    return res;
+  }, [books]);
 
   const filteredBooks = useMemo(() => {
-    return MOCK_BOOKS.filter(book => {
-      const matchesSearch = book.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           book.author.toLowerCase().includes(searchQuery.toLowerCase());
+    return books.filter(book => {
+      const matchesSearch = (book.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           (book.author || "").toLowerCase().includes(searchQuery.toLowerCase());
       
       if (!matchesSearch) return false;
       if (activeTab === "all") return true;
       if (activeTab === "favorite") return book.favorite;
       return book.status === activeTab;
     });
-  }, [activeTab, searchQuery]);
+  }, [activeTab, searchQuery, books]);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
@@ -144,17 +154,19 @@ export default function LibraryPage() {
             >
               {cat.label}
               <Badge variant="secondary" className="h-5 px-1.5 min-w-[1.25rem] flex items-center justify-center text-[10px] bg-primary/5 text-primary border-none font-bold">
-                {counts[cat.id as keyof typeof counts] || 0}
+                {counts[cat.id] || 0}
               </Badge>
             </TabsTrigger>
           ))}
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-6">
-          {filteredBooks.length > 0 ? (
+          {loading ? (
+            <div className="py-32 text-center text-muted-foreground italic">Chargement de votre bibliothèque...</div>
+          ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
               {filteredBooks.map((book) => (
-                <BookCard key={book.id} book={book} />
+                <BookCard key={book.id} book={book as Book} />
               ))}
             </div>
           ) : (
@@ -176,7 +188,7 @@ export function BookCard({ book }: { book: Book }) {
   return (
     <div className="space-y-4 group">
       <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/40 group-hover:shadow-2xl transition-all duration-700 group-hover:-translate-y-2">
-        <Image src={book.cover} alt={book.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
+        <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
         
         {/* Overlays */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
@@ -209,7 +221,7 @@ export function BookCard({ book }: { book: Book }) {
            <div className="flex flex-wrap gap-1.5">
               {book.badges?.slice(0, 2).map(b => (
                 <span key={b} className="text-[9px] px-2 py-1 rounded-full bg-white/80 text-foreground shadow-sm flex items-center gap-1 font-bold">
-                  {EMOTIONS[b].icon} {EMOTIONS[b].label.split(' ')[0]}
+                  {EMOTIONS[b]?.icon} {EMOTIONS[b]?.label.split(' ')[0]}
                 </span>
               ))}
            </div>
@@ -225,6 +237,7 @@ export function BookCard({ book }: { book: Book }) {
 
 function StatusBadge({ status }: { status: BookStatus }) {
   const config = STATUSES[status];
+  if (!config) return null;
   return (
     <Badge className={cn("text-[9px] font-bold border-none px-2.5 py-0.5 h-5 text-center text-white rounded-full shadow-lg", config.color)}>
       {config.label}

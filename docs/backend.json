@@ -1,0 +1,64 @@
+
+{
+  "entities": {
+    "Book": {
+      "title": "Book",
+      "description": "A book in the user's library.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "status": { "type": "string", "enum": ["pal", "progress", "read", "dnf", "pause", "reread"] },
+        "favorite": { "type": "boolean" },
+        "cover": { "type": "string" },
+        "rank": { "type": "string", "enum": ["diamant", "royale", "doree", "argentee", "simple", "froissee", "brisee", "dnf"] },
+        "badges": { "type": "array", "items": { "type": "string" } },
+        "progress": { "type": "number" },
+        "totalPages": { "type": "number" },
+        "pagesRead": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "author", "status"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A reading or listening note.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["lecture", "écoute"] },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "title", "content", "date"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "The user's settings and reading goals.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "annualGoal": { "type": "number" },
+        "theme": { "type": "string" },
+        "avatarUrl": { "type": "string" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data."
+    },
+    "/users/{userId}/books/{bookId}": {
+      "schema": "Book",
+      "description": "Collection of books in the user's library."
+    },
+    "/users/{userId}/journal/{entryId}": {
+      "schema": "JournalEntry",
+      "description": "User's reading and listening notes."
+    }
+  }
+}

@@ -1,14 +1,26 @@
+
 "use client";
 
 import { useMemo } from "react";
 import { Navigation } from "@/components/navigation";
-import { BookCard, MOCK_BOOKS } from "@/app/library/page";
+import { BookCard, Book } from "@/app/library/page";
 import { Diamond, Crown, Sparkles, Heart } from "lucide-react";
+import { useCollection, useUser, useFirestore } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
 
 export default function CoeurDePlumePage() {
-  const prestigiousBooks = useMemo(() => 
-    MOCK_BOOKS.filter(b => b.rank === 'diamant' || b.rank === 'royale'), 
-  []);
+  const { user } = useUser();
+  const db = useFirestore();
+
+  const prestigiousQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return query(
+      collection(db, "users", user.uid, "books"),
+      where("rank", "in", ["diamant", "royale"])
+    );
+  }, [db, user]);
+
+  const { data: prestigiousBooks = [], loading } = useCollection(prestigiousQuery);
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
@@ -27,7 +39,9 @@ export default function CoeurDePlumePage() {
       <div className="relative">
         <div className="absolute inset-0 bg-watercolor rounded-[4rem] -z-10" />
         
-        {prestigiousBooks.length > 0 ? (
+        {loading ? (
+          <div className="py-24 text-center italic text-muted-foreground">Ouverture de l'écrin...</div>
+        ) : prestigiousBooks.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-10 p-8">
             {prestigiousBooks.map((book) => (
               <div key={book.id} className="relative group">
@@ -42,7 +56,7 @@ export default function CoeurDePlumePage() {
                         </div>
                     )}
                 </div>
-                <BookCard book={book} />
+                <BookCard book={book as Book} />
               </div>
             ))}
           </div>

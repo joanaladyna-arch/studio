@@ -1,7 +1,9 @@
+
 "use client";
 
+import { useMemo } from "react";
 import { Navigation } from "@/components/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Headphones, FileText, Target, BarChart3, PieChart } from "lucide-react";
 import { 
@@ -16,33 +18,35 @@ import {
   PieChart as RechartsPieChart
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-
-const monthlyData = [
-  { month: "Jan", books: 2 },
-  { month: "Fév", books: 1 },
-  { month: "Mar", books: 3 },
-  { month: "Avr", books: 2 },
-  { month: "Mai", books: 4 },
-  { month: "Juin", books: 2 },
-  { month: "Juil", books: 0 },
-  { month: "Août", books: 1 },
-  { month: "Sep", books: 3 },
-  { month: "Oct", books: 2 },
-  { month: "Nov", books: 0 },
-  { month: "Déc", books: 0 },
-];
-
-const genreData = [
-  { name: "Roman", value: 45, color: "hsl(var(--primary))" },
-  { name: "Essai", value: 25, color: "hsl(var(--chart-2))" },
-  { name: "BD/Manga", value: 20, color: "hsl(var(--chart-3))" },
-  { name: "Poésie", value: 10, color: "hsl(var(--accent))" },
-];
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 export default function StatsPage() {
+  const { user } = useUser();
+  const db = useFirestore();
+
+  const booksQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return collection(db, "users", user.uid, "books");
+  }, [db, user]);
+
+  const { data: books = [] } = useCollection(booksQuery);
+
+  const stats = useMemo(() => {
+    const read = books.filter(b => b.status === 'read').length;
+    const progress = books.filter(b => b.status === 'progress').length;
+    const totalPages = books.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
+    
+    return {
+      read,
+      progress,
+      totalPages
+    };
+  }, [books]);
+
   const goals = [
-    { label: "Objectif Annuel", current: 12, total: 24, icon: Target, color: "bg-primary" },
-    { label: "Objectif Mensuel", current: 2, total: 3, icon: Target, color: "bg-chart-2" },
+    { label: "Objectif Annuel", current: stats.read, total: 24, icon: Target, color: "bg-primary" },
+    { label: "Objectif Mensuel", current: stats.read > 0 ? 1 : 0, total: 3, icon: Target, color: "bg-chart-2" },
     { label: "Objectif Hebdo", current: 0, total: 1, icon: Target, color: "bg-accent" },
   ];
 
@@ -63,7 +67,7 @@ export default function StatsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Livres lus</p>
-              <p className="text-2xl font-bold">12</p>
+              <p className="text-2xl font-bold">{stats.read}</p>
             </div>
           </CardContent>
         </Card>
@@ -74,7 +78,7 @@ export default function StatsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Pages lues</p>
-              <p className="text-2xl font-bold">3 450</p>
+              <p className="text-2xl font-bold">{stats.totalPages.toLocaleString()}</p>
             </div>
           </CardContent>
         </Card>
@@ -85,68 +89,11 @@ export default function StatsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Temps d'écoute</p>
-              <p className="text-2xl font-bold">42h 15m</p>
+              <p className="text-2xl font-bold">0h 0m</p>
             </div>
           </CardContent>
         </Card>
       </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <section className="space-y-4">
-          <h2 className="text-2xl font-headline flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" /> Progression mensuelle
-          </h2>
-          <Card className="p-4 glass-card h-[300px]">
-            <ChartContainer config={{
-              books: { label: "Livres", color: "hsl(var(--primary))" }
-            }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyData}>
-                  <XAxis dataKey="month" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="books" fill="var(--color-books)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </Card>
-        </section>
-
-        <section className="space-y-4">
-          <h2 className="text-2xl font-headline flex items-center gap-2">
-            <PieChart className="h-6 w-6 text-accent" /> Répartition par genre
-          </h2>
-          <Card className="p-4 glass-card h-[300px] flex items-center justify-center">
-             <ResponsiveContainer width="100%" height="100%">
-                <RechartsPieChart>
-                  <Pie
-                    data={genreData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {genreData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </RechartsPieChart>
-             </ResponsiveContainer>
-             <div className="space-y-2 ml-4">
-                {genreData.map((g) => (
-                  <div key={g.name} className="flex items-center gap-2 text-xs">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: g.color }} />
-                    <span className="font-medium">{g.name}</span>
-                    <span className="text-muted-foreground">{g.value}%</span>
-                  </div>
-                ))}
-             </div>
-          </Card>
-        </section>
-      </div>
 
       <section className="space-y-4">
         <h2 className="text-2xl font-headline flex items-center gap-2">
