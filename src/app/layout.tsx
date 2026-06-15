@@ -9,6 +9,9 @@ import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { useUser } from "@/firebase";
 import { usePathname, useRouter } from "next/navigation";
 
+/**
+ * Gère la protection des routes et les redirections automatiques.
+ */
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
   const pathname = usePathname();
@@ -20,22 +23,30 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const isAuthPage = pathname === "/login" || pathname === "/signup";
 
     if (!user && !isAuthPage) {
-      console.log("Plume AuthGuard: Redirection vers /login");
+      console.log("AuthGuard: Redirection vers /login");
       router.replace("/login");
     } 
     else if (user && isAuthPage) {
-      console.log("Plume AuthGuard: Redirection vers /");
+      console.log("AuthGuard: Redirection vers /");
       router.replace("/");
     }
   }, [user, loading, pathname, router]);
 
-  // Si on charge, on attend
-  if (loading) return null;
+  // Si on est en train de charger l'état auth, on affiche un indicateur minimaliste
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background italic text-primary/40">
+        Chargement du sanctuaire...
+      </div>
+    );
+  }
 
-  // On évite d'afficher le contenu si une redirection est en cours
   const isAuthPage = pathname === "/login" || pathname === "/signup";
-  if (!user && !isAuthPage) return null;
+
+  // Si connecté et sur une page auth, on ne rend rien (redirection en cours)
   if (user && isAuthPage) return null;
+  // Si non connecté et pas sur une page auth, on ne rend rien (redirection en cours)
+  if (!user && !isAuthPage) return null;
 
   return <>{children}</>;
 }
@@ -70,6 +81,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen pb-20 md:pb-0 overflow-x-hidden relative">
         <FirebaseClientProvider>
+          {/* Grain de papier texture */}
           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
           
           {showSplash ? (

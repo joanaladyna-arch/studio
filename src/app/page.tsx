@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useMemo } from "react";
@@ -5,16 +6,29 @@ import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Trophy, PenTool, Heart, Bookmark, Coffee, Feather } from "lucide-react";
+import { BookOpen, Clock, Trophy, PenTool, Heart, Bookmark, Coffee, Feather, LogOut, CheckCircle2 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useAuth } from "@/firebase";
 import { collection, query, where, limit } from "firebase/firestore";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
   const { user } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    await signOut(auth);
+    toast({ title: "Déconnexion", description: "À bientôt sur Plume." });
+    router.replace("/login");
+  };
 
   // Fetch current reads
   const currentReadQuery = useMemo(() => {
@@ -52,11 +66,19 @@ export default function Home() {
       <Navigation />
       
       <header className="space-y-6 pt-8 text-center relative">
+        <div className="absolute top-0 right-0 p-4">
+           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border border-emerald-100">
+              <CheckCircle2 className="h-3 w-3" />
+              PLUME est connecté
+           </div>
+        </div>
+
         <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-8 opacity-20 pointer-events-none">
           <Feather className="h-12 w-12 text-primary animate-float" />
         </div>
         
         <div className="space-y-2">
+          <p className="font-headline text-2xl italic text-primary/60">Bonjour {user?.displayName || user?.email?.split('@')[0] || "Lectrice"}</p>
           <h1 className="text-6xl font-headline text-foreground tracking-tight italic">PLUME</h1>
           <div className="flex items-center justify-center gap-2 text-primary/60 font-medium">
             <Coffee className="h-4 w-4" />
@@ -66,7 +88,7 @@ export default function Home() {
         
         <div className="max-w-xl mx-auto p-8 rounded-[2.5rem] bg-white/40 border border-white/60 shadow-inner backdrop-blur-sm">
           <p className="text-sm text-muted-foreground leading-relaxed italic">
-            Plume est un journal de lecture authentique, sans IA obligatoire, pensé pour garder une trace sincère de tes lectures, de tes émotions et de ton parcours de lectrice.
+            Bienvenue dans ton sanctuaire. Plume est pensé pour garder une trace sincère de tes lectures, de tes émotions et de ton parcours unique.
           </p>
         </div>
       </header>
@@ -142,18 +164,28 @@ export default function Home() {
               <Bookmark className="h-6 w-6 text-primary/40" /> Raccourcis
             </h2>
             <div className="grid gap-4">
-              <Link href="/coeur-de-plume" className="flex items-center gap-5 p-6 rounded-[2rem] bg-accent/20 border border-white/60 hover:bg-accent/30 transition-all group shadow-sm">
-                <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Heart className="h-5 w-5 text-primary" />
-                </div>
-                <span className="font-headline text-xl italic">Cœur de Plume</span>
-              </Link>
               <Link href="/library" className="flex items-center gap-5 p-6 rounded-[2rem] bg-secondary/10 border border-white/60 hover:bg-secondary/20 transition-all group shadow-sm">
                 <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
                   <BookOpen className="h-5 w-5 text-secondary" />
                 </div>
                 <span className="font-headline text-xl italic">Ma Bibliothèque</span>
               </Link>
+              <Link href="/coeur-de-plume" className="flex items-center gap-5 p-6 rounded-[2rem] bg-accent/20 border border-white/60 hover:bg-accent/30 transition-all group shadow-sm">
+                <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Heart className="h-5 w-5 text-primary" />
+                </div>
+                <span className="font-headline text-xl italic">Cœur de Plume</span>
+              </Link>
+              <Button 
+                onClick={handleLogout}
+                variant="ghost" 
+                className="w-full flex items-center justify-start gap-5 p-6 rounded-[2rem] bg-red-50/10 border border-red-100 hover:bg-red-50/20 transition-all group shadow-sm h-auto"
+              >
+                <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <LogOut className="h-5 w-5 text-red-400" />
+                </div>
+                <span className="font-headline text-xl italic text-red-500">Déconnexion</span>
+              </Button>
             </div>
           </div>
 
@@ -165,10 +197,6 @@ export default function Home() {
             <p className="text-lg italic text-foreground/80 leading-relaxed font-headline">
               "Le mouvement de la vie n'a d'intérêt que si on le regarde de l'intérieur."
             </p>
-            <div className="flex items-center gap-2 mt-4">
-              <span className="h-px w-6 bg-primary/30" />
-              <p className="text-[10px] font-bold text-primary/50 uppercase tracking-tighter">L'élégance du hérisson</p>
-            </div>
           </div>
         </section>
       </div>
