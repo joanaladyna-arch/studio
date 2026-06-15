@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo } from "react";
@@ -90,17 +91,17 @@ export default function SharePage() {
                     )}
 
                     <div className="flex flex-wrap justify-center gap-1.5">
-                      {selectedBook.badges?.map(b => (
-                        <span key={b} className="text-[9px] px-2 py-1 rounded-full bg-white/90 border border-white shadow-sm font-bold flex items-center gap-1">
-                          {EMOTIONS[b]?.icon} {EMOTIONS[b]?.label}
+                      {selectedBook.emotions?.map(e => (
+                        <span key={e} className="text-[9px] px-2 py-1 rounded-full bg-white/90 border border-white shadow-sm font-bold flex items-center gap-1">
+                          {EMOTIONS[e]?.icon} {EMOTIONS[e]?.label}
                         </span>
                       ))}
                     </div>
 
-                    {selectedBook.citation && (
+                    {selectedBook.favoriteQuote && (
                       <div className="pt-4 border-t border-primary/10 w-full">
                         <p className="text-xs italic leading-relaxed text-muted-foreground px-4">
-                          "{selectedBook.citation}"
+                          "{selectedBook.favoriteQuote}"
                         </p>
                       </div>
                     )}
@@ -128,7 +129,7 @@ export default function SharePage() {
         <div className="py-32 text-center space-y-4 glass-card p-12">
           <p className="text-muted-foreground italic text-lg">Vous n'avez pas encore de livres lus ou en cours pour créer une fiche.</p>
           <Button asChild variant="link" className="text-primary">
-            <a href="/library">Accéder à ma bibliothèque</a>
+            <Link href="/library">Accéder à ma bibliothèque</Link>
           </Button>
         </div>
       )}

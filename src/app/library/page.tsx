@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon, MessageSquare, Quote, PersonStanding, MapPin } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon, MessageSquare, Quote, PersonStanding, MapPin, Smile } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,17 @@ export const GENRES_LIST = [
 export const TROPES_LIST = [
   "Soulmates", "Forbidden Love", "Enemies to Lovers", "Fake Dating", "Slow Burn", "Found Family", "Morally Grey", "Small Town"
 ];
+
+export const EMOTIONS: Record<string, { label: string, icon: string }> = {
+  "Bouleversé": { label: "Bouleversé", icon: "🎭" },
+  "Inspiré": { label: "Inspiré", icon: "✨" },
+  "Passionné": { label: "Passionné", icon: "❤️" },
+  "Amusé": { label: "Amusé", icon: "😊" },
+  "Intrigué": { label: "Intrigué", icon: "🔍" },
+  "Serein": { label: "Serein", icon: "🌿" },
+  "Mélancolique": { label: "Mélancolique", icon: "🎻" },
+  "Révolté": { label: "Révolté", icon: "⚡" },
+};
 
 export const RANKS: Record<RankType, { label: string, icon: any, color: string, description: string }> = {
   diamant: { label: "Diamant de Plume", icon: Diamond, color: "text-cyan-400", description: "Coup de cœur absolu" },
@@ -290,10 +301,10 @@ export function BookCard({ book }: { book: Book }) {
 function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClose: () => void, onSave: (data: Partial<Book>) => void, onDelete: (id: string) => void }) {
   const [genres, setGenres] = useState<string[]>(book.genres || []);
   const [tropes, setTropes] = useState<string[]>(book.tropes || []);
+  const [emotions, setEmotions] = useState<string[]>(book.emotions || []);
   const [status, setStatus] = useState<BookStatus>(book.status);
   const [rank, setRank] = useState<RankType | undefined>(book.rank);
   const [favorite, setFavorite] = useState(book.favorite);
-  const [progress, setProgress] = useState(book.progress || 0);
   const [rating, setRating] = useState(book.rating || 0);
   const [review, setReview] = useState(book.review || "");
   const [favoriteQuote, setFavoriteQuote] = useState(book.favoriteQuote || "");
@@ -484,6 +495,25 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                         className="min-h-[150px] bg-white/40 border-none rounded-3xl p-6 italic"
                       />
                     </div>
+
+                    <div className="space-y-4">
+                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Émotions ressenties</label>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(EMOTIONS).map(([key, val]) => (
+                          <button 
+                            key={key} 
+                            onClick={() => toggleItem(emotions, setEmotions, key)}
+                            className={cn(
+                              "text-[10px] px-4 py-2 rounded-full border transition-all uppercase tracking-widest flex items-center gap-2",
+                              emotions.includes(key) ? "bg-accent text-accent-foreground border-accent" : "bg-white/50 border-transparent"
+                            )}
+                          >
+                            <span>{val.icon}</span>
+                            <span>{val.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     
                     <div className="space-y-4">
                       <Label className="flex items-center gap-2 italic"><Quote className="h-4 w-4 text-primary/40" /> Citation préférée</Label>
@@ -528,7 +558,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
              <div className="flex gap-4">
                <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-8">Annuler</Button>
                <Button 
-                onClick={() => onSave({ genres, tropes, status, rank, favorite, progress, publisher, pages, rating, review, favoriteQuote, favoriteCharacters, memorableScene })} 
+                onClick={() => onSave({ genres, tropes, emotions, status, rank, favorite, publisher, pages, rating, review, favoriteQuote, favoriteCharacters, memorableScene })} 
                 className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20"
                >
                  Enregistrer
