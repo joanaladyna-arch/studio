@@ -9,7 +9,6 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { collection, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -24,20 +23,22 @@ export interface Book {
   id: string;
   title: string;
   author: string;
-  status: BookStatus;
-  favorite: boolean;
+  publisher?: string;
+  isbn?: string;
+  publicationDate?: string;
+  series?: string;
+  volume?: string;
   cover: string;
-  rank?: RankType;
+  description?: string;
   genres?: string[];
   tropes?: string[];
-  review?: string;
-  citation?: string;
+  pages?: number;
+  status: BookStatus;
+  favorite: boolean;
+  rank?: RankType;
   progress?: number;
-  totalPages?: number;
   pagesRead?: number;
-  description?: string;
-  isbn?: string;
-  dateAdded?: string;
+  createdAt?: any;
 }
 
 export const GENRES_LIST = [
@@ -231,7 +232,7 @@ export default function LibraryPage() {
   );
 }
 
-function BookCard({ book }: { book: Book }) {
+export function BookCard({ book }: { book: Book }) {
   const rank = book.rank ? RANKS[book.rank] : null;
   const RankIcon = rank?.icon;
 

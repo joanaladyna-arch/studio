@@ -8,6 +8,11 @@
       "properties": {
         "title": { "type": "string" },
         "author": { "type": "string" },
+        "publisher": { "type": "string" },
+        "isbn": { "type": "string" },
+        "publicationDate": { "type": "string" },
+        "series": { "type": "string" },
+        "volume": { "type": "string" },
         "status": { "type": "string", "enum": ["pal", "progress", "read", "dnf", "pause", "reread"] },
         "favorite": { "type": "boolean" },
         "cover": { "type": "string" },
@@ -15,9 +20,8 @@
         "genres": { "type": "array", "items": { "type": "string" } },
         "tropes": { "type": "array", "items": { "type": "string" } },
         "description": { "type": "string" },
-        "publishedDate": { "type": "string" },
+        "pages": { "type": "number" },
         "progress": { "type": "number" },
-        "totalPages": { "type": "number" },
         "pagesRead": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },

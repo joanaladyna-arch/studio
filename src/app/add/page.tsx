@@ -38,12 +38,15 @@ export default function AddBookPage() {
           id: item.id,
           title: info.title,
           author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
+          publisher: info.publisher || "Inconnu",
           cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
-          totalPages: info.pageCount || 0,
+          pages: info.pageCount || 0,
           description: info.description || "Aucun résumé disponible.",
-          publishedDate: info.publishedDate || "N/A",
+          publicationDate: info.publishedDate || "N/A",
           genres: info.categories || [],
-          isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || info.industryIdentifiers?.[0]?.identifier || "N/A"
+          isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || info.industryIdentifiers?.[0]?.identifier || "N/A",
+          series: info.series || "",
+          volume: info.volume || ""
         };
       }) || [];
 
@@ -67,19 +70,22 @@ export default function AddBookPage() {
     const bookData = {
       title: book.title,
       author: book.author,
+      publisher: book.publisher,
       isbn: book.isbn,
+      publicationDate: book.publicationDate,
+      series: book.series,
+      volume: book.volume,
       cover: book.cover || "https://picsum.photos/seed/placeholder/200/300",
-      status: "pal", // Default status
-      favorite: false,
-      totalPages: book.totalPages,
-      pagesRead: 0,
-      progress: 0,
       description: book.description,
-      publishedDate: book.publishedDate,
       genres: book.genres,
       tropes: [],
+      pages: book.pages,
+      // Internal app defaults
+      status: "pal",
+      favorite: false,
+      progress: 0,
+      pagesRead: 0,
       createdAt: serverTimestamp(),
-      dateAdded: new Date().toISOString()
     };
 
     const booksRef = collection(db, "users", user.uid, "books");
@@ -145,11 +151,12 @@ export default function AddBookPage() {
                   <div className="space-y-1">
                     <h3 className="text-xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
                     <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                    {book.publisher && <p className="text-[8px] text-muted-foreground italic">Éditeur : {book.publisher}</p>}
                   </div>
 
                   <div className="flex flex-wrap gap-3 text-[9px] font-bold uppercase tracking-widest opacity-60">
-                    <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publishedDate.split('-')[0]}</div>
-                    <div className="flex items-center gap-1.5"><Tag className="h-3 w-3" /> {book.totalPages} pages</div>
+                    <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publicationDate.split('-')[0]}</div>
+                    <div className="flex items-center gap-1.5"><Tag className="h-3 w-3" /> {book.pages} pages</div>
                   </div>
 
                   <ScrollArea className="h-20 pr-4">
