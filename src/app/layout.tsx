@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -5,6 +6,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SplashScreen } from "@/components/splash-screen";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { Navigation } from "@/components/navigation";
 
 export default function RootLayout({
   children,
@@ -18,6 +20,8 @@ export default function RootLayout({
     if (hasVisited) {
       setShowSplash(false);
     }
+    // Debug domaine
+    console.log("PLUME - Domaine actuel (hostname) :", typeof window !== "undefined" ? window.location.hostname : "N/A");
   }, []);
 
   const handleSplashFinish = () => {
@@ -34,7 +38,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased bg-background text-foreground min-h-screen pb-20 md:pb-0 overflow-x-hidden relative">
+      <body className="font-body antialiased bg-background text-foreground min-h-screen pb-24 md:pb-0 md:pt-20 overflow-x-hidden relative">
         <FirebaseClientProvider>
           {/* Grain de papier texture */}
           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
@@ -42,9 +46,12 @@ export default function RootLayout({
           {showSplash ? (
             <SplashScreen onFinish={handleSplashFinish} />
           ) : (
-            <main className="max-w-4xl mx-auto px-6 py-12 md:py-16">
-              {children}
-            </main>
+            <>
+              <Navigation />
+              <main className="max-w-4xl mx-auto px-6 py-12 md:py-16">
+                {children}
+              </main>
+            </>
           )}
           <Toaster />
         </FirebaseClientProvider>

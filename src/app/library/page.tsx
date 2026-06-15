@@ -2,10 +2,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Navigation } from "@/components/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Pencil, X, Check } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { useCollection, useUser, useFirestore } from "@/firebase";
 import { collection, doc, updateDoc } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
 export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
@@ -94,6 +93,7 @@ export default function LibraryPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [editingBook, setEditingBook] = useState<Book | null>(null);
+  const { toast } = useToast();
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -145,9 +145,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
-      <Navigation />
-
+    <div className="space-y-10 animate-in fade-in duration-1000">
       <header className="space-y-6">
         <div className="text-center">
           <h1 className="text-5xl font-headline tracking-tight">Ma Bibliothèque</h1>

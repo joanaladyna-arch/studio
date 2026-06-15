@@ -2,19 +2,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Home, Library, PenTool, User, BarChart3, Heart, Feather, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 const navItems = [
   { href: "/", label: "Accueil", icon: Home },
   { href: "/library", label: "Bibliothèque", icon: Library },
-  { href: "/coeur-de-plume", label: "Cœur", icon: Heart },
   { href: "/journal", label: "Journal", icon: PenTool },
-  { href: "/stats", label: "Stats", icon: BarChart3 },
+  { href: "/coeur-de-plume", label: "Cœur de Plume", icon: Heart },
+  { href: "/stats", label: "Statistiques", icon: BarChart3 },
   { href: "/profile", label: "Profil", icon: User },
 ];
 
@@ -43,9 +44,9 @@ export function Navigation() {
 
   return (
     <>
-      {/* Desktop Navigation */}
-      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-20 items-center justify-center gap-12 px-8">
-        <div className="flex items-center gap-2 mr-8">
+      {/* Desktop Navigation (Top) */}
+      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-20 items-center justify-center gap-8 px-8">
+        <div className="flex items-center gap-2 mr-12">
           <Feather className="h-6 w-6 text-primary" />
           <span className="font-headline text-2xl tracking-widest italic text-primary/80">PLUME</span>
         </div>
@@ -77,7 +78,7 @@ export function Navigation() {
         </button>
       </nav>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation (Fixed Bottom) */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-2xl border-t border-white/40 px-2 py-4 flex justify-around items-center md:hidden h-24">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -87,14 +88,14 @@ export function Navigation() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-2 transition-all duration-500 p-2 rounded-2xl min-w-[50px]",
+                "flex flex-col items-center justify-center gap-2 transition-all duration-500 p-2 rounded-2xl min-w-[60px]",
                 isActive 
-                  ? "text-primary bg-primary/5" 
+                  ? "text-primary bg-primary/10" 
                   : "text-muted-foreground hover:text-primary"
               )}
             >
               <Icon className={cn("h-5 w-5 transition-transform duration-500", isActive && "scale-110")} />
-              <span className="text-[10px] font-headline italic tracking-tight">{item.label}</span>
+              <span className="text-[9px] font-headline italic tracking-tight font-bold">{item.label}</span>
             </Link>
           );
         })}

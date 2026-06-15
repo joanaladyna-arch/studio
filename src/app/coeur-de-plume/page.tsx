@@ -2,7 +2,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Navigation } from "@/components/navigation";
 import { BookCard, Book } from "@/app/library/page";
 import { Diamond, Crown, Sparkles, Heart } from "lucide-react";
 import { useCollection, useUser, useFirestore } from "@/firebase";
@@ -24,8 +23,6 @@ export default function CoeurDePlumePage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
-      <Navigation />
-
       <header className="text-center space-y-4 py-12">
         <div className="flex justify-center gap-3 mb-2">
           <Heart className="h-8 w-8 text-primary/40 animate-pulse" />

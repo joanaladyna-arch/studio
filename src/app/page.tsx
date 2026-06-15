@@ -1,7 +1,7 @@
+
 "use client";
 
 import { useMemo } from "react";
-import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -62,8 +62,6 @@ export default function Home() {
 
   return (
     <div className="space-y-12 animate-paper">
-      <Navigation />
-      
       <header className="space-y-6 pt-8 text-center relative">
         <div className="absolute top-0 right-0 p-4">
            <div className={cn(
@@ -106,14 +104,14 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="grid grid-cols-3 gap-6">
+      <section className="grid grid-cols-3 gap-4 md:gap-6">
         {stats.map((stat, i) => (
-          <div key={i} className="flex flex-col items-center p-6 rounded-[2rem] bg-white/50 border border-white/60 shadow-sm hover:shadow-md transition-all duration-500">
-            <div className={cn("p-3 mb-3 rounded-full bg-white shadow-sm border border-primary/5", stat.color)}>
+          <div key={i} className="flex flex-col items-center p-4 md:p-6 rounded-[2rem] bg-white/50 border border-white/60 shadow-sm hover:shadow-md transition-all duration-500">
+            <div className={cn("p-3 mb-2 md:mb-3 rounded-full bg-white shadow-sm border border-primary/5", stat.color)}>
               <stat.icon className="h-5 w-5" />
             </div>
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold">{stat.label}</p>
-            <p className="text-2xl font-headline mt-1">{stat.value}</p>
+            <p className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold text-center">{stat.label}</p>
+            <p className="text-xl md:text-2xl font-headline mt-1">{stat.value}</p>
           </div>
         ))}
       </section>
