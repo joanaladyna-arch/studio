@@ -12,13 +12,13 @@ export type FirebaseInstances = {
 };
 
 export function initializeFirebase(): FirebaseInstances {
-  // Vérification de la présence de la clé API
-  const isConfigValid = !!(firebaseConfig.apiKey && firebaseConfig.apiKey !== "");
+  // Vérification basique de la configuration
+  const hasConfig = !!firebaseConfig.projectId;
 
-  if (!isConfigValid) {
+  if (!hasConfig) {
     console.warn(
-      "PLUME : La configuration Firebase est manquante. " +
-      "Veuillez connecter votre projet dans le panneau latéral Firebase Studio pour activer l'authentification et la base de données."
+      "PLUME : La configuration Firebase semble incomplète. " +
+      "Veuillez lier votre projet dans le panneau Firebase Studio pour activer les services."
     );
     return { app: null, db: null, auth: null };
   }
