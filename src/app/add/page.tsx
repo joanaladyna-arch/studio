@@ -1,9 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info, AlertCircle } from "lucide-react";
+import { 
+  Search, 
+  Plus, 
+  BookPlus, 
+  Loader2, 
+  Sparkles, 
+  Calendar, 
+  Tag, 
+  Info, 
+  AlertCircle,
+  Building2,
+  Hash,
+  Languages,
+  BookOpen
+} from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +29,9 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+// Simple cache structure
+const searchCache: Record<string, any[]> = {};
+
 export default function AddBookPage() {
   const { user } = useUser();
   const db = useFirestore();
@@ -22,30 +39,91 @@ export default function AddBookPage() {
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const lastSearchTime = useRef<number>(0);
   const { toast } = useToast();
+
+  const searchOpenLibrary = async (q: string) => {
+    const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10`;
+    console.log(`[PLUME] Appel de secours Open Library: ${olUrl}`);
+
+    try {
+      const response = await fetch(olUrl);
+      if (!response.ok) throw new Error(`Erreur Open Library: ${response.status}`);
+
+      const data = await response.json();
+      const formattedResults = data.docs?.map((doc: any) => ({
+        id: doc.key,
+        source: 'openlibrary',
+        title: doc.title || "Titre inconnu",
+        author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
+        publisher: doc.publisher ? doc.publisher[0] : "Éditeur inconnu",
+        cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
+        pages: doc.number_of_pages_median || 0,
+        description: doc.first_sentence ? doc.first_sentence[0] : "Résumé non disponible via Open Library.",
+        publicationDate: doc.first_publish_year ? doc.first_publish_year.toString() : "Date inconnue",
+        genres: doc.subject ? doc.subject.slice(0, 5) : [],
+        isbn: doc.isbn ? doc.isbn[0] : "N/A",
+        language: doc.language ? doc.language[0] : "FR",
+      })) || [];
+
+      return formattedResults;
+    } catch (error: any) {
+      console.error(`[PLUME] Erreur Open Library:`, error);
+      return [];
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    const cleanQuery = query.trim().toLowerCase();
+    if (!cleanQuery) return;
+
+    // 1. Anti-spam / Throttling (attendre 1s entre les requêtes)
+    const now = Date.now();
+    if (now - lastSearchTime.current < 1000) {
+      toast({ 
+        title: "Doucement !", 
+        description: "Veuillez patienter un instant avant la prochaine recherche.",
+        variant: "default"
+      });
+      return;
+    }
+    lastSearchTime.current = now;
+
+    // 2. Cache check
+    if (searchCache[cleanQuery]) {
+      console.log(`[PLUME] Utilisation du cache pour: ${cleanQuery}`);
+      setResults(searchCache[cleanQuery]);
+      setErrorDetails(null);
+      return;
+    }
 
     setIsSearching(true);
     setResults([]);
     setErrorDetails(null);
     
-    // Tentative avec Google Books
     const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`;
-    console.log(`[PLUME] Appel Google Books: ${googleUrl}`);
+    console.log(`[PLUME] Recherche Google Books: ${googleUrl}`);
 
     try {
       const response = await fetch(googleUrl);
-      console.log(`[PLUME] Google Books Status: ${response.status}`);
       
-      if (!response.ok) {
-        throw new Error(`Google Books API Error: ${response.status}`);
+      // Gestion spécifique du 429 (Too Many Requests)
+      if (response.status === 429) {
+        console.warn("[PLUME] Limite Google Books atteinte (429). Basculement vers Open Library...");
+        const olResults = await searchOpenLibrary(query);
+        if (olResults.length > 0) {
+          setResults(olResults);
+          searchCache[cleanQuery] = olResults;
+        } else {
+          setErrorDetails("Service Google temporairement indisponible. Veuillez réessayer dans quelques minutes.");
+        }
+        return;
       }
 
+      if (!response.ok) throw new Error(`Google Books API Error: ${response.status}`);
+
       const data = await response.json();
-      console.log(`[PLUME] Google Books Data Received:`, data);
 
       if (data.items && data.items.length > 0) {
         const formattedResults = data.items.map((item: any) => {
@@ -61,66 +139,30 @@ export default function AddBookPage() {
             description: info.description || "Aucun résumé disponible.",
             publicationDate: info.publishedDate || "Date inconnue",
             genres: info.categories || [],
+            language: info.language?.toUpperCase() || "FR",
             isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
                   info.industryIdentifiers?.[0]?.identifier || 
                   "N/A",
-            series: "", // Google Books expose peu la série directement
-            volume: ""
           };
         });
         setResults(formattedResults);
+        searchCache[cleanQuery] = formattedResults;
       } else {
-        console.log(`[PLUME] Aucun résultat Google Books. Tentative Open Library...`);
-        await searchOpenLibrary(query);
+        console.log(`[PLUME] Aucun résultat Google. Tentative Open Library...`);
+        const olResults = await searchOpenLibrary(query);
+        setResults(olResults);
+        if (olResults.length > 0) searchCache[cleanQuery] = olResults;
+        else setErrorDetails("Aucun livre trouvé sur les plateformes littéraires.");
       }
     } catch (error: any) {
-      console.error(`[PLUME] Erreur Google Books:`, error);
-      setErrorDetails(`Google Books indisponible (${error.message}). Tentative de secours...`);
-      await searchOpenLibrary(query);
+      console.error(`[PLUME] Erreur critique recherche:`, error);
+      const olResults = await searchOpenLibrary(query);
+      setResults(olResults);
+      if (olResults.length === 0) {
+        setErrorDetails("Services de recherche indisponibles. Vérifiez votre connexion.");
+      }
     } finally {
       setIsSearching(false);
-    }
-  };
-
-  const searchOpenLibrary = async (q: string) => {
-    const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10`;
-    console.log(`[PLUME] Appel Open Library: ${olUrl}`);
-
-    try {
-      const response = await fetch(olUrl);
-      console.log(`[PLUME] Open Library Status: ${response.status}`);
-      
-      if (!response.ok) {
-        throw new Error(`Open Library API Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log(`[PLUME] Open Library Data:`, data);
-
-      const formattedResults = data.docs?.map((doc: any) => ({
-        id: doc.key,
-        source: 'openlibrary',
-        title: doc.title || "Titre inconnu",
-        author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
-        publisher: doc.publisher ? doc.publisher[0] : "Éditeur inconnu",
-        cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-        pages: doc.number_of_pages_median || 0,
-        description: doc.first_sentence ? doc.first_sentence[0] : "Résumé non disponible via Open Library.",
-        publicationDate: doc.first_publish_year ? doc.first_publish_year.toString() : "Date inconnue",
-        genres: doc.subject ? doc.subject.slice(0, 5) : [],
-        isbn: doc.isbn ? doc.isbn[0] : "N/A",
-        series: "",
-        volume: ""
-      })) || [];
-
-      setResults((prev) => [...prev, ...formattedResults]);
-      
-      if (formattedResults.length === 0 && results.length === 0) {
-        setErrorDetails("Aucun résultat trouvé sur Google Books ni Open Library.");
-      }
-    } catch (error: any) {
-      console.error(`[PLUME] Erreur Open Library:`, error);
-      setErrorDetails(`Échec critique : Les services de recherche sont injoignables.`);
     }
   };
 
@@ -140,12 +182,9 @@ export default function AddBookPage() {
       publisher: book.publisher,
       isbn: book.isbn,
       publicationDate: book.publicationDate,
-      series: book.series,
-      volume: book.volume,
       cover: book.cover || "https://picsum.photos/seed/placeholder/200/300",
       description: book.description,
       genres: book.genres,
-      tropes: [],
       pages: book.pages,
       status: "pal",
       favorite: false,
@@ -160,7 +199,7 @@ export default function AddBookPage() {
       .then(() => {
         toast({
           title: "Livre ajouté !",
-          description: `${book.title} a rejoint votre bibliothèque.`,
+          description: `${book.title} est maintenant dans votre bibliothèque.`,
         });
       })
       .catch(async (e) => {
@@ -181,7 +220,7 @@ export default function AddBookPage() {
         </div>
         <h1 className="text-5xl font-headline italic tracking-tight">Nouvelle Pépite</h1>
         <p className="text-primary/60 italic font-medium max-w-md mx-auto">
-          Recherchez votre prochain voyage littéraire par titre, auteur ou ISBN.
+          Recherchez par titre, auteur ou ISBN pour enrichir votre bibliothèque.
         </p>
       </header>
 
@@ -208,7 +247,7 @@ export default function AddBookPage() {
         {errorDetails && (
           <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle className="font-headline italic">Information de recherche</AlertTitle>
+            <AlertTitle className="font-headline italic">Information</AlertTitle>
             <AlertDescription className="text-xs italic">
               {errorDetails}
             </AlertDescription>
@@ -228,31 +267,32 @@ export default function AddBookPage() {
                     data-ai-hint="book cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  <Badge className="absolute top-2 left-2 bg-black/40 text-[8px] border-none font-bold uppercase">
+                  <Badge className="absolute top-2 left-2 bg-black/40 text-[8px] border-none font-bold uppercase backdrop-blur-sm">
                     {book.source}
                   </Badge>
                 </div>
                 
-                <div className="p-6 flex flex-col flex-1 gap-3">
+                <div className="p-6 flex flex-col flex-1 gap-4">
                   <div className="space-y-1">
                     <h3 className="text-2xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
                     <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
-                    <p className="text-[10px] text-primary/60 font-bold italic">{book.publisher}</p>
                   </div>
 
-                  <div className="flex flex-wrap gap-4 text-[9px] font-bold uppercase tracking-widest opacity-60">
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[9px] font-bold uppercase tracking-widest opacity-60">
+                    <div className="flex items-center gap-1.5"><Building2 className="h-3 w-3" /> {book.publisher}</div>
                     <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publicationDate}</div>
-                    <div className="flex items-center gap-1.5"><Tag className="h-3 w-3" /> {book.pages} pages</div>
-                    <div className="flex items-center gap-1.5"><Info className="h-3 w-3" /> ISBN: {book.isbn}</div>
+                    <div className="flex items-center gap-1.5"><Hash className="h-3 w-3" /> {book.isbn}</div>
+                    <div className="flex items-center gap-1.5"><BookOpen className="h-3 w-3" /> {book.pages} pages</div>
+                    <div className="flex items-center gap-1.5"><Languages className="h-3 w-3" /> {book.language}</div>
                   </div>
 
-                  <ScrollArea className="h-24 pr-4 border-l-2 border-primary/5 pl-4 mt-2">
+                  <ScrollArea className="h-20 pr-4 border-l-2 border-primary/5 pl-4 mt-1">
                     <p className="text-xs text-muted-foreground italic leading-relaxed">
                       {book.description.replace(/<[^>]*>?/gm, '')}
                     </p>
                   </ScrollArea>
 
-                  <div className="flex flex-wrap gap-1.5 pt-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {book.genres.slice(0, 3).map((g: string) => (
                       <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-bold uppercase">
                         {g}
@@ -263,10 +303,10 @@ export default function AddBookPage() {
                   <div className="pt-2 flex justify-end">
                     <Button 
                       onClick={() => addBook(book)} 
-                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-12 px-8 font-headline italic text-sm flex gap-2"
+                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-12 px-8 font-headline italic text-sm flex gap-2 group-hover:scale-105 transition-transform"
                     >
                       <Plus className="h-4 w-4" />
-                      Ajouter à ma bibliothèque
+                      Ajouter
                     </Button>
                   </div>
                 </div>
