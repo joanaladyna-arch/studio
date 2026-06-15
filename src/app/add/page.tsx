@@ -12,7 +12,6 @@ import {
   Sparkles, 
   Calendar, 
   AlertCircle,
-  Building2,
   Hash,
   BookOpen,
   CheckCircle2,
@@ -28,9 +27,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
 
-// Simple cache structure
 const searchCache: Record<string, any[]> = {};
 
 export default function AddBookPage() {
@@ -43,7 +40,6 @@ export default function AddBookPage() {
   const lastSearchTime = useRef<number>(0);
   const { toast } = useToast();
 
-  // Get current library to check for duplicates
   const libraryQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, "users", user.uid, "books");
@@ -60,13 +56,9 @@ export default function AddBookPage() {
 
   const searchOpenLibrary = async (q: string) => {
     const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=15`;
-    
-    console.log(`[PLUME] Débogage - Appel OpenLibrary: ${olUrl}`);
     try {
       const response = await fetch(olUrl);
-      console.log(`[PLUME] Débogage - Statut OpenLibrary: ${response.status}`);
       if (!response.ok) throw new Error(`Erreur Source: ${response.status}`);
-
       const data = await response.json();
       return data.docs?.map((doc: any) => ({
         id: doc.key,
@@ -82,7 +74,6 @@ export default function AddBookPage() {
         language: doc.language ? doc.language[0]?.toUpperCase() : "FR",
       })) || [];
     } catch (error) {
-      console.error(`[PLUME] Erreur Source:`, error);
       return [];
     }
   };
@@ -92,7 +83,6 @@ export default function AddBookPage() {
     const cleanQuery = queryStr.trim();
     if (!cleanQuery) return;
 
-    // Throttling 1s
     const now = Date.now();
     if (now - lastSearchTime.current < 1000) return;
     lastSearchTime.current = now;
@@ -108,11 +98,9 @@ export default function AddBookPage() {
     setErrorDetails(null);
     
     const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15`;
-    console.log(`[PLUME] Débogage - Appel GoogleBooks: ${googleUrl}`);
 
     try {
       const response = await fetch(googleUrl);
-      console.log(`[PLUME] Débogage - Statut GoogleBooks: ${response.status}`);
       const data = await response.json();
 
       let finalResults = [];
@@ -137,7 +125,6 @@ export default function AddBookPage() {
           };
         });
       } else {
-        console.log(`[PLUME] Débogage - Aucun résultat Google, passage à OpenLibrary`);
         finalResults = await searchOpenLibrary(cleanQuery);
       }
 
@@ -148,7 +135,6 @@ export default function AddBookPage() {
         searchCache[cleanQuery.toLowerCase()] = finalResults;
       }
     } catch (error) {
-      console.error("[PLUME] Erreur de recherche:", error);
       const fallbackResults = await searchOpenLibrary(cleanQuery);
       if (fallbackResults.length > 0) {
         setResults(fallbackResults);
@@ -162,7 +148,7 @@ export default function AddBookPage() {
 
   const addBook = async (book: any) => {
     if (!db || !user) {
-      toast({ variant: "destructive", title: "Action impossible", description: "Vous devez être connecté." });
+      toast({ variant: "destructive", title: "Action impossible", description: "Veuillez vous reconnecter." });
       return;
     }
 

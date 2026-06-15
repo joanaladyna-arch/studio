@@ -15,23 +15,18 @@ import {
   Feather, 
   Sparkles,
   Library,
-  User as UserIcon
+  User as UserIcon,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useUser, useFirestore, useCollection, useAuth } from "@/firebase";
+import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection, query, where, limit } from "firebase/firestore";
-import { signOut } from "firebase/auth";
-import { useRouter } from "next/navigation";
-import { useToast } from "@/hooks/use-toast";
 
 export default function Home() {
-  const { user } = useUser();
+  const { user, loading: authLoading } = useUser();
   const db = useFirestore();
-  const auth = useAuth();
-  const router = useRouter();
-  const { toast } = useToast();
 
   const userName = user?.displayName || user?.email?.split('@')[0] || "cher lecteur";
 
@@ -44,7 +39,7 @@ export default function Home() {
     );
   }, [db, user]);
 
-  const { data: currentReads = [] } = useCollection(currentReadQuery);
+  const { data: currentReads = [], loading: readingLoading } = useCollection(currentReadQuery);
   const currentRead = currentReads[0];
 
   const allBooksQuery = useMemo(() => {
@@ -52,7 +47,7 @@ export default function Home() {
     return collection(db, "users", user.uid, "books");
   }, [db, user]);
 
-  const { data: allBooks = [] } = useCollection(allBooksQuery);
+  const { data: allBooks = [], loading: booksLoading } = useCollection(allBooksQuery);
 
   const stats = useMemo(() => {
     const readCount = allBooks.filter(b => b.status === 'read').length;
@@ -63,6 +58,13 @@ export default function Home() {
       { label: "Objectif", value: `${readCount}/24`, icon: Trophy, color: "text-amber-500" },
     ];
   }, [allBooks]);
+
+  if (authLoading) return (
+    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+      <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+      <p className="font-headline italic text-primary/60">Ouverture de votre sanctuaire...</p>
+    </div>
+  );
 
   return (
     <div className="space-y-12 animate-paper">
@@ -99,7 +101,9 @@ export default function Home() {
           <h2 className="text-3xl font-headline flex items-center gap-3 italic">
             <Sparkles className="h-6 w-6 text-primary/40" /> En cours de lecture
           </h2>
-          {currentRead ? (
+          {readingLoading ? (
+            <div className="h-40 flex items-center justify-center"><Loader2 className="animate-spin text-primary/20" /></div>
+          ) : currentRead ? (
             <Card className="glass-card overflow-hidden border-none group transition-all duration-700 hover:shadow-2xl">
               <div className="grid sm:grid-cols-[200px_1fr] gap-0">
                 <div className="relative aspect-[2/3] overflow-hidden">
@@ -139,7 +143,7 @@ export default function Home() {
               <BookOpen className="h-16 w-16 mx-auto text-primary/20 mb-4" />
               <p className="text-muted-foreground italic text-lg">Aucune lecture en cours. <br/>Commencez un nouveau voyage aujourd'hui.</p>
               <Button asChild variant="outline" className="mt-8 rounded-2xl border-primary/20 text-primary h-12 px-10">
-                <Link href="/library">Explorer ma PAL</Link>
+                <Link href="/add">Explorer les étagères</Link>
               </Button>
             </Card>
           )}

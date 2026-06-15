@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar, Hash, MessageSquare, Quote, PersonStanding, MapPin, Mic } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar, Hash, MessageSquare, Quote, PersonStanding, MapPin, Mic, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -259,7 +259,10 @@ export default function LibraryPage() {
 
         <TabsContent value={activeTab} className="mt-6">
           {loading ? (
-            <div className="py-32 text-center text-muted-foreground italic">Ouverture de vos étagères...</div>
+            <div className="py-32 text-center text-muted-foreground italic flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary/20" />
+              Ouverture de vos étagères...
+            </div>
           ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-8">
               {filteredBooks.map((book) => (
@@ -272,7 +275,7 @@ export default function LibraryPage() {
             <div className="py-32 text-center space-y-6">
                <BookText className="h-16 w-16 mx-auto text-primary/10" />
                <div className="space-y-2">
-                 <p className="text-muted-foreground italic text-lg">Aucun livre trouvé dans cette section.</p>
+                 <p className="text-muted-foreground italic text-lg">Votre bibliothèque est vide dans cette section.</p>
                  <Button asChild variant="link" className="text-primary italic">
                    <Link href="/add">Commencer une nouvelle collection ?</Link>
                  </Button>
