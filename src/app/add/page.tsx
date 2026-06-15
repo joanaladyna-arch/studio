@@ -19,19 +19,19 @@ import {
   Languages,
   BookOpen,
   CheckCircle2,
-  Bookmark
+  Bookmark,
+  Layers
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp, query, where } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { STATUSES } from "@/app/library/page";
 
 // Simple cache structure
 const searchCache: Record<string, any[]> = {};
@@ -57,36 +57,36 @@ export default function AddBookPage() {
   const isAlreadyInLibrary = useCallback((book: any) => {
     return currentLibrary.find(b => 
       (b.isbn && b.isbn === book.isbn) || 
-      (b.title.toLowerCase() === book.title.toLowerCase() && b.author.toLowerCase() === book.author.toLowerCase())
+      (b.title?.toLowerCase() === book.title?.toLowerCase() && b.author?.toLowerCase() === book.author?.toLowerCase())
     );
   }, [currentLibrary]);
 
   const searchOpenLibrary = async (q: string) => {
-    const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10`;
-    console.log(`[PLUME] Appel de secours Open Library: ${olUrl}`);
+    const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=15`;
+    console.log(`[PLUME] Recherche Open Library: ${olUrl}`);
 
     try {
       const response = await fetch(olUrl);
       if (!response.ok) throw new Error(`Erreur Open Library: ${response.status}`);
 
       const data = await response.json();
-      const formattedResults = data.docs?.map((doc: any) => ({
+      return data.docs?.map((doc: any) => ({
         id: doc.key,
-        source: 'openlibrary',
+        source: 'Open Library',
         title: doc.title || "Titre inconnu",
         author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
         publisher: doc.publisher ? doc.publisher[0] : "Éditeur inconnu",
         cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
         pages: doc.number_of_pages_median || 0,
-        description: doc.first_sentence ? doc.first_sentence[0] : "Résumé non disponible via Open Library.",
+        description: doc.first_sentence ? doc.first_sentence[0] : "Résumé non disponible.",
         publicationDate: doc.first_publish_year ? doc.first_publish_year.toString() : "Date inconnue",
         genres: doc.subject ? doc.subject.slice(0, 5) : [],
         isbn: doc.isbn ? doc.isbn[0] : "N/A",
-        language: doc.language ? doc.language[0] : "FR",
+        language: doc.language ? doc.language[0]?.toUpperCase() : "FR",
+        series: null,
+        volume: null
       })) || [];
-
-      return formattedResults;
-    } catch (error: any) {
+    } catch (error) {
       console.error(`[PLUME] Erreur Open Library:`, error);
       return [];
     }
@@ -94,18 +94,16 @@ export default function AddBookPage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanQuery = queryStr.trim().toLowerCase();
+    const cleanQuery = queryStr.trim();
     if (!cleanQuery) return;
 
+    // Throttling
     const now = Date.now();
-    if (now - lastSearchTime.current < 1000) {
-      toast({ title: "Doucement !", description: "Veuillez patienter un instant.", variant: "default" });
-      return;
-    }
+    if (now - lastSearchTime.current < 1000) return;
     lastSearchTime.current = now;
 
-    if (searchCache[cleanQuery]) {
-      setResults(searchCache[cleanQuery]);
+    if (searchCache[cleanQuery.toLowerCase()]) {
+      setResults(searchCache[cleanQuery.toLowerCase()]);
       setErrorDetails(null);
       return;
     }
@@ -114,29 +112,22 @@ export default function AddBookPage() {
     setResults([]);
     setErrorDetails(null);
     
-    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryStr)}&maxResults=15`;
+    // 1. Essayer Google Books
+    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15`;
+    console.log(`[PLUME] Recherche Google Books: ${googleUrl}`);
 
     try {
       const response = await fetch(googleUrl);
-      
-      if (response.status === 429) {
-        const olResults = await searchOpenLibrary(queryStr);
-        setResults(olResults);
-        if (olResults.length > 0) searchCache[cleanQuery] = olResults;
-        else setErrorDetails("Service temporairement limité. Réessayez plus tard.");
-        return;
-      }
-
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-
       const data = await response.json();
 
+      let finalResults = [];
+
       if (data.items && data.items.length > 0) {
-        const formattedResults = data.items.map((item: any) => {
+        finalResults = data.items.map((item: any) => {
           const info = item.volumeInfo;
           return {
             id: item.id,
-            source: 'google',
+            source: 'Google Books',
             title: info.title || "Titre inconnu",
             author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
             publisher: info.publisher || "Éditeur inconnu",
@@ -149,20 +140,30 @@ export default function AddBookPage() {
             isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
                   info.industryIdentifiers?.[0]?.identifier || 
                   "N/A",
+            series: null, // Google Books ne sépare pas toujours proprement la série
+            volume: null
           };
         });
-        setResults(formattedResults);
-        searchCache[cleanQuery] = formattedResults;
       } else {
-        const olResults = await searchOpenLibrary(queryStr);
-        setResults(olResults);
-        if (olResults.length > 0) searchCache[cleanQuery] = olResults;
-        else setErrorDetails("Aucun livre trouvé.");
+        // 2. Fallback Open Library si Google ne trouve rien
+        finalResults = await searchOpenLibrary(cleanQuery);
       }
-    } catch (error: any) {
-      const olResults = await searchOpenLibrary(queryStr);
-      setResults(olResults);
-      if (olResults.length === 0) setErrorDetails("Services de recherche indisponibles.");
+
+      if (finalResults.length === 0) {
+        setErrorDetails("Aucun livre trouvé pour cette recherche.");
+      } else {
+        setResults(finalResults);
+        searchCache[cleanQuery.toLowerCase()] = finalResults;
+      }
+    } catch (error) {
+      console.error("[PLUME] Erreur de recherche:", error);
+      // Tentative de secours immédiate en cas d'erreur réseau sur Google
+      const fallbackResults = await searchOpenLibrary(cleanQuery);
+      if (fallbackResults.length > 0) {
+        setResults(fallbackResults);
+      } else {
+        setErrorDetails("Services de recherche momentanément indisponibles.");
+      }
     } finally {
       setIsSearching(false);
     }
@@ -174,7 +175,6 @@ export default function AddBookPage() {
       return;
     }
 
-    // Double check duplicate before write
     if (isAlreadyInLibrary(book)) {
       toast({ title: "Déjà présent", description: "Ce livre est déjà dans votre bibliothèque." });
       return;
@@ -190,6 +190,8 @@ export default function AddBookPage() {
       description: book.description,
       genres: book.genres,
       pages: book.pages,
+      series: book.series || "",
+      volume: book.volume || "",
       status: "pal",
       favorite: false,
       progress: 0,
@@ -206,7 +208,7 @@ export default function AddBookPage() {
           description: `${book.title} est maintenant dans votre bibliothèque.`,
         });
       })
-      .catch(async (e) => {
+      .catch(async () => {
         const permissionError = new FirestorePermissionError({
           path: booksRef.path,
           operation: 'create',
@@ -224,7 +226,7 @@ export default function AddBookPage() {
         </div>
         <h1 className="text-5xl font-headline italic tracking-tight">Nouvelle Pépite</h1>
         <p className="text-primary/60 italic font-medium max-w-md mx-auto">
-          Recherchez par titre, auteur ou ISBN pour enrichir votre bibliothèque.
+          Explorez Google Books & Open Library pour enrichir votre sanctuaire.
         </p>
       </header>
 
@@ -249,7 +251,7 @@ export default function AddBookPage() {
 
       <div className="max-w-4xl mx-auto space-y-6 px-4">
         {errorDetails && (
-          <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
+          <Alert className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle className="font-headline italic">Information</AlertTitle>
             <AlertDescription className="text-xs italic">{errorDetails}</AlertDescription>
@@ -292,12 +294,12 @@ export default function AddBookPage() {
 
                     <ScrollArea className="h-20 pr-4 border-l-2 border-primary/5 pl-4 mt-1">
                       <p className="text-xs text-muted-foreground italic leading-relaxed">
-                        {book.description.replace(/<[^>]*>?/gm, '')}
+                        {book.description?.replace(/<[^>]*>?/gm, '')}
                       </p>
                     </ScrollArea>
 
                     <div className="flex flex-wrap gap-1.5">
-                      {book.genres.slice(0, 3).map((g: string) => (
+                      {book.genres?.slice(0, 3).map((g: string) => (
                         <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-bold uppercase">
                           {g}
                         </Badge>
@@ -308,7 +310,7 @@ export default function AddBookPage() {
                       {existingBook ? (
                         <div className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 italic font-medium text-sm">
                           <CheckCircle2 className="h-4 w-4" />
-                          {existingBook.status === 'read' ? 'Déjà terminé' : (existingBook.status === 'pal' ? 'Dans ma PAL' : 'Déjà en bibliothèque')}
+                          Déjà en bibliothèque
                         </div>
                       ) : (
                         <Button 

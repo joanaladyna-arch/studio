@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon, MessageSquare, Quote, PersonStanding, MapPin, Smile } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon, MessageSquare, Quote, PersonStanding, MapPin, Smile, Layers } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -312,6 +312,8 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
   const [memorableScene, setMemorableScene] = useState(book.memorableScene || "");
   const [publisher, setPublisher] = useState(book.publisher || "");
   const [pages, setPages] = useState(book.pages || 0);
+  const [series, setSeries] = useState(book.series || "");
+  const [volume, setVolume] = useState(book.volume || "");
 
   const toggleItem = (list: string[], setList: (l: string[]) => void, item: string) => {
     if (list.includes(item)) setList(list.filter(i => i !== item));
@@ -372,6 +374,24 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                             value={pages} 
                             onChange={(e) => setPages(parseInt(e.target.value) || 0)} 
                             className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Saga / Série</Label>
+                          <Input 
+                            value={series} 
+                            onChange={(e) => setSeries(e.target.value)} 
+                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                            placeholder="Nom de la série"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Tome</Label>
+                          <Input 
+                            value={volume} 
+                            onChange={(e) => setVolume(e.target.value)} 
+                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                            placeholder="Numéro"
                           />
                         </div>
                       </div>
@@ -558,7 +578,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
              <div className="flex gap-4">
                <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-8">Annuler</Button>
                <Button 
-                onClick={() => onSave({ genres, tropes, emotions, status, rank, favorite, publisher, pages, rating, review, favoriteQuote, favoriteCharacters, memorableScene })} 
+                onClick={() => onSave({ genres, tropes, emotions, status, rank, favorite, publisher, pages, rating, review, favoriteQuote, favoriteCharacters, memorableScene, series, volume })} 
                 className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20"
                >
                  Enregistrer
