@@ -3,11 +3,11 @@
  * REMPLACEZ LES VALEURS "VOTRE_..." PAR CELLES DE VOTRE CONSOLE FIREBASE.
  */
 export const firebaseConfig = {
-  apiKey: "VOTRE_API_KEY_REELLE", // À copier depuis Console Firebase > Paramètres du projet
+  apiKey: "AIzaSyDnS_PZtJzspRoyS9a9k0HEVBq6iAWIN8c",
   authDomain: "plume-f3424.firebaseapp.com",
   projectId: "plume-f3424",
-  storageBucket: "plume-f3424.appspot.com",
-  messagingSenderId: "VOTRE_SENDER_ID_REEL", // À copier depuis Console Firebase
-  appId: "VOTRE_APP_ID_REEL", // À copier depuis Console Firebase
-  measurementId: "VOTRE_MEASUREMENT_ID_REEL" // Optionnel
+  storageBucket: "plume-f3424.firebasestorage.app",
+  messagingSenderId: "612131621608",
+  appId: "1:612131621608:web:ac6001f00f205e9c59975d",
+  measurementId: "G-RFWCQ9QK6R"
 };

@@ -28,7 +28,14 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Le service d'authentification n'est pas prêt.",
+      });
+      return;
+    }
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -37,7 +44,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Erreur de connexion",
-        description: "Email ou mot de passe incorrect.",
+        description: error.message || "Email ou mot de passe incorrect.",
       });
     } finally {
       setLoading(false);
@@ -45,16 +52,24 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    if (!auth) return;
+    if (!auth) {
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Le service d'authentification n'est pas prêt.",
+      });
+      return;
+    }
     const provider = new GoogleAuthProvider();
     try {
       await signInWithPopup(auth, provider);
       router.push("/");
     } catch (error: any) {
+      // Affichage de l'erreur exacte demandée par l'utilisateur
       toast({
         variant: "destructive",
         title: "Erreur Google",
-        description: "Impossible de se connecter avec Google.",
+        description: error.message || "Impossible de se connecter avec Google.",
       });
     }
   };
@@ -80,7 +95,7 @@ export default function LoginPage() {
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: "Impossible d'envoyer l'email de réinitialisation.",
+        description: error.message || "Impossible d'envoyer l'email de réinitialisation.",
       });
     } finally {
       setResetLoading(false);
