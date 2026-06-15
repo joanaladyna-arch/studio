@@ -23,13 +23,25 @@
     --border: 341 20% 90%;
     --input: 341 20% 90%;
     --ring: 341 46% 68%;
-    --chart-1: 341 46% 68%;
-    --chart-2: 88 20% 70%;
-    --chart-3: 205 40% 79%;
-    --chart-4: 53 100% 82%;
-    --chart-5: 305 31% 66%;
     --radius: 0.75rem;
   }
+  
+  /* Thème Bibliothèque Cosy */
+  .theme-cosy {
+    --background: 28 40% 96%;
+    --primary: 28 40% 45%;
+    --accent: 12 40% 50%;
+    --border: 28 30% 85%;
+  }
+
+  /* Thème Romantasy */
+  .theme-romantasy {
+    --background: 260 20% 96%;
+    --primary: 260 40% 35%;
+    --accent: 45 60% 50%;
+    --border: 260 20% 85%;
+  }
+
   .dark {
     --background: 0 0% 3.9%;
     --foreground: 0 0% 98%;
@@ -58,7 +70,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground font-body antialiased transition-colors duration-300;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
@@ -73,4 +85,12 @@
 
 .glass-card {
   @apply bg-white/50 backdrop-blur-md border border-white/20 shadow-sm;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

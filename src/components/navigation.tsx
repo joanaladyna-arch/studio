@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -10,7 +9,6 @@ const navItems = [
   { href: "/", label: "Accueil", icon: Home },
   { href: "/library", label: "Bibliothèque", icon: Library },
   { href: "/voliere", label: "La Volière", icon: Diamond },
-  { href: "/add", label: "Ajouter", icon: PlusCircle },
   { href: "/journal", label: "Journal", icon: PenTool },
   { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/profile", label: "Profil", icon: User },

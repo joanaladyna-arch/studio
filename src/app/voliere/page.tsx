@@ -1,45 +1,14 @@
-
 "use client";
 
 import { useMemo } from "react";
 import { Navigation } from "@/components/navigation";
-import { Book, BookCard } from "@/app/library/page";
+import { Book, BookCard, MOCK_BOOKS } from "@/app/library/page";
 import { Diamond, Crown, Sparkles } from "lucide-react";
 
 export default function VolierePage() {
-  const topBooks: Book[] = useMemo(() => [
-    { 
-      title: "L'élégance du hérisson", 
-      author: "Muriel Barbery", 
-      status: "progress", 
-      favorite: true, 
-      cover: "https://picsum.photos/seed/10/200/300", 
-      rank: 'diamant', 
-      badges: ['obsession', 'inoubliable'] 
-    },
-    { 
-      title: "La vérité sur l'affaire Harry Quebert", 
-      author: "Joël Dicker", 
-      status: "read", 
-      favorite: true, 
-      cover: "https://picsum.photos/seed/11/200/300", 
-      rank: 'royale', 
-      badges: ['plot-twist', 'addictif'] 
-    },
-    { 
-      title: "Les Fleurs du Mal", 
-      author: "Charles Baudelaire", 
-      status: "read", 
-      favorite: true, 
-      cover: "https://picsum.photos/seed/14/200/300", 
-      rank: 'doree', 
-      badges: ['larmes'] 
-    },
-  ], []);
-
   const voliereBooks = useMemo(() => 
-    topBooks.filter(b => b.rank === 'diamant' || b.rank === 'royale'), 
-  [topBooks]);
+    MOCK_BOOKS.filter(b => b.rank === 'diamant' || b.rank === 'royale'), 
+  []);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
@@ -61,8 +30,8 @@ export default function VolierePage() {
         
         {voliereBooks.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 p-6">
-            {voliereBooks.map((book, i) => (
-              <div key={i} className="relative">
+            {voliereBooks.map((book) => (
+              <div key={book.id} className="relative">
                 <div className="absolute -top-4 -left-4 z-20">
                     {book.rank === 'diamant' ? (
                         <div className="bg-cyan-400 text-white p-2 rounded-full shadow-lg">
@@ -87,19 +56,19 @@ export default function VolierePage() {
       </div>
 
       <section className="pt-12 border-t">
-        <h2 className="text-2xl font-headline mb-6 text-center">Pourquoi ce classement ?</h2>
+        <h2 className="text-2xl font-headline mb-6 text-center">Les Grades de Prestige</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl bg-white/40 border">
             <h3 className="font-bold flex items-center gap-2 text-cyan-500">
                 <Diamond className="h-4 w-4" /> Diamant de Plume
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">Le summum. Un livre qui a changé votre vision du monde ou vous a marqué à jamais.</p>
+            <p className="text-sm text-muted-foreground mt-1">Le coup de cœur absolu. Un livre qui a changé votre vision du monde.</p>
           </div>
           <div className="p-4 rounded-xl bg-white/40 border">
             <h3 className="font-bold flex items-center gap-2 text-amber-500">
                 <Crown className="h-4 w-4" /> Plume Royale
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">Une lecture magistrale, parfaite de bout en bout, que vous pourriez relire sans cesse.</p>
+            <p className="text-sm text-muted-foreground mt-1">Une lecture exceptionnelle, une plume magistrale de bout en bout.</p>
           </div>
         </div>
       </section>
