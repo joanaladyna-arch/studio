@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -31,6 +32,19 @@ export default function RootLayout({
       <head>
         <title>PLUME - Journal de Lecture Personnel</title>
         <meta name="description" content="Ton carnet de lecture précieux et authentique." />
+        
+        {/* PWA / Mobile Meta Tags */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Plume" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#fdf2f5" />
+        
+        {/* Apple Touch Icon */}
+        <link rel="apple-touch-icon" href="https://picsum.photos/seed/plume-icon/180/180" />
+        
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
@@ -45,7 +59,7 @@ export default function RootLayout({
           ) : (
             <>
               <Navigation />
-              <main className="flex-1 max-w-4xl mx-auto px-6 pt-6 pb-28 md:pt-28 md:pb-16 w-full">
+              <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-32 md:pt-28 md:pb-16 w-full">
                 {children}
               </main>
             </>

@@ -1,14 +1,14 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Navigation } from "@/components/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Settings, Share2, Crown, BadgeCheck, FileArchive, Sparkles, Award, Medal, TrendingUp, BookOpen, Clock, DoorOpen, Star, Book as BookIcon, Tablet, Headphones, Timer } from "lucide-react";
+import { Settings, Share2, Crown, BadgeCheck, FileArchive, Sparkles, Award, Medal, TrendingUp, BookOpen, Clock, DoorOpen, Star, Book as BookIcon, Tablet, Headphones, Timer, Plus, Info, Apple, Smartphone } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
@@ -18,6 +18,7 @@ import { GENRES_LIST, TROPES_LIST, Book, FORMATS } from "@/app/library/page";
 export default function ProfilePage() {
   const { user } = useUser();
   const db = useFirestore();
+  const [showPwaInfo, setShowPwaInfo] = useState(false);
 
   const profileRef = useMemo(() => {
     if (!db || !user) return null;
@@ -40,7 +41,6 @@ export default function ProfilePage() {
     const progressBooks = allBooks.filter(b => b.status === 'progress');
     const dnfBooks = allBooks.filter(b => b.status === 'dnf');
     
-    // Formats
     const paperCount = allBooks.filter(b => b.format === 'papier' || !b.format).length;
     const ebookCount = allBooks.filter(b => b.format === 'ebook').length;
     const audioCount = allBooks.filter(b => b.format === 'audio').length;
@@ -48,7 +48,6 @@ export default function ProfilePage() {
     const pagesRead = allBooks.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
     const listeningHours = allBooks.reduce((acc, b) => acc + (b.format === 'audio' ? (b.duration || 0) : 0), 0);
     
-    // Genre Counts
     const genreCounts: Record<string, number> = {};
     readBooks.forEach(b => {
       b.genres?.forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1);
@@ -56,7 +55,6 @@ export default function ProfilePage() {
     const favoriteGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "N/A";
     const unlockedBadges = Object.values(genreCounts).filter(c => c >= 5).length;
 
-    // Trope Counts
     const tropeCounts: Record<string, number> = {};
     readBooks.forEach(b => {
       b.tropes?.forEach(t => tropeCounts[t] = (tropeCounts[t] || 0) + 1);
@@ -103,14 +101,48 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="flex gap-3">
+            <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5" onClick={() => setShowPwaInfo(!showPwaInfo)}>
+                <Smartphone className="h-5 w-5 text-primary" />
+            </Button>
             <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5">
                 <Settings className="h-5 w-5 text-primary" />
             </Button>
-            <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5">
-                <Share2 className="h-5 w-5 text-primary" />
-            </Button>
         </div>
       </header>
+
+      {showPwaInfo && (
+        <Card className="glass-card bg-primary/5 border-primary/20 animate-paper">
+          <CardContent className="p-8 space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+                <Plus className="h-6 w-6 text-primary" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-headline italic text-xl">Plume sur votre écran</h3>
+                <p className="text-xs text-muted-foreground italic">Installez l'application pour une expérience optimale.</p>
+              </div>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 gap-4 pt-2">
+              <div className="p-4 bg-white/40 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
+                  <Apple className="h-3 w-3" /> Sur iPhone / iPad
+                </div>
+                <p className="text-[11px] leading-relaxed italic text-muted-foreground">Appuyez sur <Share2 className="h-3 w-3 inline mx-1" /> puis sur <b>"Sur l'écran d'accueil"</b>.</p>
+              </div>
+              <div className="p-4 bg-white/40 rounded-2xl space-y-2">
+                <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
+                  <Smartphone className="h-3 w-3" /> Sur Android
+                </div>
+                <p className="text-[11px] leading-relaxed italic text-muted-foreground">Appuyez sur les <b>trois points ⋮</b> puis sur <b>"Installer l'application"</b>.</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" className="w-full rounded-xl text-primary/40 hover:text-primary" onClick={() => setShowPwaInfo(false)}>
+              Masquer ces instructions
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <section className="space-y-8">
         <div className="flex items-center gap-3">
@@ -118,7 +150,7 @@ export default function ProfilePage() {
           <h2 className="text-3xl font-headline italic">Mes Statistiques</h2>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="glass-card p-6 border-none text-center space-y-2 hover:scale-105 transition-transform">
             <BookOpen className="h-8 w-8 mx-auto text-primary" />
             <p className="text-3xl font-headline italic">{stats.readCount}</p>
@@ -170,7 +202,7 @@ export default function ProfilePage() {
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <Card className="glass-card p-6 border-none text-center space-y-3 bg-white/40">
             <div className="p-3 bg-orange-50 rounded-2xl w-fit mx-auto">
               <BookIcon className="h-6 w-6 text-orange-700" />
@@ -200,7 +232,7 @@ export default function ProfilePage() {
           </Card>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid sm:grid-cols-2 gap-8">
             <Link href="/profile/badges" className="block">
                 <Card className="glass-card p-8 border-none flex items-center justify-between hover:bg-white/60 transition-colors bg-white/40">
                     <div className="flex items-center gap-4">
@@ -276,4 +308,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
