@@ -61,8 +61,10 @@ export default function AddBookPage() {
   const searchOpenLibrary = async (q: string) => {
     const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=15`;
     
+    console.log(`[PLUME] Débogage - Appel OpenLibrary: ${olUrl}`);
     try {
       const response = await fetch(olUrl);
+      console.log(`[PLUME] Débogage - Statut OpenLibrary: ${response.status}`);
       if (!response.ok) throw new Error(`Erreur Source: ${response.status}`);
 
       const data = await response.json();
@@ -90,7 +92,7 @@ export default function AddBookPage() {
     const cleanQuery = queryStr.trim();
     if (!cleanQuery) return;
 
-    // Throttling
+    // Throttling 1s
     const now = Date.now();
     if (now - lastSearchTime.current < 1000) return;
     lastSearchTime.current = now;
@@ -106,9 +108,11 @@ export default function AddBookPage() {
     setErrorDetails(null);
     
     const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15`;
+    console.log(`[PLUME] Débogage - Appel GoogleBooks: ${googleUrl}`);
 
     try {
       const response = await fetch(googleUrl);
+      console.log(`[PLUME] Débogage - Statut GoogleBooks: ${response.status}`);
       const data = await response.json();
 
       let finalResults = [];
@@ -133,6 +137,7 @@ export default function AddBookPage() {
           };
         });
       } else {
+        console.log(`[PLUME] Débogage - Aucun résultat Google, passage à OpenLibrary`);
         finalResults = await searchOpenLibrary(cleanQuery);
       }
 
@@ -181,6 +186,8 @@ export default function AddBookPage() {
       favorite: false,
       progress: 0,
       pagesRead: 0,
+      duration: 0,
+      narrator: "",
       createdAt: serverTimestamp(),
     };
 

@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar, Hash, MessageSquare, Quote, PersonStanding, MapPin } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar, Hash, MessageSquare, Quote, PersonStanding, MapPin, Mic } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ export interface Book {
   tropes?: string[];
   pages?: number;
   duration?: number;
+  narrator?: string;
   format?: BookFormat;
   status: BookStatus;
   favorite: boolean;
@@ -107,6 +108,13 @@ const CATEGORIES = [
   { id: "read", label: "Lu" },
   { id: "favorite", label: "Favoris" },
 ];
+
+export function formatDuration(decimalHours: number) {
+  const h = Math.floor(decimalHours);
+  const m = Math.round((decimalHours - h) * 60);
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
 
 export default function LibraryPage() {
   const { user } = useUser();
@@ -337,9 +345,16 @@ export function BookCard({ book }: { book: Book }) {
       <div className="text-center px-1 space-y-0.5">
         <h3 className="text-[13px] font-headline line-clamp-1 italic text-foreground/90 leading-tight">{book.title}</h3>
         <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest opacity-80">{book.author}</p>
-        {book.publisher && (
-          <p className="text-[7px] text-primary/40 font-bold uppercase tracking-[0.2em] italic truncate">{book.publisher}</p>
-        )}
+        <div className="flex flex-col gap-0.5">
+           {book.publisher && (
+             <p className="text-[7px] text-primary/40 font-bold uppercase tracking-[0.2em] italic truncate">{book.publisher}</p>
+           )}
+           {book.format === 'audio' && book.duration && (
+             <p className="text-[7px] text-primary font-bold uppercase tracking-widest flex items-center justify-center gap-1">
+               <Headphones className="h-2 w-2" /> {formatDuration(book.duration)}
+             </p>
+           )}
+        </div>
       </div>
     </div>
   );
@@ -361,6 +376,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
   const [publisher, setPublisher] = useState(book.publisher || "");
   const [pages, setPages] = useState(book.pages || 0);
   const [duration, setDuration] = useState(book.duration || 0);
+  const [narrator, setNarrator] = useState(book.narrator || "");
   const [series, setSeries] = useState(book.series || "");
   const [volume, setVolume] = useState(book.volume || "");
 
@@ -465,15 +481,31 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                           </div>
                         </div>
                         {format === 'audio' ? (
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Durée (Heures)</Label>
-                            <Input 
-                              type="number"
-                              value={duration} 
-                              onChange={(e) => setDuration(parseFloat(e.target.value) || 0)} 
-                              className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
-                            />
-                          </div>
+                          <>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Durée (Heures décimales)</Label>
+                              <Input 
+                                type="number"
+                                step="0.01"
+                                value={duration} 
+                                onChange={(e) => setDuration(parseFloat(e.target.value) || 0)} 
+                                className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                                placeholder="Ex: 12.75"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Narrateur</Label>
+                              <div className="relative">
+                                <Mic className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary/40" />
+                                <Input 
+                                  value={narrator} 
+                                  onChange={(e) => setNarrator(e.target.value)} 
+                                  className="h-11 pl-9 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                                  placeholder="Nom du narrateur"
+                                />
+                              </div>
+                            </div>
+                          </>
                         ) : (
                           <div className="space-y-1.5">
                             <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Pages</Label>
@@ -487,8 +519,14 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                         )}
                       </div>
 
-                      <div className="flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-[0.2em] opacity-50 italic">
+                      <div className="flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-[0.2em] opacity-50 italic pt-2">
                         <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary/40" /> {book.publicationDate}</div>
+                        {format === 'audio' && duration > 0 && (
+                          <div className="flex items-center gap-2 text-primary font-bold">
+                            <Mic className="h-4 w-4" /> Narré par : {narrator || "Inconnu"} 
+                            <span className="ml-2 opacity-60">({formatDuration(duration)})</span>
+                          </div>
+                        )}
                       </div>
                    </div>
                 </div>
@@ -668,7 +706,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
              <div className="flex gap-4">
                <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-8">Annuler</Button>
                <Button 
-                onClick={() => onSave({ genres, tropes, emotions, status, format, rank, favorite, publisher, pages, duration, rating, review, favoriteQuote, favoriteCharacters, memorableScene, series, volume })} 
+                onClick={() => onSave({ genres, tropes, emotions, status, format, rank, favorite, publisher, pages, duration, rating, review, favoriteQuote, favoriteCharacters, memorableScene, series, volume, narrator })} 
                 className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20"
                >
                  Enregistrer

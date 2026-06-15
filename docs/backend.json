@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Book": {
@@ -22,7 +21,8 @@
         "tropes": { "type": "array", "items": { "type": "string" } },
         "description": { "type": "string" },
         "pages": { "type": "number" },
-        "duration": { "type": "number", "description": "Duration in hours for audiobooks." },
+        "duration": { "type": "number", "description": "Duration in decimal hours for audiobooks." },
+        "narrator": { "type": "string", "description": "Narrator for audiobooks." },
         "progress": { "type": "number" },
         "pagesRead": { "type": "number" },
         "rating": { "type": "number" },
