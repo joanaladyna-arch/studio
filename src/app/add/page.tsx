@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,18 +17,21 @@ import {
   Building2,
   Hash,
   Languages,
-  BookOpen
+  BookOpen,
+  CheckCircle2,
+  Bookmark
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { useUser, useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useUser, useFirestore, useCollection } from "@/firebase";
+import { collection, addDoc, serverTimestamp, query, where } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { STATUSES } from "@/app/library/page";
 
 // Simple cache structure
 const searchCache: Record<string, any[]> = {};
@@ -35,12 +39,27 @@ const searchCache: Record<string, any[]> = {};
 export default function AddBookPage() {
   const { user } = useUser();
   const db = useFirestore();
-  const [query, setQuery] = useState("");
+  const [queryStr, setQueryStr] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const lastSearchTime = useRef<number>(0);
   const { toast } = useToast();
+
+  // Get current library to check for duplicates
+  const libraryQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return collection(db, "users", user.uid, "books");
+  }, [db, user]);
+
+  const { data: currentLibrary = [] } = useCollection(libraryQuery);
+
+  const isAlreadyInLibrary = useCallback((book: any) => {
+    return currentLibrary.find(b => 
+      (b.isbn && b.isbn === book.isbn) || 
+      (b.title.toLowerCase() === book.title.toLowerCase() && b.author.toLowerCase() === book.author.toLowerCase())
+    );
+  }, [currentLibrary]);
 
   const searchOpenLibrary = async (q: string) => {
     const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=10`;
@@ -75,24 +94,17 @@ export default function AddBookPage() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanQuery = query.trim().toLowerCase();
+    const cleanQuery = queryStr.trim().toLowerCase();
     if (!cleanQuery) return;
 
-    // 1. Anti-spam / Throttling (attendre 1s entre les requêtes)
     const now = Date.now();
     if (now - lastSearchTime.current < 1000) {
-      toast({ 
-        title: "Doucement !", 
-        description: "Veuillez patienter un instant avant la prochaine recherche.",
-        variant: "default"
-      });
+      toast({ title: "Doucement !", description: "Veuillez patienter un instant.", variant: "default" });
       return;
     }
     lastSearchTime.current = now;
 
-    // 2. Cache check
     if (searchCache[cleanQuery]) {
-      console.log(`[PLUME] Utilisation du cache pour: ${cleanQuery}`);
       setResults(searchCache[cleanQuery]);
       setErrorDetails(null);
       return;
@@ -102,26 +114,20 @@ export default function AddBookPage() {
     setResults([]);
     setErrorDetails(null);
     
-    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`;
-    console.log(`[PLUME] Recherche Google Books: ${googleUrl}`);
+    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(queryStr)}&maxResults=15`;
 
     try {
       const response = await fetch(googleUrl);
       
-      // Gestion spécifique du 429 (Too Many Requests)
       if (response.status === 429) {
-        console.warn("[PLUME] Limite Google Books atteinte (429). Basculement vers Open Library...");
-        const olResults = await searchOpenLibrary(query);
-        if (olResults.length > 0) {
-          setResults(olResults);
-          searchCache[cleanQuery] = olResults;
-        } else {
-          setErrorDetails("Service Google temporairement indisponible. Veuillez réessayer dans quelques minutes.");
-        }
+        const olResults = await searchOpenLibrary(queryStr);
+        setResults(olResults);
+        if (olResults.length > 0) searchCache[cleanQuery] = olResults;
+        else setErrorDetails("Service temporairement limité. Réessayez plus tard.");
         return;
       }
 
-      if (!response.ok) throw new Error(`Google Books API Error: ${response.status}`);
+      if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
       const data = await response.json();
 
@@ -148,19 +154,15 @@ export default function AddBookPage() {
         setResults(formattedResults);
         searchCache[cleanQuery] = formattedResults;
       } else {
-        console.log(`[PLUME] Aucun résultat Google. Tentative Open Library...`);
-        const olResults = await searchOpenLibrary(query);
+        const olResults = await searchOpenLibrary(queryStr);
         setResults(olResults);
         if (olResults.length > 0) searchCache[cleanQuery] = olResults;
-        else setErrorDetails("Aucun livre trouvé sur les plateformes littéraires.");
+        else setErrorDetails("Aucun livre trouvé.");
       }
     } catch (error: any) {
-      console.error(`[PLUME] Erreur critique recherche:`, error);
-      const olResults = await searchOpenLibrary(query);
+      const olResults = await searchOpenLibrary(queryStr);
       setResults(olResults);
-      if (olResults.length === 0) {
-        setErrorDetails("Services de recherche indisponibles. Vérifiez votre connexion.");
-      }
+      if (olResults.length === 0) setErrorDetails("Services de recherche indisponibles.");
     } finally {
       setIsSearching(false);
     }
@@ -168,11 +170,13 @@ export default function AddBookPage() {
 
   const addBook = async (book: any) => {
     if (!db || !user) {
-      toast({ 
-        variant: "destructive", 
-        title: "Action impossible", 
-        description: "Vous devez être connecté pour ajouter un livre." 
-      });
+      toast({ variant: "destructive", title: "Action impossible", description: "Vous devez être connecté." });
+      return;
+    }
+
+    // Double check duplicate before write
+    if (isAlreadyInLibrary(book)) {
+      toast({ title: "Déjà présent", description: "Ce livre est déjà dans votre bibliothèque." });
       return;
     }
 
@@ -229,8 +233,8 @@ export default function AddBookPage() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40 group-focus-within:text-primary transition-colors" />
           <Input 
             placeholder="Titre, auteur ou ISBN..." 
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={queryStr}
+            onChange={(e) => setQueryStr(e.target.value)}
             className="pl-12 h-14 bg-white/60 border-white shadow-sm rounded-2xl text-lg italic focus-visible:ring-primary/20"
           />
         </div>
@@ -243,76 +247,84 @@ export default function AddBookPage() {
         </Button>
       </form>
 
-      <div className="max-w-3xl mx-auto space-y-6 px-4">
+      <div className="max-w-4xl mx-auto space-y-6 px-4">
         {errorDetails && (
           <Alert variant="destructive" className="bg-destructive/5 border-destructive/20 text-destructive rounded-2xl">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle className="font-headline italic">Information</AlertTitle>
-            <AlertDescription className="text-xs italic">
-              {errorDetails}
-            </AlertDescription>
+            <AlertDescription className="text-xs italic">{errorDetails}</AlertDescription>
           </Alert>
         )}
 
         {results.length > 0 ? (
-          results.map((book) => (
-            <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group border-none">
-              <CardContent className="p-0 flex flex-col sm:flex-row">
-                <div className="relative w-full sm:w-44 aspect-[2/3] shrink-0 overflow-hidden bg-muted">
-                  <Image 
-                    src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
-                    alt={book.title} 
-                    fill 
-                    className="object-cover transition-transform duration-1000 group-hover:scale-110" 
-                    data-ai-hint="book cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  <Badge className="absolute top-2 left-2 bg-black/40 text-[8px] border-none font-bold uppercase backdrop-blur-sm">
-                    {book.source}
-                  </Badge>
-                </div>
-                
-                <div className="p-6 flex flex-col flex-1 gap-4">
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
-                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+          results.map((book) => {
+            const existingBook = isAlreadyInLibrary(book);
+            return (
+              <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group border-none">
+                <CardContent className="p-0 flex flex-col sm:flex-row">
+                  <div className="relative w-full sm:w-48 aspect-[2/3] shrink-0 overflow-hidden bg-secondary/5 flex items-center justify-center p-4">
+                    <div className="relative w-full h-full">
+                      <Image 
+                        src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
+                        alt={book.title} 
+                        fill 
+                        className="object-contain transition-transform duration-1000 group-hover:scale-105" 
+                        data-ai-hint="book cover"
+                      />
+                    </div>
+                    <Badge className="absolute top-2 left-2 bg-black/40 text-[8px] border-none font-bold uppercase backdrop-blur-sm">
+                      {book.source}
+                    </Badge>
                   </div>
+                  
+                  <div className="p-6 flex flex-col flex-1 gap-4">
+                    <div className="space-y-1">
+                      <h3 className="text-2xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
+                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[9px] font-bold uppercase tracking-widest opacity-60">
-                    <div className="flex items-center gap-1.5"><Building2 className="h-3 w-3" /> {book.publisher}</div>
-                    <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publicationDate}</div>
-                    <div className="flex items-center gap-1.5"><Hash className="h-3 w-3" /> {book.isbn}</div>
-                    <div className="flex items-center gap-1.5"><BookOpen className="h-3 w-3" /> {book.pages} pages</div>
-                    <div className="flex items-center gap-1.5"><Languages className="h-3 w-3" /> {book.language}</div>
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-[9px] font-bold uppercase tracking-widest opacity-60">
+                      <div className="flex items-center gap-1.5"><Building2 className="h-3 w-3" /> {book.publisher}</div>
+                      <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publicationDate}</div>
+                      <div className="flex items-center gap-1.5"><Hash className="h-3 w-3" /> {book.isbn}</div>
+                      <div className="flex items-center gap-1.5"><BookOpen className="h-3 w-3" /> {book.pages} pages</div>
+                    </div>
+
+                    <ScrollArea className="h-20 pr-4 border-l-2 border-primary/5 pl-4 mt-1">
+                      <p className="text-xs text-muted-foreground italic leading-relaxed">
+                        {book.description.replace(/<[^>]*>?/gm, '')}
+                      </p>
+                    </ScrollArea>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {book.genres.slice(0, 3).map((g: string) => (
+                        <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-bold uppercase">
+                          {g}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      {existingBook ? (
+                        <div className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 italic font-medium text-sm">
+                          <CheckCircle2 className="h-4 w-4" />
+                          {existingBook.status === 'read' ? 'Déjà terminé' : (existingBook.status === 'pal' ? 'Dans ma PAL' : 'Déjà en bibliothèque')}
+                        </div>
+                      ) : (
+                        <Button 
+                          onClick={() => addBook(book)} 
+                          className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-12 px-8 font-headline italic text-sm flex gap-2 group-hover:scale-105 transition-transform"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Ajouter
+                        </Button>
+                      )}
+                    </div>
                   </div>
-
-                  <ScrollArea className="h-20 pr-4 border-l-2 border-primary/5 pl-4 mt-1">
-                    <p className="text-xs text-muted-foreground italic leading-relaxed">
-                      {book.description.replace(/<[^>]*>?/gm, '')}
-                    </p>
-                  </ScrollArea>
-
-                  <div className="flex flex-wrap gap-1.5">
-                    {book.genres.slice(0, 3).map((g: string) => (
-                      <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-bold uppercase">
-                        {g}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  <div className="pt-2 flex justify-end">
-                    <Button 
-                      onClick={() => addBook(book)} 
-                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-12 px-8 font-headline italic text-sm flex gap-2 group-hover:scale-105 transition-transform"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Ajouter
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            );
+          })
         ) : !isSearching && !errorDetails && (
           <div className="py-24 text-center space-y-6">
             <BookPlus className="h-20 w-20 mx-auto text-primary/10 animate-pulse" />

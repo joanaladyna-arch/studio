@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -239,52 +239,41 @@ export function BookCard({ book }: { book: Book }) {
 
   return (
     <div className="space-y-4 group">
-      <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/40 group-hover:shadow-2xl transition-all duration-700 group-hover:-translate-y-2 bg-muted">
-        <Image 
-          src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
-          alt={book.title} 
-          fill 
-          className="object-cover transition-transform duration-1000 group-hover:scale-110" 
-          data-ai-hint="book cover"
-        />
+      <div className="relative aspect-[2/3] rounded-[1.5rem] overflow-hidden shadow-sm border border-white/40 group-hover:shadow-xl transition-all duration-700 group-hover:-translate-y-1.5 bg-secondary/5 flex items-center justify-center p-2">
+        <div className="relative w-full h-full">
+          <Image 
+            src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
+            alt={book.title} 
+            fill 
+            className="object-contain transition-transform duration-1000 group-hover:scale-105" 
+            data-ai-hint="book cover"
+          />
+        </div>
         
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
         
-        <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
+        <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
           <div className={cn(
-            "text-[8px] font-bold px-2 py-0.5 rounded-full text-white shadow-lg uppercase",
+            "text-[7px] font-bold px-2 py-0.5 rounded-full text-white shadow-md uppercase",
             STATUSES[book.status]?.color || "bg-slate-400"
           )}>
             {STATUSES[book.status]?.label}
           </div>
           {book.favorite && (
-            <div className="bg-white/95 p-1.5 rounded-full shadow-lg border border-primary/10">
-              <Heart className="h-3 w-3 text-primary fill-primary" />
+            <div className="bg-white/95 p-1 rounded-full shadow-md border border-primary/10">
+              <Heart className="h-2.5 w-2.5 text-primary fill-primary" />
             </div>
           )}
           {rank && (
-            <div className="bg-white/95 p-2 rounded-full shadow-lg border border-primary/5">
-              <RankIcon className={cn("h-4 w-4", rank.color)} />
+            <div className="bg-white/95 p-1.5 rounded-full shadow-md border border-primary/5">
+              <RankIcon className={cn("h-3 w-3", rank.color)} />
             </div>
           )}
         </div>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/60 backdrop-blur-md border-t border-white/20 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
-           <div className="flex flex-col gap-1">
-              <span className="text-[7px] text-primary/80 font-bold uppercase truncate">{book.publisher}</span>
-              <div className="flex flex-wrap gap-1">
-                {book.genres?.slice(0, 2).map(g => (
-                  <span key={g} className="text-[7px] px-2 py-0.5 rounded-full bg-white/80 text-foreground font-bold uppercase tracking-tighter">
-                    {g}
-                  </span>
-                ))}
-              </div>
-           </div>
-        </div>
       </div>
       <div className="text-center px-1">
-        <h3 className="text-sm font-headline line-clamp-1 italic">{book.title}</h3>
-        <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">{book.author}</p>
+        <h3 className="text-[13px] font-headline line-clamp-1 italic text-foreground/90">{book.title}</h3>
+        <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5 opacity-80">{book.author}</p>
       </div>
     </div>
   );
@@ -304,64 +293,80 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
     else setList([...list, item]);
   };
 
+  const statusLabel = status === 'read' ? 'Déjà terminé' : (status === 'pal' ? 'Dans ma PAL' : (status === 'progress' ? 'Lecture en cours' : STATUSES[status].label));
+
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-background/95">
+      <DialogContent className="max-w-4xl max-h-[95vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-background/98">
         <DialogHeader className="p-6 border-b border-primary/5">
-          <DialogTitle className="font-headline text-3xl italic">Éditer ma pépite</DialogTitle>
+          <div className="flex justify-between items-center">
+            <DialogTitle className="font-headline text-3xl italic">Détails de ma pépite</DialogTitle>
+            <Badge variant="secondary" className={cn("text-[10px] font-bold uppercase", STATUSES[status].color, "text-white border-none")}>
+              {statusLabel}
+            </Badge>
+          </div>
         </DialogHeader>
         
         <ScrollArea className="flex-1 p-8">
-          <div className="space-y-10">
-            <div className="flex flex-col sm:flex-row gap-8 items-start">
-               <div className="relative w-32 aspect-[2/3] rounded-2xl overflow-hidden shadow-xl bg-muted shrink-0">
-                  <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-cover" />
+          <div className="space-y-12">
+            <div className="flex flex-col md:flex-row gap-10 items-start">
+               <div className="relative w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl bg-secondary/5 p-4 flex items-center justify-center shrink-0 border border-white/50">
+                  <div className="relative w-full h-full">
+                    <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-contain" />
+                  </div>
                </div>
-               <div className="space-y-4 flex-1">
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-headline italic">{book.title}</h3>
-                    <p className="text-sm text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+               <div className="space-y-6 flex-1">
+                  <div className="space-y-2">
+                    <h3 className="text-3xl font-headline italic leading-tight">{book.title}</h3>
+                    <Link href={`/author/${encodeURIComponent(book.author)}`} className="text-sm text-primary font-bold uppercase tracking-[0.2em] hover:underline flex items-center gap-2">
+                      <UserIcon className="h-3.5 w-3.5" /> {book.author}
+                    </Link>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-50">Éditeur</Label>
+                      <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Éditeur</Label>
                       <Input 
                         value={publisher} 
                         onChange={(e) => setPublisher(e.target.value)} 
-                        className="h-10 rounded-xl bg-white/40 border-none italic text-sm"
+                        className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm focus:ring-primary/20"
                         placeholder="Nom de l'éditeur"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-50">Nombre de pages</Label>
+                      <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Nombre de pages</Label>
                       <Input 
                         type="number"
                         value={pages} 
                         onChange={(e) => setPages(parseInt(e.target.value) || 0)} 
-                        className="h-10 rounded-xl bg-white/40 border-none italic text-sm"
+                        className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest opacity-40 italic">
-                    <div className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {book.publicationDate}</div>
-                    <div className="flex items-center gap-1.5"><Info className="h-3.5 w-3.5" /> ISBN: {book.isbn}</div>
+                  <div className="flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-[0.2em] opacity-50 italic">
+                    <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary/40" /> {book.publicationDate}</div>
+                    <div className="flex items-center gap-2"><Info className="h-4 w-4 text-primary/40" /> ISBN: {book.isbn}</div>
                   </div>
                </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Statut de lecture</label>
-                <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="space-y-6">
+                <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Statut de lecture</label>
+                <div className="flex flex-wrap gap-2.5">
                   {Object.entries(STATUSES).map(([key, val]) => (
                     <Button 
                       key={key} 
                       variant="outline" 
                       size="sm"
                       onClick={() => setStatus(key as BookStatus)}
-                      className={cn("rounded-full border-primary/10 text-[10px] font-bold h-9 px-4", status === key ? "bg-primary text-white border-primary" : "hover:border-primary/40")}
+                      className={cn(
+                        "rounded-full border-primary/10 text-[10px] font-bold h-10 px-5 transition-all", 
+                        status === key 
+                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20" 
+                          : "hover:border-primary/40 bg-white/40"
+                      )}
                     >
                       {val.label}
                     </Button>
@@ -369,9 +374,9 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Grade Plume</label>
-                <div className="flex flex-wrap gap-2">
+              <div className="space-y-6">
+                <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Grade Plume</label>
+                <div className="flex flex-wrap gap-2.5">
                   {Object.entries(RANKS).map(([key, val]) => {
                     const Icon = val.icon;
                     return (
@@ -380,9 +385,14 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                         variant="outline" 
                         size="sm"
                         onClick={() => setRank(key as RankType)}
-                        className={cn("rounded-full border-primary/10 h-9 px-3 text-[10px]", rank === key ? "bg-primary/10 text-primary border-primary" : "hover:border-primary/40")}
+                        className={cn(
+                          "rounded-full border-primary/10 h-10 px-4 text-[10px] transition-all", 
+                          rank === key 
+                            ? "bg-primary/10 text-primary border-primary" 
+                            : "hover:border-primary/40 bg-white/40"
+                        )}
                       >
-                        <Icon className="h-4 w-4 mr-2" /> {val.label}
+                        <Icon className={cn("h-4 w-4 mr-2", rank === key ? val.color : "opacity-40")} /> {val.label}
                       </Button>
                     );
                   })}
@@ -390,24 +400,24 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
               </div>
             </div>
 
-            <div className="space-y-4">
-               <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Résumé de l'œuvre</label>
-               <ScrollArea className="h-32 p-4 bg-white/30 rounded-2xl italic text-xs leading-relaxed text-muted-foreground border border-white/40">
+            <div className="space-y-6">
+               <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Résumé de l'œuvre</label>
+               <div className="p-6 bg-white/40 rounded-[2rem] italic text-sm leading-relaxed text-muted-foreground border border-white/60 shadow-inner">
                  {book.description?.replace(/<[^>]*>?/gm, '') || "Aucun résumé disponible."}
-               </ScrollArea>
+               </div>
             </div>
 
-            <div className="space-y-4">
-               <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Genres littéraires</label>
-               <div className="flex flex-wrap gap-2">
+            <div className="space-y-6">
+               <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Genres littéraires</label>
+               <div className="flex flex-wrap gap-2.5">
                   {GENRES_LIST.map(g => (
                     <button 
                       key={g} 
                       onClick={() => toggleItem(genres, setGenres, g)}
                       className={cn(
-                        "text-[10px] px-4 py-2 rounded-full border transition-all font-bold uppercase",
+                        "text-[10px] px-5 py-2.5 rounded-full border transition-all font-bold uppercase tracking-widest",
                         genres.includes(g) 
-                          ? "bg-primary text-white border-primary shadow-sm" 
+                          ? "bg-primary text-white border-primary shadow-md shadow-primary/10" 
                           : "bg-white/50 text-muted-foreground border-transparent hover:border-primary/20"
                       )}
                     >
@@ -417,27 +427,27 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                </div>
             </div>
 
-            <div className="pt-6 border-t border-primary/5 flex items-center justify-between">
+            <div className="pt-10 border-t border-primary/5 flex items-center justify-between gap-4 flex-col sm:flex-row">
                <Button 
                 variant="ghost" 
                 onClick={() => setFavorite(!favorite)}
-                className={cn("rounded-2xl h-14 px-8 text-sm", favorite && "text-primary bg-primary/5")}
+                className={cn("rounded-2xl h-14 px-8 text-sm w-full sm:w-auto", favorite && "text-primary bg-primary/5")}
                >
-                 <Heart className={cn("h-6 w-6 mr-3", favorite && "fill-primary")} /> {favorite ? "Coup de cœur absolu" : "Ajouter aux favoris"}
+                 <Heart className={cn("h-6 w-6 mr-3 transition-transform duration-500", favorite && "fill-primary scale-110")} /> {favorite ? "Coup de cœur absolu" : "Ajouter aux favoris"}
                </Button>
 
-               <Button variant="ghost" className="text-destructive hover:bg-destructive/5 h-14 px-8" onClick={() => onDelete(book.id)}>
+               <Button variant="ghost" className="text-destructive hover:bg-destructive/5 h-14 px-8 w-full sm:w-auto" onClick={() => onDelete(book.id)}>
                  <Trash2 className="h-5 w-5 mr-2" /> Retirer de ma collection
                </Button>
             </div>
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-8 border-t border-primary/5 bg-white/40 backdrop-blur-md">
-           <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-6">Annuler</Button>
+        <DialogFooter className="p-8 border-t border-primary/5 bg-white/60 backdrop-blur-md">
+           <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-8">Annuler</Button>
            <Button 
             onClick={() => onSave({ genres, status, rank, favorite, progress, publisher, pages })} 
-            className="rounded-xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-10 h-14 shadow-lg shadow-primary/20"
+            className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-16 shadow-xl shadow-primary/20"
            >
              Enregistrer mes pépites
            </Button>
@@ -446,3 +456,4 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
     </Dialog>
   );
 }
+
