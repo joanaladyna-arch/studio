@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info, Bookmark } from "lucide-react";
+import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag, Info } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -28,34 +28,62 @@ export default function AddBookPage() {
     if (!query.trim()) return;
 
     setIsSearching(true);
+    setResults([]);
+    
+    const searchUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`;
+    
+    console.log(`[PLUME] Début de recherche pour: "${query}"`);
+    console.log(`[PLUME] URL de requête: ${searchUrl}`);
+
     try {
-      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=15`);
+      const response = await fetch(searchUrl);
+      
+      console.log(`[PLUME] Statut de la réponse: ${response.status} ${response.statusText}`);
+      
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+
       const data = await response.json();
+      console.log(`[PLUME] Données reçues:`, data);
       
       const formattedResults = data.items?.map((item: any) => {
         const info = item.volumeInfo;
         return {
           id: item.id,
-          title: info.title,
+          title: info.title || "Titre inconnu",
           author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
           publisher: info.publisher || "Éditeur inconnu",
+          // Conversion HTTP -> HTTPS pour les couvertures Google
           cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
           pages: info.pageCount || 0,
           description: info.description || "Aucun résumé disponible.",
           publicationDate: info.publishedDate || "Date inconnue",
           genres: info.categories || [],
-          isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || info.industryIdentifiers?.[0]?.identifier || "N/A",
+          isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
+                info.industryIdentifiers?.[0]?.identifier || 
+                "N/A",
           series: info.series || "",
           volume: info.volume || ""
         };
       }) || [];
 
+      console.log(`[PLUME] Nombre de résultats formatés: ${formattedResults.length}`);
       setResults(formattedResults);
+      
       if (formattedResults.length === 0) {
-        toast({ title: "Aucun résultat", description: "Désolé, nous n'avons trouvé aucun livre correspondant." });
+        toast({ 
+          title: "Aucun résultat", 
+          description: "Désolé, nous n'avons trouvé aucun livre correspondant à votre recherche." 
+        });
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de contacter Google Books." });
+    } catch (error: any) {
+      console.error(`[PLUME] Erreur lors de la recherche:`, error);
+      toast({ 
+        variant: "destructive", 
+        title: "Erreur de connexion", 
+        description: "Impossible de contacter le service Google Books. Vérifiez votre connexion." 
+      });
     } finally {
       setIsSearching(false);
     }
@@ -63,7 +91,11 @@ export default function AddBookPage() {
 
   const addBook = async (book: any) => {
     if (!db || !user) {
-      toast({ variant: "destructive", title: "Erreur", description: "Vous devez être connecté pour ajouter un livre." });
+      toast({ 
+        variant: "destructive", 
+        title: "Action impossible", 
+        description: "Vous devez être connecté pour ajouter un livre." 
+      });
       return;
     }
 
@@ -89,14 +121,17 @@ export default function AddBookPage() {
 
     const booksRef = collection(db, "users", user.uid, "books");
 
+    console.log(`[PLUME] Ajout du livre à Firestore:`, book.title);
+
     addDoc(booksRef, bookData)
       .then(() => {
         toast({
           title: "Livre ajouté !",
-          description: `${book.title} a été ajouté à votre bibliothèque.`,
+          description: `${book.title} a rejoint votre bibliothèque.`,
         });
       })
       .catch(async (e) => {
+        console.error(`[PLUME] Erreur Firestore lors de l'ajout:`, e);
         const permissionError = new FirestorePermissionError({
           path: booksRef.path,
           operation: 'create',
@@ -113,7 +148,9 @@ export default function AddBookPage() {
           <Sparkles className="h-10 w-10 text-primary/40 animate-float" />
         </div>
         <h1 className="text-5xl font-headline italic tracking-tight">Nouvelle Pépite</h1>
-        <p className="text-primary/60 italic font-medium max-w-md mx-auto">Recherchez votre prochain voyage littéraire par titre, auteur ou ISBN.</p>
+        <p className="text-primary/60 italic font-medium max-w-md mx-auto">
+          Recherchez votre prochain voyage littéraire par titre, auteur ou ISBN.
+        </p>
       </header>
 
       <form onSubmit={handleSearch} className="max-w-2xl mx-auto flex gap-3 px-4">
@@ -126,7 +163,11 @@ export default function AddBookPage() {
             className="pl-12 h-14 bg-white/60 border-white shadow-sm rounded-2xl text-lg italic focus-visible:ring-primary/20"
           />
         </div>
-        <Button type="submit" className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 font-headline italic text-lg" disabled={isSearching}>
+        <Button 
+          type="submit" 
+          className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 font-headline italic text-lg min-w-[140px]" 
+          disabled={isSearching}
+        >
           {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Chercher"}
         </Button>
       </form>
@@ -192,7 +233,7 @@ export default function AddBookPage() {
             <BookPlus className="h-20 w-20 mx-auto text-primary/10 animate-pulse" />
             <div className="space-y-2">
               <p className="italic font-headline text-2xl text-primary/40">Le monde entier dans votre carnet.</p>
-              <p className="text-sm text-muted-foreground italic">Recherchez et capturez vos futures lectures avec précision.</p>
+              <p className="text-sm text-muted-foreground italic">Capturez vos futures lectures avec précision.</p>
             </div>
           </div>
         )}
