@@ -48,6 +48,9 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [showPwaInfo, setShowPwaInfo] = useState(false);
 
+  const userName = user?.displayName || user?.email?.split('@')[0] || "Lectrice Plume";
+  const userPhoto = user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200`;
+
   const profileRef = useMemo(() => {
     if (!db || !user) return null;
     return doc(db, "users", user.uid);
@@ -130,7 +133,7 @@ export default function ProfilePage() {
         <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="relative">
             <Avatar className="h-28 w-28 border-4 border-primary/20 shadow-xl">
-              <AvatarImage src={user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200`} />
+              <AvatarImage src={userPhoto} />
               <AvatarFallback className="bg-primary/5 text-primary text-xl font-headline italic">PL</AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white rounded-full p-2 border-2 border-white shadow-md">
@@ -138,7 +141,7 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="space-y-1">
-            <h1 className="text-5xl font-headline italic tracking-tight">{user?.displayName || user?.email?.split('@')[0] || "Lectrice Plume"}</h1>
+            <h1 className="text-5xl font-headline italic tracking-tight">{userName}</h1>
             <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground italic text-sm">
               <Mail className="h-3 w-3" /> {user?.email}
             </div>
@@ -173,13 +176,13 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
                   <Apple className="h-3 w-3" /> Sur iPhone / iPad
                 </div>
-                <p className="text-[11px] leading-relaxed italic text-muted-foreground">Appuyez sur <Share2 className="h-3 w-3 inline mx-1" /> puis sur <b>"Sur l'écran d'accueil"</b>.</p>
+                <p className="text-[11px] font-medium leading-relaxed italic text-muted-foreground">Appuyez sur <Share2 className="h-3 w-3 inline mx-1" /> puis sur <b>"Sur l'écran d'accueil"</b>.</p>
               </div>
               <div className="p-4 bg-white/40 rounded-2xl space-y-2">
                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
                   <Smartphone className="h-3 w-3" /> Sur Android
                 </div>
-                <p className="text-[11px] leading-relaxed italic text-muted-foreground">Appuyez sur les <b>trois points ⋮</b> puis sur <b>"Installer l'application"</b>.</p>
+                <p className="text-[11px] font-medium leading-relaxed italic text-muted-foreground">Appuyez sur les <b>trois points ⋮</b> puis sur <b>"Installer l'application"</b>.</p>
               </div>
             </div>
             <Button variant="ghost" size="sm" className="w-full rounded-xl text-primary/40 hover:text-primary" onClick={() => setShowPwaInfo(false)}>

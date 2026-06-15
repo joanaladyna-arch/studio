@@ -33,6 +33,8 @@ export default function Home() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const userName = user?.displayName || user?.email?.split('@')[0] || "cher lecteur";
+
   const currentReadQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -72,7 +74,7 @@ export default function Home() {
         
         <div className="max-w-xl mx-auto p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-md">
           <p className="text-2xl font-headline italic text-primary/80 mb-2">
-            Bonjour {user?.displayName || user?.email?.split('@')[0] || "cher lecteur"},
+            Bonjour {userName},
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed italic">
             “Chaque page tournée est un souvenir gravé.” Ton sanctuaire littéraire t'attend pour de nouvelles pépites.
@@ -164,7 +166,7 @@ export default function Home() {
                 <div className="p-4 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
                   <UserIcon className="h-6 w-6 text-amber-500" />
                 </div>
-                <span className="font-headline text-2xl italic">Mes Statistiques</span>
+                <span className="font-headline text-2xl italic">Mon Profil</span>
               </Link>
             </div>
           </div>
