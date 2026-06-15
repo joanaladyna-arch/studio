@@ -7,8 +7,7 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup, 
   GoogleAuthProvider, 
-  sendPasswordResetEmail,
-  fetchSignInMethodsForEmail
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
@@ -31,37 +30,51 @@ export default function LoginPage() {
 
   const syncUserProfile = async (user: any, provider: string) => {
     if (!db) return;
-    const userRef = doc(db, "users", user.uid);
-    await setDoc(userRef, {
-      uid: user.uid,
-      email: user.email,
-      name: user.displayName || user.email?.split('@')[0] || "Utilisateur Plume",
-      photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
-      provider: provider,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    try {
+      const userRef = doc(db, "users", user.uid);
+      await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || user.email?.split('@')[0] || "Utilisateur Plume",
+        photoURL: user.photoURL || `https://picsum.photos/seed/${user.uid}/200`,
+        provider: provider,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      console.error("Erreur lors de la synchronisation Firestore :", e);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Le service d'authentification n'est pas prêt.",
-      });
+      toast({ variant: "destructive", title: "Erreur", description: "Le service d'authentification n'est pas prêt." });
       return;
     }
     setLoading(true);
     try {
+      console.log("Tentative de connexion pour :", email);
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("Connexion réussie :", userCredential.user.uid);
       await syncUserProfile(userCredential.user, "password");
       router.push("/");
     } catch (error: any) {
+      console.error("CODE ERREUR FIREBASE (Login) :", error.code);
+      console.error("MESSAGE ERREUR FIREBASE (Login) :", error.message);
+      
+      let message = "Email ou mot de passe incorrect.";
+      if (error.code === 'auth/invalid-credential') {
+        message = "Identifiants invalides. Vérifiez votre email et mot de passe.";
+      } else if (error.code === 'auth/user-not-found') {
+        message = "Aucun compte trouvé avec cet email.";
+      } else if (error.code === 'auth/wrong-password') {
+        message = "Mot de passe incorrect.";
+      }
+
       toast({
         variant: "destructive",
         title: "Erreur de connexion",
-        description: error.message || "Email ou mot de passe incorrect.",
+        description: message,
       });
     } finally {
       setLoading(false);
@@ -70,19 +83,19 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     if (!auth) {
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Le service d'authentification n'est pas prêt.",
-      });
+      toast({ variant: "destructive", title: "Erreur", description: "Le service d'authentification n'est pas prêt." });
       return;
     }
     const provider = new GoogleAuthProvider();
     try {
+      console.log("Tentative de connexion Google...");
       const result = await signInWithPopup(auth, provider);
+      console.log("Connexion Google réussie :", result.user.uid);
       await syncUserProfile(result.user, "google.com");
       router.push("/");
     } catch (error: any) {
+      console.error("CODE ERREUR FIREBASE (Google) :", error.code);
+      console.error("MESSAGE ERREUR FIREBASE (Google) :", error.message);
       toast({
         variant: "destructive",
         title: "Erreur Google",
@@ -93,35 +106,21 @@ export default function LoginPage() {
 
   const handleForgotPassword = async () => {
     if (!email) {
-      toast({
-        variant: "destructive",
-        title: "Email requis",
-        description: "Veuillez saisir votre adresse email pour réinitialiser votre mot de passe.",
-      });
+      toast({ variant: "destructive", title: "Email requis", description: "Veuillez saisir votre adresse email." });
       return;
     }
     if (!auth) return;
     setResetLoading(true);
     try {
-      // Vérifier d'abord les méthodes de connexion
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      if (methods.length === 0) {
-        throw new Error("Aucun compte n'est associé à cet email.");
-      }
-      if (!methods.includes("password")) {
-        throw new Error(`Ce compte utilise la connexion via : ${methods.join(', ')}. Connectez-vous avec ce service.`);
-      }
-
+      console.log("Demande de réinitialisation pour :", email);
       await sendPasswordResetEmail(auth, email);
-      toast({
-        title: "Email envoyé",
-        description: "Consultez votre boîte de réception pour réinitialiser votre mot de passe.",
-      });
+      toast({ title: "Email envoyé", description: "Consultez votre boîte de réception pour réinitialiser votre mot de passe." });
     } catch (error: any) {
+      console.error("CODE ERREUR FIREBASE (Reset) :", error.code);
       toast({
         variant: "destructive",
         title: "Erreur",
-        description: error.message || "Impossible d'envoyer l'email de réinitialisation.",
+        description: error.code === 'auth/user-not-found' ? "Aucun compte associé à cet email." : error.message,
       });
     } finally {
       setResetLoading(false);

@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useAuth, useFirestore } from "@/firebase";
-import { createUserWithEmailAndPassword, updateProfile, fetchSignInMethodsForEmail } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,23 +25,17 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!auth || !db) return;
+    if (!auth || !db) {
+      toast({ variant: "destructive", title: "Erreur", description: "Les services Firebase ne sont pas prêts." });
+      return;
+    }
     setLoading(true);
     try {
-      // Vérification proactive de l'email
-      const existingMethods = await fetchSignInMethodsForEmail(auth, email);
-      if (existingMethods.length > 0) {
-        toast({
-          variant: "destructive",
-          title: "Compte déjà existant",
-          description: `Vous avez déjà un compte via : ${existingMethods.join(', ')}. Veuillez vous connecter.`,
-        });
-        router.push("/login");
-        return;
-      }
-
+      console.log("Tentative d'inscription pour :", email);
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      console.log("Inscription réussie (Auth) :", user.uid);
 
       // Update Firebase Auth profile
       await updateProfile(user, { displayName: name });
@@ -57,6 +51,8 @@ export default function SignupPage() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+      
+      console.log("Profil Firestore créé pour :", user.uid);
 
       toast({
         title: "Bienvenue sur Plume !",
@@ -64,10 +60,22 @@ export default function SignupPage() {
       });
       router.push("/");
     } catch (error: any) {
+      console.error("CODE ERREUR FIREBASE (Signup) :", error.code);
+      console.error("MESSAGE ERREUR FIREBASE (Signup) :", error.message);
+      
+      let message = "Une erreur est survenue lors de la création du compte.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "Cette adresse email est déjà utilisée. Veuillez vous connecter.";
+      } else if (error.code === 'auth/invalid-email') {
+        message = "L'adresse email n'est pas valide.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "Le mot de passe est trop faible (6 caractères minimum).";
+      }
+
       toast({
         variant: "destructive",
         title: "Erreur d'inscription",
-        description: error.message || "Une erreur est survenue lors de la création du compte.",
+        description: message,
       });
     } finally {
       setLoading(false);
