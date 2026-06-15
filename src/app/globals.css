@@ -4,64 +4,26 @@
 
 @layer base {
   :root {
-    --background: 345 33% 98%;
+    --background: 30 40% 98%; /* Ivoire Crème */
     --foreground: 0 0% 18%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 18%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 18%;
-    --primary: 341 46% 68%;
+    --primary: 341 46% 68%; /* Rose Poudré */
     --primary-foreground: 0 0% 98%;
-    --secondary: 88 20% 70%;
+    --secondary: 88 20% 85%; /* Vert Sauge très doux */
     --secondary-foreground: 0 0% 18%;
-    --muted: 345 20% 94%;
+    --muted: 345 20% 96%;
     --muted-foreground: 0 0% 45%;
-    --accent: 305 31% 66%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 260 20% 94%; /* Lilas très clair */
+    --accent-foreground: 260 20% 20%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 341 20% 90%;
-    --input: 341 20% 90%;
+    --border: 341 20% 92%;
+    --input: 341 20% 92%;
     --ring: 341 46% 68%;
-    --radius: 0.75rem;
-  }
-  
-  /* Thème Bibliothèque Cosy */
-  .theme-cosy {
-    --background: 28 40% 96%;
-    --primary: 28 40% 45%;
-    --accent: 12 40% 50%;
-    --border: 28 30% 85%;
-  }
-
-  /* Thème Romantasy */
-  .theme-romantasy {
-    --background: 260 20% 96%;
-    --primary: 260 40% 35%;
-    --accent: 45 60% 50%;
-    --border: 260 20% 85%;
-  }
-
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 341 46% 68%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 88 20% 70%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 305 31% 66%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
+    --radius: 1rem;
   }
 }
 
@@ -71,20 +33,34 @@
   }
   body {
     @apply bg-background text-foreground font-body antialiased transition-colors duration-300;
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(341, 46%, 68%, 0.05) 0, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(260, 20% , 90%, 0.05) 0, transparent 50%);
+    background-attachment: fixed;
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-headline;
   }
 }
 
-.highlighter {
-  background-color: hsl(var(--chart-4));
-  padding: 0 0.2rem;
-  border-radius: 0.2rem;
+/* Effet Aquarelle discret */
+.bg-watercolor {
+  background: radial-gradient(circle at 50% 50%, rgba(253, 242, 245, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
 }
 
 .glass-card {
-  @apply bg-white/50 backdrop-blur-md border border-white/20 shadow-sm;
+  @apply bg-white/60 backdrop-blur-xl border border-white/40 shadow-sm rounded-3xl;
+}
+
+/* Animation Plume qui tombe */
+@keyframes feather-fall {
+  0% { transform: translateY(-100vh) rotate(0deg); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(0) rotate(360deg); opacity: 0.8; }
+}
+
+.animate-feather {
+  animation: feather-fall 4s ease-in-out infinite;
 }
 
 .no-scrollbar::-webkit-scrollbar {

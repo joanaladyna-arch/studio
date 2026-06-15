@@ -40,25 +40,25 @@ export const RANKS: Record<RankType, { label: string, icon: any, color: string, 
 };
 
 export const EMOTIONS: Record<EmotionBadgeType, { label: string, color: string, icon: string }> = {
-  obsession: { label: "Obsession Littéraire", color: "bg-purple-100 text-purple-700 border-purple-200", icon: "🔥" },
-  larmes: { label: "Larmes Garanties", color: "bg-blue-100 text-blue-700 border-blue-200", icon: "😭" },
-  doudou: { label: "Livre Doudou", color: "bg-green-100 text-green-700 border-green-200", icon: "☕" },
-  epicee: { label: "Romance Épicée", color: "bg-red-100 text-red-700 border-red-200", icon: "🌶️" },
-  "plot-twist": { label: "Plot Twist Mémorable", color: "bg-orange-100 text-orange-700 border-orange-200", icon: "🎭" },
-  addictif: { label: "Univers Addictif", color: "bg-indigo-100 text-indigo-700 border-indigo-200", icon: "🌍" },
-  inoubliable: { label: "Personnages Inoubliables", color: "bg-pink-100 text-pink-700 border-pink-200", icon: "🫶" },
-  reflexion: { label: "M'a fait réfléchir", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: "🧠" },
-  "romance-mem": { label: "Romance mémorable", color: "bg-rose-100 text-rose-700 border-rose-200", icon: "💘" },
-  fantasy: { label: "Fantasy immersive", color: "bg-sky-100 text-sky-700 border-sky-200", icon: "🐉" },
+  obsession: { label: "Obsession Littéraire", color: "bg-purple-50 text-purple-700 border-purple-100", icon: "🔥" },
+  larmes: { label: "Larmes Garanties", color: "bg-blue-50 text-blue-700 border-blue-100", icon: "😭" },
+  doudou: { label: "Livre Doudou", color: "bg-green-50 text-green-700 border-green-100", icon: "☕" },
+  epicee: { label: "Romance Épicée", color: "bg-red-50 text-red-700 border-red-100", icon: "🌶️" },
+  "plot-twist": { label: "Plot Twist Mémorable", color: "bg-orange-50 text-orange-700 border-orange-100", icon: "🎭" },
+  addictif: { label: "Univers Addictif", color: "bg-indigo-50 text-indigo-700 border-indigo-100", icon: "🌍" },
+  inoubliable: { label: "Personnages Inoubliables", color: "bg-pink-50 text-pink-700 border-pink-100", icon: "🫶" },
+  reflexion: { label: "M'a fait réfléchir", color: "bg-emerald-50 text-emerald-700 border-emerald-100", icon: "🧠" },
+  "romance-mem": { label: "Romance mémorable", color: "bg-rose-50 text-rose-700 border-rose-100", icon: "💘" },
+  fantasy: { label: "Fantasy immersive", color: "bg-sky-50 text-sky-700 border-sky-100", icon: "🐉" },
 };
 
 export const STATUSES: Record<BookStatus, { label: string, icon: any, color: string }> = {
-  pal: { label: "PAL", icon: BookText, color: "bg-slate-500" },
-  progress: { label: "En cours", icon: RefreshCw, color: "bg-blue-500" },
-  read: { label: "Lu", icon: Sparkles, color: "bg-emerald-500" },
-  dnf: { label: "DNF", icon: DoorOpen, color: "bg-rose-500" },
-  pause: { label: "Pause", icon: Pause, color: "bg-amber-500" },
-  reread: { label: "Relecture", icon: RefreshCw, color: "bg-purple-500" },
+  pal: { label: "PAL", icon: BookText, color: "bg-slate-400" },
+  progress: { label: "En cours", icon: RefreshCw, color: "bg-blue-400" },
+  read: { label: "Lu", icon: Sparkles, color: "bg-emerald-400" },
+  dnf: { label: "DNF", icon: DoorOpen, color: "bg-rose-400" },
+  pause: { label: "Pause", icon: Pause, color: "bg-amber-400" },
+  reread: { label: "Relecture", icon: RefreshCw, color: "bg-purple-400" },
 };
 
 export const CATEGORIES = [
@@ -109,38 +109,41 @@ export default function LibraryPage() {
   }, [activeTab, searchQuery]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+    <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
       <Navigation />
 
-      <header className="space-y-4">
-        <h1 className="text-4xl font-headline">Ma Bibliothèque</h1>
-        <p className="text-muted-foreground italic -mt-2">“Chaque livre est un souvenir précieux.”</p>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <header className="space-y-6">
+        <div className="text-center">
+          <h1 className="text-5xl font-headline tracking-tight">Ma Bibliothèque</h1>
+          <p className="text-primary/60 italic mt-2 font-medium">“Chaque livre est un souvenir précieux.”</p>
+        </div>
+        
+        <div className="flex gap-3 max-w-2xl mx-auto">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40 group-focus-within:text-primary transition-colors" />
             <Input 
-              placeholder="Chercher dans mes lectures..." 
-              className="pl-9 bg-muted/50 border-none focus-visible:ring-primary rounded-xl"
+              placeholder="Chercher une pépite..." 
+              className="pl-10 h-12 bg-white/40 border-white/60 focus-visible:ring-primary/30 rounded-2xl shadow-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <button className="p-3 border rounded-xl hover:bg-muted transition-colors">
-            <Filter className="h-5 w-5 text-muted-foreground" />
+          <button className="h-12 w-12 flex items-center justify-center bg-white/40 border border-white/60 rounded-2xl hover:bg-white/60 transition-all shadow-sm">
+            <Filter className="h-5 w-5 text-primary/40" />
           </button>
         </div>
       </header>
 
       <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="w-full justify-start overflow-x-auto h-auto bg-transparent border-b p-0 rounded-none gap-4 no-scrollbar mb-4">
+        <TabsList className="w-full justify-start overflow-x-auto h-auto bg-transparent border-b border-primary/5 p-0 rounded-none gap-6 no-scrollbar mb-8">
           {CATEGORIES.map((cat) => (
             <TabsTrigger 
               key={cat.id} 
               value={cat.id}
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-2 font-medium px-2 flex items-center gap-2 whitespace-nowrap"
+              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-4 font-headline text-lg px-2 flex items-center gap-2 whitespace-nowrap transition-all opacity-50 data-[state=active]:opacity-100"
             >
               {cat.label}
-              <Badge variant="secondary" className="h-5 px-1.5 min-w-[1.25rem] flex items-center justify-center text-[10px] bg-muted/50">
+              <Badge variant="secondary" className="h-5 px-1.5 min-w-[1.25rem] flex items-center justify-center text-[10px] bg-primary/5 text-primary border-none font-bold">
                 {counts[cat.id as keyof typeof counts] || 0}
               </Badge>
             </TabsTrigger>
@@ -149,15 +152,15 @@ export default function LibraryPage() {
 
         <TabsContent value={activeTab} className="mt-6">
           {filteredBooks.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-8">
               {filteredBooks.map((book) => (
                 <BookCard key={book.id} book={book} />
               ))}
             </div>
           ) : (
-            <div className="py-20 text-center space-y-4">
-               <BookText className="h-12 w-12 mx-auto text-muted/20" />
-               <p className="text-muted-foreground italic">Aucun livre ne correspond à tes critères.</p>
+            <div className="py-32 text-center space-y-6">
+               <BookText className="h-16 w-16 mx-auto text-primary/10" />
+               <p className="text-muted-foreground italic text-lg">Aucun livre ne correspond à tes critères.</p>
             </div>
           )}
         </TabsContent>
@@ -171,45 +174,50 @@ export function BookCard({ book }: { book: Book }) {
   const RankIcon = rank?.icon;
 
   return (
-    <div className="space-y-2 group">
-      <div className="relative aspect-[2/3] rounded-2xl overflow-hidden shadow-sm group-hover:shadow-xl transition-all duration-500 group-hover:-translate-y-1">
-        <Image src={book.cover} alt={book.title} fill className="object-cover" />
-        <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+    <div className="space-y-4 group">
+      <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/40 group-hover:shadow-2xl transition-all duration-700 group-hover:-translate-y-2">
+        <Image src={book.cover} alt={book.title} fill className="object-cover transition-transform duration-1000 group-hover:scale-110" />
+        
+        {/* Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+        
+        <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
           <StatusBadge status={book.status} />
           {book.favorite && (
-            <div className="bg-white/90 p-1.5 rounded-full shadow-sm">
-              <Heart className="h-3 w-3 text-red-500 fill-red-500" />
+            <div className="bg-white/95 p-1.5 rounded-full shadow-lg border border-primary/10">
+              <Heart className="h-3 w-3 text-primary fill-primary" />
             </div>
           )}
           {rank && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="bg-white/90 p-2 rounded-full shadow-sm">
+                  <div className="bg-white/95 p-2 rounded-full shadow-lg border border-primary/5 transition-transform duration-500 hover:rotate-12">
                     <RankIcon className={cn("h-4 w-4", rank.color)} />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent className="bg-white text-foreground border shadow-xl">
-                  <p className="font-bold">{rank.label}</p>
-                  <p className="text-[10px] italic opacity-70">{rank.description}</p>
+                <TooltipContent className="bg-white/95 backdrop-blur-xl text-foreground border shadow-2xl rounded-2xl p-3">
+                  <p className="font-headline text-lg">{rank.label}</p>
+                  <p className="text-xs italic opacity-70">{rank.description}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           )}
         </div>
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-           <div className="flex flex-wrap gap-1">
-              {book.badges?.map(b => (
-                <span key={b} className="text-[8px] px-1.5 py-0.5 rounded-full bg-white/20 text-white backdrop-blur-md border border-white/30 flex items-center gap-0.5 font-medium">
-                  {EMOTIONS[b].icon} {EMOTIONS[b].label}
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/30 backdrop-blur-md border-t border-white/40 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+           <div className="flex flex-wrap gap-1.5">
+              {book.badges?.slice(0, 2).map(b => (
+                <span key={b} className="text-[9px] px-2 py-1 rounded-full bg-white/80 text-foreground shadow-sm flex items-center gap-1 font-bold">
+                  {EMOTIONS[b].icon} {EMOTIONS[b].label.split(' ')[0]}
                 </span>
               ))}
            </div>
         </div>
       </div>
-      <div className="px-1">
-        <h3 className="text-sm font-semibold line-clamp-1 italic">{book.title}</h3>
-        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{book.author}</p>
+      <div className="text-center px-1">
+        <h3 className="text-lg font-headline line-clamp-1 italic text-foreground/90">{book.title}</h3>
+        <p className="text-[10px] text-primary/50 font-bold uppercase tracking-widest mt-0.5">{book.author}</p>
       </div>
     </div>
   );
@@ -218,7 +226,7 @@ export function BookCard({ book }: { book: Book }) {
 function StatusBadge({ status }: { status: BookStatus }) {
   const config = STATUSES[status];
   return (
-    <Badge className={cn("text-[8px] font-bold border-none px-2 py-0 h-4 text-center text-white rounded-full", config.color)}>
+    <Badge className={cn("text-[9px] font-bold border-none px-2.5 py-0.5 h-5 text-center text-white rounded-full shadow-lg", config.color)}>
       {config.label}
     </Badge>
   );
