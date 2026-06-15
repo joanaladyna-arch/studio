@@ -33,13 +33,6 @@ export default function Home() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogout = async () => {
-    if (!auth) return;
-    await signOut(auth);
-    toast({ title: "Déconnexion", description: "À bientôt sur Plume." });
-    router.replace("/login");
-  };
-
   const currentReadQuery = useMemo(() => {
     if (!db || !user) return null;
     return query(
@@ -72,16 +65,6 @@ export default function Home() {
   return (
     <div className="space-y-12 animate-paper">
       <header className="space-y-8 pt-8 text-center relative">
-        <div className="flex justify-center mb-2">
-           <div className={cn(
-             "flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border backdrop-blur-sm shadow-sm",
-             user ? "bg-emerald-50/50 text-emerald-600 border-emerald-100" : "bg-amber-50/50 text-amber-600 border-amber-100"
-           )}>
-              <div className={cn("h-1.5 w-1.5 rounded-full animate-pulse", user ? "bg-emerald-500" : "bg-amber-500")} />
-              {user ? "PLUME est connecté" : "Mode Visiteur"}
-           </div>
-        </div>
-
         <div className="relative inline-block">
           <Feather className="h-16 w-16 text-primary/40 animate-float mx-auto" />
           <h1 className="text-7xl font-headline text-foreground tracking-tighter italic mt-2">Plume</h1>

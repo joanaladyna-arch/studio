@@ -1,23 +1,51 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Navigation } from "@/components/navigation";
+import { useState, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Settings, Share2, Crown, BadgeCheck, FileArchive, Sparkles, Award, Medal, TrendingUp, BookOpen, Clock, DoorOpen, Star, Book as BookIcon, Tablet, Headphones, Timer, Plus, Info, Apple, Smartphone } from "lucide-react";
+import { 
+  Settings, 
+  Share2, 
+  Crown, 
+  BadgeCheck, 
+  FileArchive, 
+  Sparkles, 
+  Award, 
+  Medal, 
+  TrendingUp, 
+  BookOpen, 
+  Clock, 
+  DoorOpen, 
+  Star, 
+  Book as BookIcon, 
+  Tablet, 
+  Headphones, 
+  Timer, 
+  Plus, 
+  Smartphone, 
+  Apple, 
+  LogOut,
+  Mail
+} from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
+import { useUser, useFirestore, useDoc, useCollection, useAuth } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import { GENRES_LIST, TROPES_LIST, Book, FORMATS } from "@/app/library/page";
+import { Book } from "@/app/library/page";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProfilePage() {
   const { user } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
+  const router = useRouter();
+  const { toast } = useToast();
   const [showPwaInfo, setShowPwaInfo] = useState(false);
 
   const profileRef = useMemo(() => {
@@ -79,6 +107,20 @@ export default function ProfilePage() {
     };
   }, [books]);
 
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+      toast({
+        title: "Déconnexion",
+        description: "À bientôt sur Plume !",
+      });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error", error);
+    }
+  };
+
   const annualGoal = profile?.annualGoal || 24;
   const progressPercent = Math.min(100, Math.round((stats.readCount / annualGoal) * 100));
 
@@ -96,16 +138,19 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="space-y-1">
-            <h1 className="text-5xl font-headline italic tracking-tight">{user?.displayName || "Lectrice Plume"}</h1>
-            <p className="text-muted-foreground italic text-sm">{profile?.bio || "“Perdue entre deux chapitres.”"}</p>
+            <h1 className="text-5xl font-headline italic tracking-tight">{user?.displayName || user?.email?.split('@')[0] || "Lectrice Plume"}</h1>
+            <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground italic text-sm">
+              <Mail className="h-3 w-3" /> {user?.email}
+            </div>
+            <p className="text-muted-foreground italic text-sm mt-2">{profile?.bio || "“Perdue entre deux chapitres.”"}</p>
           </div>
         </div>
         <div className="flex gap-3">
-            <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5" onClick={() => setShowPwaInfo(!showPwaInfo)}>
+            <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5" onClick={() => setShowPwaInfo(!showPwaInfo)} title="Installation PWA">
                 <Smartphone className="h-5 w-5 text-primary" />
             </Button>
-            <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5">
-                <Settings className="h-5 w-5 text-primary" />
+            <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5" onClick={handleLogout} title="Se déconnecter">
+                <LogOut className="h-5 w-5 text-destructive" />
             </Button>
         </div>
       </header>
