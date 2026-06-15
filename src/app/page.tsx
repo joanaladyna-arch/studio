@@ -4,7 +4,22 @@ import { useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Trophy, PenTool, Heart, Bookmark, Coffee, Feather, LogOut, CheckCircle2, Star, Sparkles } from "lucide-react";
+import { 
+  BookOpen, 
+  Clock, 
+  Trophy, 
+  PenTool, 
+  Heart, 
+  Bookmark, 
+  Coffee, 
+  Feather, 
+  LogOut, 
+  CheckCircle2, 
+  Star, 
+  Sparkles,
+  Library,
+  BarChart3
+} from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
