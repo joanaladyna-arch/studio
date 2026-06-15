@@ -12,33 +12,30 @@ export type FirebaseInstances = {
 };
 
 /**
- * Initialise les services Firebase de manière sécurisée.
- * Si la configuration est incomplète (notamment la clé API),
- * les services retourneront null pour éviter de bloquer l'application.
+ * Initialise les services Firebase de manière robuste.
+ * Vérifie la présence de la clé API avant toute tentative d'initialisation
+ * pour éviter l'erreur auth/invalid-api-key.
  */
 export function initializeFirebase(): FirebaseInstances {
-  // Vérification de la présence des clés minimales requises par Firebase SDK
-  const hasConfig = !!firebaseConfig.apiKey && !!firebaseConfig.projectId;
+  // Vérification stricte de la configuration
+  const { apiKey, projectId } = firebaseConfig;
+  const isConfigValid = !!apiKey && apiKey !== "undefined" && !!projectId;
 
-  if (!hasConfig) {
-    console.warn(
-      "PLUME : La configuration Firebase est incomplète (clé API ou ID de projet manquant). " +
-      "Veuillez lier votre projet dans Firebase Studio pour activer l'authentification et la base de données."
-    );
+  if (!isConfigValid) {
+    if (typeof window !== 'undefined') {
+      console.warn(
+        "PLUME : Configuration Firebase manquante ou clé API invalide.\n" +
+        "Veuillez vérifier vos variables d'environnement NEXT_PUBLIC_FIREBASE_*.\n" +
+        "L'authentification et Firestore sont désactivés pour le moment."
+      );
+    }
     return { app: null, db: null, auth: null };
   }
 
   try {
     const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    
-    // getAuth est particulièrement sensible à la validité de l'apiKey
-    let auth: Auth | null = null;
-    try {
-      auth = getAuth(app);
-    } catch (authError) {
-      console.error("PLUME : Impossible d'initialiser Firebase Auth (clé API invalide ?)", authError);
-    }
+    const auth = getAuth(app);
 
     return { app, db, auth };
   } catch (error) {
