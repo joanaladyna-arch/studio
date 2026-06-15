@@ -6,6 +6,33 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SplashScreen } from "@/components/splash-screen";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
+import { useUser } from "@/firebase";
+import { usePathname, useRouter } from "next/navigation";
+
+function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useUser();
+  const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user && pathname !== "/login" && pathname !== "/signup") {
+      router.push("/login");
+    }
+  }, [user, loading, pathname, router]);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+          <p className="text-primary italic font-headline">Ouverture du journal...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
 
 export default function RootLayout({
   children,
@@ -43,9 +70,11 @@ export default function RootLayout({
           {showSplash ? (
             <SplashScreen onFinish={handleSplashFinish} />
           ) : (
-            <main className="max-w-4xl mx-auto px-6 py-12 md:py-16">
-              {children}
-            </main>
+            <AuthGuard>
+              <main className="max-w-4xl mx-auto px-6 py-12 md:py-16">
+                {children}
+              </main>
+            </AuthGuard>
           )}
           <Toaster />
         </FirebaseClientProvider>

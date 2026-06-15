@@ -1,9 +1,13 @@
+
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, Library, PenTool, User, BarChart3, Heart, Feather } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Home, Library, PenTool, User, BarChart3, Heart, Feather, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { useToast } from "@/hooks/use-toast";
 
 const navItems = [
   { href: "/", label: "Accueil", icon: Home },
@@ -16,6 +20,26 @@ const navItems = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+      await signOut(auth);
+      toast({
+        title: "Déconnexion",
+        description: "À bientôt sur Plume !",
+      });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error", error);
+    }
+  };
+
+  // Ne pas afficher la navigation sur les pages d'auth
+  if (pathname === "/login" || pathname === "/signup") return null;
 
   return (
     <>
@@ -44,6 +68,13 @@ export function Navigation() {
             </Link>
           );
         })}
+        <button 
+          onClick={handleLogout}
+          className="ml-8 text-muted-foreground hover:text-destructive transition-colors"
+          title="Déconnexion"
+        >
+          <LogOut className="h-5 w-5" />
+        </button>
       </nav>
 
       {/* Mobile Navigation */}
