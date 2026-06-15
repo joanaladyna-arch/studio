@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon, MessageSquare, Quote, PersonStanding, MapPin, Smile, Layers } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, PlusCircle, Bookmark, Info, Calendar, User as UserIcon, MessageSquare, Quote, PersonStanding, MapPin, Smile, Layers, Book as BookIcon, Tablet, Headphones, SlidersHorizontal } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,9 +17,11 @@ import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
 export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
+export type BookFormat = "papier" | "ebook" | "audio";
 
 export interface Book {
   id: string;
@@ -35,6 +37,8 @@ export interface Book {
   genres?: string[];
   tropes?: string[];
   pages?: number;
+  duration?: number;
+  format?: BookFormat;
   status: BookStatus;
   favorite: boolean;
   rank?: RankType;
@@ -58,6 +62,12 @@ export const GENRES_LIST = [
 export const TROPES_LIST = [
   "Soulmates", "Forbidden Love", "Enemies to Lovers", "Fake Dating", "Slow Burn", "Found Family", "Morally Grey", "Small Town"
 ];
+
+export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {
+  papier: { label: "Papier", icon: BookIcon, color: "text-amber-800", badgeClass: "bg-orange-50 text-orange-700 border-orange-100" },
+  ebook: { label: "Ebook", icon: Tablet, color: "text-accent-foreground", badgeClass: "bg-accent/10 text-accent-foreground border-accent/20" },
+  audio: { label: "Audio", icon: Headphones, color: "text-primary", badgeClass: "bg-primary/5 text-primary border-primary/10" },
+};
 
 export const EMOTIONS: Record<string, { label: string, icon: string }> = {
   "Bouleversé": { label: "Bouleversé", icon: "🎭" },
@@ -103,6 +113,7 @@ export default function LibraryPage() {
   const db = useFirestore();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFormat, setSelectedFormat] = useState<BookFormat | "all">("all");
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const { toast } = useToast();
 
@@ -126,14 +137,19 @@ export default function LibraryPage() {
 
   const filteredBooks = useMemo(() => {
     return books.filter(book => {
-      const matchesSearch = String(book.title).toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           String(book.author).toLowerCase().includes(searchQuery.toLowerCase());
+      const b = book as Book;
+      const matchesSearch = String(b.title).toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           String(b.author).toLowerCase().includes(searchQuery.toLowerCase());
       if (!matchesSearch) return false;
+      
+      const matchesFormat = selectedFormat === "all" || b.format === selectedFormat;
+      if (!matchesFormat) return false;
+
       if (activeTab === "all") return true;
-      if (activeTab === "favorite") return book.favorite;
-      return book.status === activeTab;
+      if (activeTab === "favorite") return b.favorite;
+      return b.status === activeTab;
     });
-  }, [activeTab, searchQuery, books]);
+  }, [activeTab, searchQuery, selectedFormat, books]);
 
   const handleUpdateBook = async (updatedData: Partial<Book>) => {
     if (!db || !user || !editingBook) return;
@@ -166,8 +182,8 @@ export default function LibraryPage() {
           <p className="text-primary/60 italic font-medium">L'écrin précieux de vos aventures littéraires.</p>
         </div>
         
-        <div className="flex gap-4 max-w-2xl mx-auto items-center">
-          <div className="relative flex-1 group">
+        <div className="flex flex-col sm:flex-row gap-4 max-w-3xl mx-auto items-center">
+          <div className="relative flex-1 group w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40 group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Chercher un titre ou un auteur..." 
@@ -176,12 +192,40 @@ export default function LibraryPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90 h-12 px-6 shadow-lg shadow-primary/10 font-headline italic text-lg hidden sm:flex">
-            <Link href="/add">
-              <Plus className="mr-2 h-5 w-5" />
-              Ajouter
-            </Link>
-          </Button>
+          
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="h-12 rounded-2xl bg-white/40 border-white/60 flex gap-2 font-headline italic px-4 shrink-0">
+                  <SlidersHorizontal className="h-4 w-4 text-primary" />
+                  Format: {selectedFormat === 'all' ? 'Tous' : FORMATS[selectedFormat].label}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 glass-card border-none p-2" align="end">
+                <div className="flex flex-col gap-1">
+                  <Button variant="ghost" className="justify-start font-headline italic text-sm" onClick={() => setSelectedFormat('all')}>Tous les formats</Button>
+                  {Object.entries(FORMATS).map(([key, value]) => (
+                    <Button 
+                      key={key} 
+                      variant="ghost" 
+                      className={cn("justify-start font-headline italic text-sm flex gap-2", selectedFormat === key && "bg-primary/5 text-primary")}
+                      onClick={() => setSelectedFormat(key as BookFormat)}
+                    >
+                      <value.icon className="h-4 w-4" />
+                      {value.label}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90 h-12 px-6 shadow-lg shadow-primary/10 font-headline italic text-lg flex-1 sm:flex-none">
+              <Link href="/add">
+                <Plus className="mr-2 h-5 w-5" />
+                Ajouter
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -231,14 +275,6 @@ export default function LibraryPage() {
           <Plus className="h-7 w-7" />
         </Button>
       </Link>
-      <div className="hidden sm:block fixed bottom-8 right-8 z-50">
-        <Button asChild className="rounded-full bg-primary hover:bg-primary/90 shadow-xl shadow-primary/40 h-16 px-8 text-lg font-headline italic">
-           <Link href="/add">
-              <PlusCircle className="mr-2 h-6 w-6" />
-              Ajouter une pépite
-           </Link>
-        </Button>
-      </div>
 
       {editingBook && (
         <EditBookDialog 
@@ -254,7 +290,9 @@ export default function LibraryPage() {
 
 export function BookCard({ book }: { book: Book }) {
   const rank = book.rank ? RANKS[book.rank] : null;
+  const format = book.format ? FORMATS[book.format] : FORMATS.papier;
   const RankIcon = rank?.icon;
+  const FormatIcon = format.icon;
 
   return (
     <div className="space-y-4 group">
@@ -271,6 +309,12 @@ export function BookCard({ book }: { book: Book }) {
         
         <div className="absolute inset-0 bg-gradient-to-t from-black/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
         
+        <div className="absolute top-2 left-2 flex flex-col gap-1.5 items-start">
+           <Badge className={cn("text-[7px] font-bold px-2 py-0.5 rounded-full border shadow-sm uppercase backdrop-blur-md", format.badgeClass)}>
+             <FormatIcon className="h-2 w-2 mr-1" /> {format.label}
+           </Badge>
+        </div>
+
         <div className="absolute top-2 right-2 flex flex-col gap-1.5 items-end">
           <div className={cn(
             "text-[7px] font-bold px-2 py-0.5 rounded-full text-white shadow-md uppercase",
@@ -303,6 +347,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
   const [tropes, setTropes] = useState<string[]>(book.tropes || []);
   const [emotions, setEmotions] = useState<string[]>(book.emotions || []);
   const [status, setStatus] = useState<BookStatus>(book.status);
+  const [format, setFormat] = useState<BookFormat>(book.format || "papier");
   const [rank, setRank] = useState<RankType | undefined>(book.rank);
   const [favorite, setFavorite] = useState(book.favorite);
   const [rating, setRating] = useState(book.rating || 0);
@@ -312,6 +357,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
   const [memorableScene, setMemorableScene] = useState(book.memorableScene || "");
   const [publisher, setPublisher] = useState(book.publisher || "");
   const [pages, setPages] = useState(book.pages || 0);
+  const [duration, setDuration] = useState(book.duration || 0);
   const [series, setSeries] = useState(book.series || "");
   const [volume, setVolume] = useState(book.volume || "");
 
@@ -368,12 +414,11 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Pages</Label>
+                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">ISBN</Label>
                           <Input 
-                            type="number"
-                            value={pages} 
-                            onChange={(e) => setPages(parseInt(e.target.value) || 0)} 
-                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                            value={book.isbn || ""} 
+                            readOnly
+                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm opacity-50"
                           />
                         </div>
                         <div className="space-y-1.5">
@@ -394,11 +439,53 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                             placeholder="Numéro"
                           />
                         </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Format</Label>
+                          <div className="flex gap-2">
+                            {Object.entries(FORMATS).map(([key, val]) => {
+                              const Icon = val.icon;
+                              return (
+                                <Button 
+                                  key={key} 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => setFormat(key as BookFormat)}
+                                  className={cn(
+                                    "rounded-xl border-primary/10 h-11 flex-1", 
+                                    format === key ? "bg-primary text-white border-primary" : "bg-white/40"
+                                  )}
+                                >
+                                  <Icon className="h-4 w-4" />
+                                </Button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {format === 'audio' ? (
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Durée (Heures)</Label>
+                            <Input 
+                              type="number"
+                              value={duration} 
+                              onChange={(e) => setDuration(parseFloat(e.target.value) || 0)} 
+                              className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Pages</Label>
+                            <Input 
+                              type="number"
+                              value={pages} 
+                              onChange={(e) => setPages(parseInt(e.target.value) || 0)} 
+                              className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-[0.2em] opacity-50 italic">
                         <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary/40" /> {book.publicationDate}</div>
-                        <div className="flex items-center gap-2"><Info className="h-4 w-4 text-primary/40" /> {book.isbn}</div>
                       </div>
                    </div>
                 </div>
@@ -578,7 +665,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
              <div className="flex gap-4">
                <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-8">Annuler</Button>
                <Button 
-                onClick={() => onSave({ genres, tropes, emotions, status, rank, favorite, publisher, pages, rating, review, favoriteQuote, favoriteCharacters, memorableScene, series, volume })} 
+                onClick={() => onSave({ genres, tropes, emotions, status, format, rank, favorite, publisher, pages, duration, rating, review, favoriteQuote, favoriteCharacters, memorableScene, series, volume })} 
                 className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20"
                >
                  Enregistrer
@@ -590,3 +677,4 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
     </Dialog>
   );
 }
+

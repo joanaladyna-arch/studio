@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useCallback, useRef, useMemo } from "react";
@@ -58,8 +59,7 @@ export default function AddBookPage() {
 
   const searchOpenLibrary = async (q: string) => {
     const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=15`;
-    console.log(`[PLUME] Recherche (Backup Source): ${olUrl}`);
-
+    
     try {
       const response = await fetch(olUrl);
       if (!response.ok) throw new Error(`Erreur Source: ${response.status}`);
@@ -109,7 +109,6 @@ export default function AddBookPage() {
     
     // 1. Essayer Google Books
     const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15`;
-    console.log(`[PLUME] Recherche (Primary Source): ${googleUrl}`);
 
     try {
       const response = await fetch(googleUrl);
@@ -188,6 +187,7 @@ export default function AddBookPage() {
       series: book.series || "",
       volume: book.volume || "",
       status: "pal",
+      format: "papier", // Format par défaut à l'ajout
       favorite: false,
       progress: 0,
       pagesRead: 0,

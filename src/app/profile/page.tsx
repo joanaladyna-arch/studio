@@ -8,12 +8,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Settings, Share2, Crown, BadgeCheck, FileArchive, Sparkles, Award, Medal, TrendingUp, BookOpen, Clock, DoorOpen, Star } from "lucide-react";
+import { Settings, Share2, Crown, BadgeCheck, FileArchive, Sparkles, Award, Medal, TrendingUp, BookOpen, Clock, DoorOpen, Star, Book as BookIcon, Tablet, Headphones, Timer } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { doc, collection } from "firebase/firestore";
-import { GENRES_LIST, TROPES_LIST, Book } from "@/app/library/page";
+import { GENRES_LIST, TROPES_LIST, Book, FORMATS } from "@/app/library/page";
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -39,7 +39,14 @@ export default function ProfilePage() {
     const palBooks = allBooks.filter(b => b.status === 'pal');
     const progressBooks = allBooks.filter(b => b.status === 'progress');
     const dnfBooks = allBooks.filter(b => b.status === 'dnf');
+    
+    // Formats
+    const paperCount = allBooks.filter(b => b.format === 'papier' || !b.format).length;
+    const ebookCount = allBooks.filter(b => b.format === 'ebook').length;
+    const audioCount = allBooks.filter(b => b.format === 'audio').length;
+
     const pagesRead = allBooks.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
+    const listeningHours = allBooks.reduce((acc, b) => acc + (b.format === 'audio' ? (b.duration || 0) : 0), 0);
     
     // Genre Counts
     const genreCounts: Record<string, number> = {};
@@ -62,7 +69,11 @@ export default function ProfilePage() {
       palCount: palBooks.length,
       progressCount: progressBooks.length,
       dnfCount: dnfBooks.length,
+      paperCount,
+      ebookCount,
+      audioCount,
       pagesRead,
+      listeningHours,
       unlockedBadges,
       unlockedMedals,
       favoriteGenre,
@@ -75,8 +86,8 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-12 animate-in fade-in duration-700 pb-20">
-      <header className="flex justify-between items-center pt-8">
-        <div className="flex items-center gap-6">
+      <header className="flex flex-col md:flex-row justify-between items-center pt-8 gap-6 text-center md:text-left">
+        <div className="flex flex-col md:flex-row items-center gap-6">
           <div className="relative">
             <Avatar className="h-28 w-28 border-4 border-primary/20 shadow-xl">
               <AvatarImage src={user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200`} />
@@ -131,7 +142,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-            <Card className="glass-card p-8 border-none space-y-6 bg-white/40">
+            <Card className="glass-card p-8 border-none space-y-6 bg-white/40 h-full">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Objectif annuel</p>
@@ -146,21 +157,74 @@ export default function ProfilePage() {
             </Card>
 
             <div className="grid grid-cols-2 gap-6">
-                <Link href="/profile/badges">
-                    <Card className="glass-card p-6 border-none text-center space-y-2 h-full hover:bg-white/60 transition-colors">
-                        <BadgeCheck className="h-8 w-8 mx-auto text-emerald-400" />
-                        <p className="text-3xl font-headline italic">{stats.unlockedBadges}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Badges de Genres</p>
-                    </Card>
-                </Link>
-                <Link href="/profile/badges">
-                    <Card className="glass-card p-6 border-none text-center space-y-2 h-full hover:bg-white/60 transition-colors">
-                        <Medal className="h-8 w-8 mx-auto text-amber-500" />
-                        <p className="text-3xl font-headline italic">{stats.unlockedMedals}</p>
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Médailles de Tropes</p>
-                    </Card>
-                </Link>
+                <Card className="glass-card p-6 border-none text-center space-y-2 bg-white/40">
+                    <FileArchive className="h-8 w-8 mx-auto text-primary/60" />
+                    <p className="text-3xl font-headline italic">{stats.pagesRead.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages parcourues</p>
+                </Card>
+                <Card className="glass-card p-6 border-none text-center space-y-2 bg-white/40">
+                    <Timer className="h-8 w-8 mx-auto text-primary/60" />
+                    <p className="text-3xl font-headline italic">{Math.round(stats.listeningHours)}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Heures d'écoute</p>
+                </Card>
             </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card p-6 border-none text-center space-y-3 bg-white/40">
+            <div className="p-3 bg-orange-50 rounded-2xl w-fit mx-auto">
+              <BookIcon className="h-6 w-6 text-orange-700" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-3xl font-headline italic">{stats.paperCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 italic">Livres Papier</p>
+            </div>
+          </Card>
+          <Card className="glass-card p-6 border-none text-center space-y-3 bg-white/40">
+            <div className="p-3 bg-accent/10 rounded-2xl w-fit mx-auto">
+              <Tablet className="h-6 w-6 text-accent-foreground" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-3xl font-headline italic">{stats.ebookCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 italic">Ebooks</p>
+            </div>
+          </Card>
+          <Card className="glass-card p-6 border-none text-center space-y-3 bg-white/40">
+            <div className="p-3 bg-primary/5 rounded-2xl w-fit mx-auto">
+              <Headphones className="h-6 w-6 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-3xl font-headline italic">{stats.audioCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 italic">Livres Audio</p>
+            </div>
+          </Card>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+            <Link href="/profile/badges" className="block">
+                <Card className="glass-card p-8 border-none flex items-center justify-between hover:bg-white/60 transition-colors bg-white/40">
+                    <div className="flex items-center gap-4">
+                        <BadgeCheck className="h-10 w-10 text-emerald-400" />
+                        <div className="text-left">
+                            <p className="text-2xl font-headline italic">{stats.unlockedBadges}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Badges de Genres</p>
+                        </div>
+                    </div>
+                    <Sparkles className="h-5 w-5 text-primary/20" />
+                </Card>
+            </Link>
+            <Link href="/profile/badges" className="block">
+                <Card className="glass-card p-8 border-none flex items-center justify-between hover:bg-white/60 transition-colors bg-white/40">
+                    <div className="flex items-center gap-4">
+                        <Medal className="h-10 w-10 text-amber-500" />
+                        <div className="text-left">
+                            <p className="text-2xl font-headline italic">{stats.unlockedMedals}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Médailles de Tropes</p>
+                        </div>
+                    </div>
+                    <Sparkles className="h-5 w-5 text-primary/20" />
+                </Card>
+            </Link>
         </div>
 
         <Card className="glass-card p-8 border-none space-y-8 bg-white/40">
@@ -185,13 +249,6 @@ export default function ProfilePage() {
                         <p className="text-xs text-muted-foreground italic">Votre thématique de cœur</p>
                     </div>
                 </div>
-            </div>
-            <div className="pt-8 border-t border-primary/5 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <FileArchive className="h-5 w-5 text-primary/20" />
-                    <span className="text-xs italic text-muted-foreground">Pages parcourues cette année</span>
-                </div>
-                <p className="text-2xl font-headline italic">{stats.pagesRead.toLocaleString()}</p>
             </div>
         </Card>
       </section>
@@ -219,3 +276,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+
