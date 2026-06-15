@@ -23,6 +23,14 @@
         "pages": { "type": "number" },
         "progress": { "type": "number" },
         "pagesRead": { "type": "number" },
+        "rating": { "type": "number" },
+        "review": { "type": "string" },
+        "favoriteQuote": { "type": "string" },
+        "favoriteCharacters": { "type": "string" },
+        "memorableScene": { "type": "string" },
+        "emotions": { "type": "array", "items": { "type": "string" } },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "author", "status"]
@@ -47,7 +55,8 @@
         "name": { "type": "string" },
         "annualGoal": { "type": "number" },
         "theme": { "type": "string" },
-        "avatarUrl": { "type": "string" }
+        "avatarUrl": { "type": "string" },
+        "bio": { "type": "string" }
       }
     }
   },
