@@ -1,0 +1,22 @@
+{
+  "placeholderImages": [
+    {
+      "id": "book-1",
+      "description": "L'élégance du hérisson cover",
+      "imageUrl": "https://picsum.photos/seed/book1/200/300",
+      "imageHint": "book cover"
+    },
+    {
+      "id": "book-2",
+      "description": "La vérité sur l'affaire Harry Quebert cover",
+      "imageUrl": "https://picsum.photos/seed/book2/200/300",
+      "imageHint": "book novel"
+    },
+    {
+      "id": "book-3",
+      "description": "Les fleurs du mal cover",
+      "imageUrl": "https://picsum.photos/seed/book3/200/300",
+      "imageHint": "poetry book"
+    }
+  ]
+}
