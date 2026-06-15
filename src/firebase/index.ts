@@ -12,23 +12,19 @@ export type FirebaseInstances = {
 };
 
 /**
- * Initialise les services Firebase pour plume-f3424.
+ * Initialise les services Firebase pour plume-f3424 de manière directe.
  */
 export function initializeFirebase(): FirebaseInstances {
   try {
-    // On ne tente l'initialisation que si la clé API est présente
-    if (!firebaseConfig.apiKey) {
-      console.warn("PLUME : La clé API Firebase est manquante. L'authentification sera désactivée.");
-      return { app: null, db: null, auth: null };
-    }
-
+    // Initialisation forcée avec la config directe
     const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
     return { app, db, auth };
   } catch (error) {
-    console.error("PLUME : Erreur lors de l'initialisation Firebase.", error);
+    console.error("PLUME : Erreur fatale lors de l'initialisation Firebase.", error);
+    // Retourne des instances nulles au lieu de faire planter l'app
     return { app: null, db: null, auth: null };
   }
 }

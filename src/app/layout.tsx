@@ -5,18 +5,17 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import { SplashScreen } from "@/components/splash-screen";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
-import { useUser, useAuth } from "@/firebase";
+import { useUser } from "@/firebase";
 import { usePathname, useRouter } from "next/navigation";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
-  const auth = useAuth();
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Timeout de sécurité : on affiche l'app après 2 secondes max
+    // Timeout de sécurité : on affiche l'app après 2 secondes max quoi qu'il arrive
     const timer = setTimeout(() => {
       setReady(true);
     }, 2000);
@@ -29,17 +28,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [loading]);
 
   useEffect(() => {
+    // Redirection vers login si non connecté (sauf pages d'auth)
     if (ready && !user && pathname !== "/login" && pathname !== "/signup") {
       router.push("/login");
     }
   }, [user, ready, pathname, router]);
-
-  // Si Firebase n'est pas configuré du tout (pas d'auth instance)
-  if (!auth && ready) {
-    return <div className="p-8 text-center bg-destructive/10 text-destructive rounded-xl m-4 italic font-headline border border-destructive/20">
-      La configuration Firebase est manquante. Veuillez vérifier vos clés API.
-    </div>;
-  }
 
   return <>{children}</>;
 }
@@ -74,6 +67,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-screen pb-20 md:pb-0 overflow-x-hidden relative">
         <FirebaseClientProvider>
+          {/* Effet papier superposé */}
           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
           
           {showSplash ? (
