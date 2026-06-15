@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Instagram, Music } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { RANKS, EMOTIONS, Book, BookCard } from "@/app/library/page";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useCollection } from "@/firebase";
@@ -36,8 +37,6 @@ export default function SharePage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      <Navigation />
-
       <header>
         <h1 className="text-4xl font-headline italic">Partage BookTok</h1>
         <p className="text-muted-foreground italic">Générez une fiche élégante pour vos réseaux sociaux.</p>
