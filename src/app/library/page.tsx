@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { collection, doc, updateDoc } from "firebase/firestore";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
 export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
@@ -34,6 +35,7 @@ export interface Book {
   progress?: number;
   totalPages?: number;
   pagesRead?: number;
+  description?: string;
 }
 
 export const GENRES_LIST = [
@@ -122,8 +124,10 @@ export default function LibraryPage() {
 
   const filteredBooks = useMemo(() => {
     return books.filter(book => {
-      const matchesSearch = (book.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           (book.author || "").toLowerCase().includes(searchQuery.toLowerCase());
+      const titleStr = String(book.title || "").toLowerCase();
+      const authorStr = String(book.author || "").toLowerCase();
+      const matchesSearch = titleStr.includes(searchQuery.toLowerCase()) || 
+                           authorStr.includes(searchQuery.toLowerCase());
       
       if (!matchesSearch) return false;
       if (activeTab === "all") return true;
@@ -145,23 +149,29 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="space-y-10 animate-in fade-in duration-1000">
+    <div className="space-y-10 animate-in fade-in duration-1000 relative">
       <header className="space-y-6">
         <div className="text-center">
           <h1 className="text-5xl font-headline tracking-tight">Ma Bibliothèque</h1>
           <p className="text-primary/60 italic mt-2 font-medium">“Chaque livre est un souvenir précieux.”</p>
         </div>
         
-        <div className="flex gap-3 max-w-2xl mx-auto">
-          <div className="relative flex-1 group">
+        <div className="flex flex-col sm:flex-row gap-4 max-w-3xl mx-auto items-center">
+          <div className="relative flex-1 group w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40 group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Chercher une pépite..." 
-              className="pl-10 h-12 bg-white/40 border-white/60 focus-visible:ring-primary/30 rounded-2xl shadow-sm"
+              className="pl-10 h-12 bg-white/40 border-white/60 focus-visible:ring-primary/30 rounded-2xl shadow-sm italic"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
+          <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90 h-12 px-6 shadow-lg shadow-primary/10 font-headline italic text-lg w-full sm:w-auto">
+            <Link href="/add">
+              <Plus className="mr-2 h-5 w-5" />
+              Ajouter
+            </Link>
+          </Button>
         </div>
       </header>
 
@@ -195,7 +205,12 @@ export default function LibraryPage() {
           ) : (
             <div className="py-32 text-center space-y-6">
                <BookText className="h-16 w-16 mx-auto text-primary/10" />
-               <p className="text-muted-foreground italic text-lg">Aucun livre ne correspond à tes critères.</p>
+               <div className="space-y-2">
+                 <p className="text-muted-foreground italic text-lg">Aucun livre ne correspond à tes critères.</p>
+                 <Button asChild variant="link" className="text-primary italic">
+                   <Link href="/add">Ajouter une nouvelle lecture ?</Link>
+                 </Button>
+               </div>
             </div>
           )}
         </TabsContent>
@@ -208,6 +223,13 @@ export default function LibraryPage() {
           onSave={handleUpdateBook} 
         />
       )}
+
+      {/* Floating Action Button for Mobile */}
+      <Link href="/add" className="md:hidden fixed bottom-24 right-6 z-50">
+        <Button size="icon" className="h-16 w-16 rounded-full bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/40">
+          <Plus className="h-8 w-8" />
+        </Button>
+      </Link>
     </div>
   );
 }
@@ -244,8 +266,8 @@ function EditBookDialog({ book, onClose, onSave }: { book: Book, onClose: () => 
                </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Statut</label>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(STATUSES).map(([key, val]) => (
@@ -254,14 +276,14 @@ function EditBookDialog({ book, onClose, onSave }: { book: Book, onClose: () => 
                       variant="outline" 
                       size="sm"
                       onClick={() => setStatus(key as BookStatus)}
-                      className={cn("rounded-full border-primary/10", status === key && "bg-primary text-white border-primary")}
+                      className={cn("rounded-full border-primary/10 transition-all", status === key ? "bg-primary text-white border-primary shadow-md" : "hover:border-primary/40")}
                     >
                       {val.label}
                     </Button>
                   ))}
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Rang Plume</label>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(RANKS).map(([key, val]) => {
@@ -272,7 +294,7 @@ function EditBookDialog({ book, onClose, onSave }: { book: Book, onClose: () => 
                         variant="outline" 
                         size="sm"
                         onClick={() => setRank(key as RankType)}
-                        className={cn("rounded-full border-primary/10", rank === key && "bg-primary/10 text-primary border-primary")}
+                        className={cn("rounded-full border-primary/10 transition-all", rank === key ? "bg-primary/10 text-primary border-primary shadow-sm" : "hover:border-primary/40")}
                       >
                         <Icon className="h-3 w-3 mr-1" /> {val.label}
                       </Button>
@@ -332,7 +354,7 @@ function EditBookDialog({ book, onClose, onSave }: { book: Book, onClose: () => 
                <Button 
                 variant="ghost" 
                 onClick={() => setFavorite(!favorite)}
-                className={cn("rounded-full", favorite && "text-primary")}
+                className={cn("rounded-2xl h-12 px-6", favorite && "text-primary bg-primary/5")}
                >
                  <Heart className={cn("h-5 w-5 mr-2", favorite && "fill-primary")} /> {favorite ? "Favori" : "Ajouter aux favoris"}
                </Button>
@@ -344,9 +366,9 @@ function EditBookDialog({ book, onClose, onSave }: { book: Book, onClose: () => 
            <Button variant="ghost" onClick={onClose} className="rounded-xl">Annuler</Button>
            <Button 
             onClick={() => onSave({ genres, tropes, status, rank, favorite, progress })} 
-            className="rounded-xl bg-primary hover:bg-primary/90"
+            className="rounded-xl bg-primary hover:bg-primary/90 font-headline italic text-lg px-8 h-12"
            >
-             Enregistrer les pépites
+             Enregistrer mes pépites
            </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,10 +1,10 @@
+
 "use client";
 
 import { useState } from "react";
-import { Navigation } from "@/components/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Barcode, BookPlus, Loader2 } from "lucide-react";
+import { Search, Plus, BookPlus, Loader2, Sparkles, Calendar, Tag } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,8 @@ import { useUser, useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function AddBookPage() {
   const { user } = useUser();
@@ -27,25 +29,30 @@ export default function AddBookPage() {
 
     setIsSearching(true);
     try {
-      const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10`);
+      const response = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10`);
       const data = await response.json();
       
-      const formattedResults = data.docs.map((doc: any) => ({
-        id: doc.key,
-        title: doc.title,
-        author: doc.author_name ? doc.author_name[0] : "Auteur inconnu",
-        cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null,
-        totalPages: doc.number_of_pages_median || doc.number_of_pages || 0,
-        isbn: doc.isbn ? doc.isbn[0] : null,
-        key: doc.key
-      }));
+      const formattedResults = data.items?.map((item: any) => {
+        const info = item.volumeInfo;
+        return {
+          id: item.id,
+          title: info.title,
+          author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
+          cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
+          totalPages: info.pageCount || 0,
+          description: info.description || "Aucun résumé disponible.",
+          publishedDate: info.publishedDate || "N/A",
+          genres: info.categories || [],
+          isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || info.industryIdentifiers?.[0]?.identifier || "N/A"
+        };
+      }) || [];
 
       setResults(formattedResults);
       if (formattedResults.length === 0) {
         toast({ title: "Aucun résultat", description: "Désolé, nous n'avons trouvé aucun livre correspondant." });
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de contacter Open Library." });
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de contacter Google Books." });
     } finally {
       setIsSearching(false);
     }
@@ -57,8 +64,6 @@ export default function AddBookPage() {
       return;
     }
 
-    // On pourrait ici faire un deuxième appel pour récupérer la description (summary) via le "key"
-    // mais pour une MVP, on importe les données déjà présentes dans la recherche.
     const bookData = {
       title: book.title,
       author: book.author,
@@ -68,6 +73,9 @@ export default function AddBookPage() {
       totalPages: book.totalPages,
       pagesRead: 0,
       progress: 0,
+      description: book.description,
+      publishedDate: book.publishedDate,
+      genres: book.genres,
       createdAt: serverTimestamp()
     };
 
@@ -77,7 +85,7 @@ export default function AddBookPage() {
       .then(() => {
         toast({
           title: "Livre ajouté !",
-          description: `${book.title} a été ajouté à votre bibliothèque (PAL).`,
+          description: `${book.title} a été ajouté à votre bibliothèque.`,
         });
       })
       .catch(async (e) => {
@@ -91,62 +99,88 @@ export default function AddBookPage() {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      <Navigation />
-
-      <header>
-        <h1 className="text-4xl font-headline italic">Ajouter une pépite</h1>
-        <p className="text-muted-foreground italic">Recherchez par titre, auteur ou ISBN via Open Library.</p>
+    <div className="space-y-8 animate-paper pb-12">
+      <header className="text-center space-y-4 pt-4">
+        <Sparkles className="h-10 w-10 text-primary/40 mx-auto animate-float" />
+        <h1 className="text-5xl font-headline italic tracking-tight">Ajouter une pépite</h1>
+        <p className="text-primary/60 italic font-medium">Recherchez par titre, auteur ou ISBN dans le catalogue mondial.</p>
       </header>
 
-      <form onSubmit={handleSearch} className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
+      <form onSubmit={handleSearch} className="max-w-2xl mx-auto flex gap-3">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40 group-focus-within:text-primary transition-colors" />
           <Input 
-            placeholder="L'élégance du hérisson, 978..." 
+            placeholder="Ex: L'élégance du hérisson, 978..." 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-9 h-12 bg-white/40 border-white/60 focus-visible:ring-primary/30 rounded-2xl"
+            className="pl-11 h-14 bg-white/40 border-white/60 focus-visible:ring-primary/30 rounded-2xl shadow-sm text-lg italic"
           />
         </div>
-        <Button size="icon" variant="outline" className="h-12 w-12 rounded-2xl border-white/60 bg-white/40">
-          <Barcode className="h-6 w-6 text-primary/40" />
-        </Button>
-        <Button type="submit" className="h-12 px-6 rounded-2xl bg-primary hover:bg-primary/90" disabled={isSearching}>
-          {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Rechercher"}
+        <Button type="submit" className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 font-headline italic text-lg" disabled={isSearching}>
+          {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Trouver"}
         </Button>
       </form>
 
-      <div className="space-y-4">
+      <div className="grid gap-6">
         {results.length > 0 ? (
           results.map((book) => (
-            <Card key={book.id} className="glass-card hover:bg-white/80 transition-all duration-300">
-              <CardContent className="p-4 flex gap-4 items-center">
-                <div className="relative h-24 w-16 shrink-0 rounded-xl overflow-hidden shadow-sm border border-white/40">
+            <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group">
+              <CardContent className="p-0 flex flex-col sm:flex-row">
+                <div className="relative w-full sm:w-48 aspect-[2/3] shrink-0 overflow-hidden">
                   <Image 
                     src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
                     alt={book.title} 
                     fill 
-                    className="object-cover" 
+                    className="object-cover transition-transform duration-1000 group-hover:scale-110" 
                   />
+                  <div className="absolute inset-0 bg-black/5 mix-blend-overlay" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-headline text-lg line-clamp-1 italic">{book.title}</h3>
-                  <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
-                  {book.totalPages > 0 && (
-                    <p className="text-[10px] text-primary/60 mt-1 italic">{book.totalPages} pages</p>
-                  )}
+                
+                <div className="p-8 flex flex-col flex-1 gap-4">
+                  <div className="space-y-1">
+                    <h3 className="text-2xl font-headline italic leading-tight group-hover:text-primary transition-colors">{book.title}</h3>
+                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-widest opacity-60">
+                    <div className="flex items-center gap-1.5"><Calendar className="h-3 w-3" /> {book.publishedDate.split('-')[0]}</div>
+                    <div className="flex items-center gap-1.5"><Tag className="h-3 w-3" /> {book.totalPages} pages</div>
+                  </div>
+
+                  <ScrollArea className="h-20">
+                    <p className="text-sm text-muted-foreground italic leading-relaxed line-clamp-3">
+                      {book.description.replace(/<[^>]*>?/gm, '')}
+                    </p>
+                  </ScrollArea>
+
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    {book.genres.slice(0, 3).map((g: string) => (
+                      <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[9px] font-bold">
+                        {g}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="pt-4 flex justify-end">
+                    <Button 
+                      onClick={() => addBook(book)} 
+                      className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 h-11 px-6 font-headline italic text-md flex gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Ajouter à ma PAL
+                    </Button>
+                  </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => addBook(book)} className="text-primary hover:text-primary hover:bg-primary/10 rounded-full h-12 w-12">
-                  <Plus className="h-6 w-6" />
-                </Button>
               </CardContent>
             </Card>
           ))
         ) : !isSearching && (
-          <div className="py-20 flex flex-col items-center justify-center text-muted-foreground gap-4 opacity-40">
-            <BookPlus className="h-16 w-16" />
-            <p className="italic font-headline text-lg">Recherchez un livre pour l'ajouter à votre PAL.</p>
+          <div className="py-24 text-center space-y-6">
+            <BookPlus className="h-20 w-20 mx-auto text-primary/10 animate-pulse" />
+            <div className="space-y-2">
+              <p className="italic font-headline text-2xl text-primary/40">Le catalogue mondial à votre portée.</p>
+              <p className="text-sm text-muted-foreground italic">Recherchez votre prochaine lecture coup de cœur.</p>
+            </div>
           </div>
         )}
       </div>

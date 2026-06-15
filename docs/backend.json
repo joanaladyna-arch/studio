@@ -14,6 +14,8 @@
         "rank": { "type": "string", "enum": ["diamant", "royale", "doree", "argentee", "simple", "froissee", "brisee", "dnf"] },
         "genres": { "type": "array", "items": { "type": "string" } },
         "tropes": { "type": "array", "items": { "type": "string" } },
+        "description": { "type": "string" },
+        "publishedDate": { "type": "string" },
         "progress": { "type": "number" },
         "totalPages": { "type": "number" },
         "pagesRead": { "type": "number" },

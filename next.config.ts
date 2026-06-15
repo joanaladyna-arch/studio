@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -31,6 +32,12 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'covers.openlibrary.org',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'books.google.com',
         port: '',
         pathname: '/**',
       },
