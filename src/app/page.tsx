@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Star, Clock, Trophy, PenTool } from "lucide-react";
+import { BookOpen, Star, Clock, Trophy, PenTool, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ export default function Home() {
     progress: 65,
     pagesRead: 210,
     totalPages: 320,
-    cover: PlaceHolderImages[0]?.imageUrl || "https://picsum.photos/seed/default/200/300"
+    cover: "https://picsum.photos/seed/book1/200/300"
   };
 
   const stats = [
@@ -31,10 +31,17 @@ export default function Home() {
     <div className="space-y-8 animate-in fade-in duration-700">
       <Navigation />
       
-      <header className="flex justify-between items-end">
-        <div>
-          <h1 className="text-4xl font-headline text-foreground">Bonjour, Lecteur</h1>
-          <p className="text-muted-foreground">Votre bibliothèque personnelle à portée de main.</p>
+      <header className="space-y-4">
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-4xl font-headline text-foreground">Bonjour, Léa</h1>
+            <p className="text-muted-foreground italic mt-1">“Tes lectures, tes mots, tes émotions.”</p>
+          </div>
+        </div>
+        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+          <p className="text-sm text-primary-foreground/80 font-medium">
+            Plume est un journal de lecture authentique, sans IA obligatoire, pensé pour garder une trace sincère de tes lectures.
+          </p>
         </div>
       </header>
 
@@ -55,7 +62,7 @@ export default function Home() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-2xl font-headline">Lecture en cours</h2>
+        <h2 className="text-2xl font-headline">Ma lecture du moment</h2>
         <Card className="overflow-hidden border-none shadow-lg">
           <div className="grid md:grid-cols-[150px_1fr] gap-6">
             <div className="relative aspect-[2/3] md:h-full">
@@ -91,7 +98,7 @@ export default function Home() {
                 <Button asChild variant="default" className="flex-1 bg-accent hover:bg-accent/90">
                   <Link href="/journal">
                     <PenTool className="mr-2 h-4 w-4" />
-                    Noter mes pensées
+                    Écrire une réflexion
                   </Link>
                 </Button>
                 <Button variant="outline" size="icon">
@@ -105,24 +112,23 @@ export default function Home() {
 
       <section className="space-y-4">
         <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-headline">Dernières pépites</h2>
+          <h2 className="text-2xl font-headline text-primary">Dernières pépites</h2>
           <Button variant="link" asChild className="text-primary p-0">
-            <Link href="/library">Voir tout</Link>
+            <Link href="/library">Voir ma bibliothèque</Link>
           </Button>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="group cursor-pointer">
-              <div className="relative aspect-[2/3] rounded-lg overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300">
+              <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-sm group-hover:shadow-md transition-all duration-300">
                 <Image 
                   src={`https://picsum.photos/seed/recent${i}/200/300`} 
                   alt="Recent book"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  data-ai-hint="book novel"
                 />
               </div>
-              <p className="mt-2 text-sm font-medium line-clamp-1">Roman récent {i}</p>
+              <p className="mt-2 text-sm font-medium line-clamp-1 italic">Titre du livre {i}</p>
               <p className="text-xs text-muted-foreground">Auteur {i}</p>
             </div>
           ))}
