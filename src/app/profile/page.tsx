@@ -355,7 +355,10 @@ function EditProfileDialog({ profile }: { profile: any }) {
   }, [profile, open]);
 
   const handleSave = async () => {
-    if (!db || !user) return;
+    if (!db || !user) {
+      toast({ variant: 'destructive', title: 'Utilisateur non connecté' });
+      return;
+    }
     setLoading(true);
     try {
       const data = {
@@ -387,13 +390,13 @@ function EditProfileDialog({ profile }: { profile: any }) {
           <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl h-[90vh]">
+      <DialogContent className="max-w-4xl glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl h-[90vh] sm:h-[80vh]">
         <DialogHeader className="p-8 border-b bg-white/40 shrink-0">
           <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 w-full">
-          <div className="p-8 space-y-16 pb-12">
+        <ScrollArea className="flex-1 w-full h-full">
+          <div className="p-8 space-y-16 pb-24">
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Informations Personnelles</h3>
               <div className="grid gap-8">
@@ -507,7 +510,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
           </div>
         </ScrollArea>
         
-        <DialogFooter className="p-8 border-t bg-white/60 shrink-0 gap-4 sm:gap-2">
+        <DialogFooter className="p-8 border-t bg-white/95 backdrop-blur-md absolute bottom-0 left-0 right-0 shrink-0 gap-4 sm:gap-2 z-20">
           <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl px-8 rounded-2xl">Annuler</Button>
           <Button onClick={handleSave} disabled={loading} className="h-16 px-16 rounded-[2rem] bg-primary text-2xl font-headline italic shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95">
             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Graver mon identité"}
