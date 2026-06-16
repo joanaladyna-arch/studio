@@ -31,7 +31,8 @@ export function initializeFirebase(): FirebaseInstances {
   }
 }
 
+// L'export de useUser vient maintenant de provider.tsx (version Context)
 export * from './provider';
 export { useCollection } from './firestore/use-collection';
 export { useDoc } from './firestore/use-doc';
-export { useUser } from './auth/use-user';
+// On supprime l'export direct de useUser d'ici pour éviter le conflit avec celui du provider
