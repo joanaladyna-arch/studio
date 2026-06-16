@@ -75,6 +75,19 @@ export interface UserBook {
   tropes?: string[];
   themes?: string[];
   volume?: string;
+  spicyLevel?: number;
+  releaseDateUS?: string;
+  releaseDateFR?: string;
+  releaseDateUE?: string;
+  detailedRatings?: {
+    intrigue?: number;
+    personnages?: number;
+    ecriture?: number;
+    rythme?: number;
+    chimie?: number;
+    tension?: number;
+    developpement?: number;
+  };
   pagesRead?: number;
   favorite?: boolean;
   dePlume?: boolean;
@@ -116,7 +129,7 @@ export const THEMES_LIST = [
   "Manipulation", "Jalousie", "Liberté", "Sacrifice", "Loyauté",
   "Addiction", "Santé mentale", "Reconstruction de soi", "Littérature française",
   "Politique", "Religion et foi", "Mythologie et légendes", "Milieu artistique",
-  "Milieu médical"
+  "Milieu médical", "Adapté au cinéma", "Adapté en série/film"
 ];
 
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {

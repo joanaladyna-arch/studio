@@ -30,7 +30,8 @@ import {
   ShieldCheck,
   Medal,
   Award,
-  Heart
+  Heart,
+  Feather
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
@@ -44,6 +45,26 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
+
+// Titre de lectrice évolutif, basé sur le total de livres lus toutes
+// catégories confondues — du plus léger au plus dévorant, à la demande
+// explicite de l'utilisatrice.
+const READER_TITLES = [
+  { min: 0, label: "Lectrice Plume" },
+  { min: 10, label: "Lectrice Curieuse" },
+  { min: 25, label: "Lectrice Passionnée" },
+  { min: 50, label: "Lectrice Assidue" },
+  { min: 100, label: "Lectrice Insatiable" },
+  { min: 200, label: "Lectrice Addict" },
+];
+
+function getReaderTitle(count: number): string {
+  let current = READER_TITLES[0];
+  for (const tier of READER_TITLES) {
+    if (count >= tier.min) current = tier;
+  }
+  return current.label;
+}
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -186,6 +207,9 @@ export default function ProfilePage() {
           </div>
           <div className="space-y-3 text-center md:text-left">
             <h1 className="text-6xl font-headline italic tracking-tight">{userName}</h1>
+            <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1.5 italic font-headline text-sm gap-2">
+              <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
+            </Badge>
             {profile?.bio && <p className="text-muted-foreground italic text-xl max-w-xl leading-relaxed">{profile.bio}</p>}
           </div>
         </div>

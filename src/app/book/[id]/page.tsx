@@ -17,8 +17,11 @@ import {
   Camera,
   Link as LinkIcon,
   Upload,
-  Share2
+  Share2,
+  Flame,
+  ClipboardList
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import Image from "next/image";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
@@ -34,6 +37,20 @@ import { cn, toArray, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
+
+// Grille d'évaluation détaillée, distincte de "Ma Note" — combine des
+// critères sur le livre en lui-même (intrigue, personnages, écriture,
+// rythme) et sur la romance qu'il raconte (chimie, tension, développement
+// de la relation), à la demande explicite de l'utilisatrice.
+const EVALUATION_CRITERIA: { key: keyof NonNullable<UserBook["detailedRatings"]>; label: string }[] = [
+  { key: "intrigue", label: "Intrigue / Histoire" },
+  { key: "personnages", label: "Personnages" },
+  { key: "ecriture", label: "Écriture / Style" },
+  { key: "rythme", label: "Rythme" },
+  { key: "chimie", label: "Chimie entre les personnages" },
+  { key: "tension", label: "Tension" },
+  { key: "developpement", label: "Développement de la relation" },
+];
 
 export default function BookDetailPage() {
   const params = useParams();
@@ -56,6 +73,7 @@ export default function BookDetailPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [newCoverUrl, setNewCoverUrl] = useState("");
+  const [ratingGridOpen, setRatingGridOpen] = useState(false);
 
   // Récupération des données Master
   const fetchMasterData = useCallback(async (mid: string) => {
@@ -329,6 +347,39 @@ export default function BookDetailPage() {
                  />
                  <p className="text-[10px] text-muted-foreground italic">Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</p>
                </div>
+
+               <div className="space-y-3">
+                 <Label className="italic text-xl font-headline">Date de sortie</Label>
+                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                   <div className="space-y-2">
+                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">US</Label>
+                     <Input
+                       value={(editedData as any).releaseDateUS || ""}
+                       onChange={(e) => setEditedData({ ...editedData, releaseDateUS: e.target.value } as any)}
+                       placeholder="ex : 2023"
+                       className="h-11 rounded-xl bg-white/40 border-none italic"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">FR</Label>
+                     <Input
+                       value={(editedData as any).releaseDateFR || ""}
+                       onChange={(e) => setEditedData({ ...editedData, releaseDateFR: e.target.value } as any)}
+                       placeholder="ex : 2024"
+                       className="h-11 rounded-xl bg-white/40 border-none italic"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">UE</Label>
+                     <Input
+                       value={(editedData as any).releaseDateUE || ""}
+                       onChange={(e) => setEditedData({ ...editedData, releaseDateUE: e.target.value } as any)}
+                       placeholder="ex : 2024"
+                       className="h-11 rounded-xl bg-white/40 border-none italic"
+                     />
+                   </div>
+                 </div>
+               </div>
                <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm">
                  <h4 className="font-headline text-2xl italic mb-6 opacity-40">Résumé de la pépite</h4>
                  <p className="italic text-lg leading-relaxed text-muted-foreground">{masterBook?.description || "Cette œuvre attend que vous en décriviez l'essence."}</p>
@@ -408,7 +459,52 @@ export default function BookDetailPage() {
 
             <TabsContent value="journal" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">
                <div className="space-y-6">
-                 <Label className="italic text-3xl font-headline">Ma Note</Label>
+                 <div className="flex items-center justify-between flex-wrap gap-4">
+                   <Label className="italic text-3xl font-headline">Ma Note</Label>
+                   <Dialog open={ratingGridOpen} onOpenChange={setRatingGridOpen}>
+                     <DialogTrigger asChild>
+                       <Button variant="outline" className="rounded-2xl h-11 px-6 italic font-headline border-primary/20">
+                         <ClipboardList className="mr-2 h-4 w-4" /> Évaluer
+                       </Button>
+                     </DialogTrigger>
+                     <DialogContent className="max-w-lg glass-card border-none bg-white/95 backdrop-blur-3xl shadow-2xl">
+                       <DialogHeader>
+                         <DialogTitle className="font-headline text-3xl italic">Grille d'évaluation</DialogTitle>
+                       </DialogHeader>
+                       <div className="space-y-5 py-2">
+                         {EVALUATION_CRITERIA.map((c) => (
+                           <div key={c.key} className="flex items-center justify-between gap-4">
+                             <Label className="italic text-sm">{c.label}</Label>
+                             <div className="flex gap-1 shrink-0">
+                               {[1,2,3,4,5].map(s => (
+                                 <Star
+                                   key={s}
+                                   onClick={() => setEditedData({
+                                     ...editedData,
+                                     detailedRatings: { ...((editedData as any).detailedRatings || {}), [c.key]: s }
+                                   } as any)}
+                                   className={cn(
+                                     "h-5 w-5 cursor-pointer transition-all hover:scale-110",
+                                     s <= (((editedData as any).detailedRatings || {})[c.key] || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/15"
+                                   )}
+                                 />
+                               ))}
+                             </div>
+                           </div>
+                         ))}
+                       </div>
+                       <DialogFooter>
+                         <Button
+                           onClick={async () => { await handleSave(); setRatingGridOpen(false); }}
+                           disabled={isSaving}
+                           className="w-full rounded-2xl bg-primary h-12 font-headline italic"
+                         >
+                           {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="mr-2 h-5 w-5" />} Enregistrer l'évaluation
+                         </Button>
+                       </DialogFooter>
+                     </DialogContent>
+                   </Dialog>
+                 </div>
                  <div className="flex gap-4">
                    {[1,2,3,4,5].map(s => (
                     <Star 
@@ -421,6 +517,23 @@ export default function BookDetailPage() {
                     />
                    ))}
                  </div>
+               </div>
+
+               <div className="space-y-6">
+                 <Label className="italic text-3xl font-headline">Niveau Spicy</Label>
+                 <div className="flex gap-4">
+                   {[1,2,3,4,5].map(s => (
+                    <Flame 
+                      key={s} 
+                      onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)} 
+                      className={cn(
+                        "h-12 w-12 cursor-pointer transition-all hover:scale-110", 
+                        s <= ((editedData as any).spicyLevel || 0) ? "text-orange-500 fill-orange-500 drop-shadow-md" : "text-muted-foreground/10"
+                      )} 
+                    />
+                   ))}
+                 </div>
+                 <p className="text-[10px] text-muted-foreground italic">0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la dernière flamme pour revenir à 0.</p>
                </div>
 
                <div className="grid sm:grid-cols-2 gap-6">

@@ -41,6 +41,9 @@ export default function AdminPage() {
   const [progress, setProgress] = useState(0);
   const [importResults, setImportResults] = useState<{ success: number; errors: number } | null>(null);
   const [isSyncingAuthors, setIsSyncingAuthors] = useState(false);
+  const [isFillingDescriptions, setIsFillingDescriptions] = useState(false);
+  const [fillProgress, setFillProgress] = useState(0);
+  const [fillResults, setFillResults] = useState<{ filled: number; notFound: number; skipped: number } | null>(null);
 
   // Simple Admin check
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
@@ -222,6 +225,76 @@ export default function AdminPage() {
       toast({ variant: "destructive", title: "Échec de la synchronisation", description: "Vérifie les règles Firestore (lecture sur masterBooks, écriture sur authors)." });
     } finally {
       setIsSyncingAuthors(false);
+    }
+  };
+
+  // Recherche un résumé via Google Books (par ISBN si disponible, sinon
+  // par titre + auteur) pour toutes les fiches maître qui n'en ont pas
+  // encore — utile pour les livres ajoutés avant l'enrichissement
+  // systématique des résumés, ou dont la source d'origine n'en fournissait
+  // pas. Ne touche jamais aux livres qui ont déjà un résumé.
+  const fillMissingDescriptions = async () => {
+    if (!db) return;
+    setIsFillingDescriptions(true);
+    setFillProgress(0);
+    setFillResults(null);
+    let filled = 0;
+    let notFound = 0;
+    let skipped = 0;
+    try {
+      const snap = await getDocs(collection(db, "masterBooks"));
+      const candidates = snap.docs.filter((d) => !((d.data().description || "").toString().trim()));
+      skipped = snap.docs.length - candidates.length;
+
+      for (let i = 0; i < candidates.length; i++) {
+        const bookDoc = candidates[i];
+        const data = bookDoc.data();
+        const isbn = (data.isbn13 || data.isbn || "").toString().trim();
+        const title = (data.title || "").toString().trim();
+        const author = (data.author || "").toString().trim();
+        let description = "";
+
+        try {
+          if (isbn) {
+            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`, {}, 8000);
+            const json = await res.json();
+            description = json.items?.[0]?.volumeInfo?.description || "";
+          }
+          if (!description && title) {
+            const q = author ? `${title} ${author}` : title;
+            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}`, {}, 8000);
+            const json = await res.json();
+            description = json.items?.[0]?.volumeInfo?.description || "";
+          }
+        } catch (err) {
+          console.error("Recherche résumé échouée:", title, err);
+        }
+
+        if (description) {
+          try {
+            await setDoc(doc(db, "masterBooks", bookDoc.id), { description, updatedAt: serverTimestamp() }, { merge: true });
+            filled++;
+          } catch (err) {
+            console.error("Écriture résumé échouée:", title, err);
+            notFound++;
+          }
+        } else {
+          notFound++;
+        }
+
+        setFillProgress(Math.round(((i + 1) / candidates.length) * 100));
+      }
+
+      setFillResults({ filled, notFound, skipped });
+      toast({
+        title: "Recherche terminée",
+        description: `${filled} résumés complétés, ${notFound} introuvables, ${skipped} en avaient déjà un.`
+      });
+    } catch (err) {
+      console.error("Fill Descriptions Error:", err);
+      toast({ variant: "destructive", title: "Échec", description: "Vérifie les règles Firestore (lecture/écriture sur masterBooks)." });
+    } finally {
+      setIsFillingDescriptions(false);
     }
   };
 
@@ -407,6 +480,20 @@ export default function AdminPage() {
                <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
                  {isSyncingAuthors ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Synchroniser les Auteurs
                </Button>
+               <Button variant="outline" onClick={fillMissingDescriptions} disabled={isFillingDescriptions} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+                 {isFillingDescriptions ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Compléter les résumés manquants
+               </Button>
+               {isFillingDescriptions && (
+                 <div className="space-y-1">
+                   <Progress value={fillProgress} className="h-2 bg-primary/10" />
+                   <p className="text-[10px] text-center opacity-40 italic">{fillProgress}%</p>
+                 </div>
+               )}
+               {fillResults && (
+                 <p className="text-[10px] text-center opacity-60 italic">
+                   {fillResults.filled} résumés complétés, {fillResults.notFound} introuvables, {fillResults.skipped} en avaient déjà un.
+                 </p>
+               )}
                <Button variant="outline" className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">Nettoyer les Genres</Button>
                <p className="text-[10px] text-center opacity-40 font-bold uppercase tracking-widest mt-4">Statut : En ligne et sécurisé</p>
             </CardContent>
