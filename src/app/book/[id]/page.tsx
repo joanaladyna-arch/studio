@@ -30,7 +30,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn, toArray } from "@/lib/utils";
+import { cn, toArray, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
@@ -205,8 +205,8 @@ export default function BookDetailPage() {
         </div>
       </header>
 
-      <div className="grid lg:grid-cols-[380px_1fr] gap-16">
-        <div className="space-y-8 max-w-[280px] mx-auto lg:max-w-none lg:mx-0 w-full">
+      <div className="flex flex-col sm:flex-row gap-10 items-start">
+        <div className="space-y-6 w-full sm:w-[260px] shrink-0 mx-auto sm:mx-0">
           <div className="relative aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
             <BookCover
               src={editedData.cover || masterBook?.cover}
@@ -221,87 +221,87 @@ export default function BookDetailPage() {
             </div>
           </div>
 
-          <Card className="glass-card p-8 border-none bg-white/60 space-y-8 shadow-sm">
-             <div className="space-y-4">
-               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Statut de lecture</Label>
-               <div className="flex flex-wrap gap-2">
-                 {Object.entries(STATUSES).map(([k, v]) => (
-                   <Button 
-                    key={k} 
-                    variant="outline" 
-                    onClick={() => setEditedData({ ...editedData, status: k as any })} 
-                    className={cn(
-                      "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all", 
-                      editedData.status === k ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
-                    )}
-                   >
-                     {v.label}
-                   </Button>
-                 ))}
-               </div>
-             </div>
-
-             <div className="space-y-4 pt-4 border-t border-primary/5">
-               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang Plume</Label>
-               <div className="flex flex-wrap gap-2">
-                 {Object.entries(RANKS).map(([k, v]) => {
-                   const isActive = editedData.plumeRank === k;
-                   const RankIcon = v.icon;
-                   return (
-                     <Button
-                      key={k}
-                      variant="outline"
-                      onClick={() => setEditedData({ ...editedData, plumeRank: isActive ? null : (k as RankType) } as any)}
-                      className={cn(
-                        "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
-                        isActive ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
-                      )}
-                     >
-                       <RankIcon className={cn("h-3.5 w-3.5", isActive ? "text-white" : v.color)} />
-                       {v.label}
-                     </Button>
-                   );
-                 })}
-               </div>
-               <p className="text-[10px] text-muted-foreground italic">Cliquez à nouveau sur un rang pour le retirer.</p>
-             </div>
-
-             <div className="space-y-4 pt-4 border-t border-primary/5">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center gap-2">
-                  <LinkIcon className="h-3 w-3" /> URL Couverture
-                </Label>
-                <div className="flex gap-2">
-                  <Input 
-                    value={newCoverUrl} 
-                    onChange={(e) => setNewCoverUrl(e.target.value)} 
-                    placeholder="https://..." 
-                    className="h-10 text-xs italic bg-white/40 border-none rounded-xl"
-                  />
-                  <Button onClick={() => handleCoverUpdate(newCoverUrl)} variant="secondary" className="h-10 px-4 rounded-xl italic">OK</Button>
-                </div>
-             </div>
-          </Card>
-
           <Button variant="ghost" onClick={handleDelete} className="w-full text-destructive hover:text-destructive hover:bg-rose-50 rounded-2xl h-14 italic font-headline text-lg">
             <Trash2 className="mr-3 h-5 w-5" /> Retirer de la réserve
           </Button>
         </div>
 
-        <div className="space-y-12">
-          <div className="space-y-4">
-            <h1 className="text-6xl font-headline italic leading-tight">{masterBook?.title || userBook.title}</h1>
-            <Link
-              href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
-              className="text-3xl font-headline text-primary italic hover:underline inline-block"
-            >
-              {masterBook?.author || userBook.author}
-            </Link>
-            {masterBook?.translator && (
-              <p className="text-sm text-muted-foreground italic">Traduit par {masterBook.translator}</p>
-            )}
-          </div>
+        <Card className="glass-card p-8 border-none bg-white/60 space-y-8 shadow-sm flex-1 w-full">
+           <div className="space-y-4">
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Statut de lecture</Label>
+             <div className="flex flex-wrap gap-2">
+               {Object.entries(STATUSES).map(([k, v]) => (
+                 <Button 
+                  key={k} 
+                  variant="outline" 
+                  onClick={() => setEditedData({ ...editedData, status: k as any })} 
+                  className={cn(
+                    "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all", 
+                    editedData.status === k ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
+                  )}
+                 >
+                   {v.label}
+                 </Button>
+               ))}
+             </div>
+           </div>
 
-          <Tabs defaultValue="overview">
+           <div className="space-y-4 pt-4 border-t border-primary/5">
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang Plume</Label>
+             <div className="flex flex-wrap gap-2">
+               {Object.entries(RANKS).map(([k, v]) => {
+                 const isActive = editedData.plumeRank === k;
+                 const RankIcon = v.icon;
+                 return (
+                   <Button
+                    key={k}
+                    variant="outline"
+                    onClick={() => setEditedData({ ...editedData, plumeRank: isActive ? null : (k as RankType) } as any)}
+                    className={cn(
+                      "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
+                      isActive ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
+                    )}
+                   >
+                     <RankIcon className={cn("h-3.5 w-3.5", isActive ? "text-white" : v.color)} />
+                     {v.label}
+                   </Button>
+                 );
+               })}
+             </div>
+             <p className="text-[10px] text-muted-foreground italic">Cliquez à nouveau sur un rang pour le retirer.</p>
+           </div>
+
+           <div className="space-y-4 pt-4 border-t border-primary/5">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center gap-2">
+                <LinkIcon className="h-3 w-3" /> URL Couverture
+              </Label>
+              <div className="flex gap-2">
+                <Input 
+                  value={newCoverUrl} 
+                  onChange={(e) => setNewCoverUrl(e.target.value)} 
+                  placeholder="https://..." 
+                  className="h-10 text-xs italic bg-white/40 border-none rounded-xl"
+                />
+                <Button onClick={() => handleCoverUpdate(newCoverUrl)} variant="secondary" className="h-10 px-4 rounded-xl italic">OK</Button>
+              </div>
+           </div>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+        <h1 className="text-6xl font-headline italic leading-tight">{cleanBookTitle(masterBook?.title || userBook.title)}</h1>
+        <Link
+          href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
+          className="text-3xl font-headline text-primary italic hover:underline inline-block"
+        >
+          {cleanAuthorName(masterBook?.author || userBook.author)}
+        </Link>
+        {masterBook?.translator && (
+          <p className="text-sm text-muted-foreground italic">Traduit par {cleanAuthorName(masterBook.translator)}</p>
+        )}
+      </div>
+
+      <Tabs defaultValue="overview">
             <TabsList className="bg-transparent border-b h-14 justify-start p-0 gap-12 mb-10 rounded-none w-full">
               <TabsTrigger value="overview" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">L'Œuvre</TabsTrigger>
               <TabsTrigger value="journal" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">Mon Journal</TabsTrigger>
@@ -447,8 +447,6 @@ export default function BookDetailPage() {
                </div>
             </TabsContent>
           </Tabs>
-        </div>
-      </div>
     </div>
   );
 }

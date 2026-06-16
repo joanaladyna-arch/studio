@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BookOpen, Headset, Save, History, Plus, Star, Sparkles, MessageCircle, Quote, PlusCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection, addDoc, orderBy, query, limit, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -104,8 +104,8 @@ export default function JournalPage() {
                                 <BookCover src={book.cover} alt={book.title} className="object-cover" />
                             </div>
                             <div className="space-y-1 overflow-hidden">
-                                <h4 className="font-headline italic text-lg line-clamp-1">{book.title}</h4>
-                                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{book.author}</p>
+                                <h4 className="font-headline italic text-lg line-clamp-1">{cleanBookTitle(book.title)}</h4>
+                                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{cleanAuthorName(book.author)}</p>
                                 <div className="flex gap-1 pt-1">
                                     {[1,2,3,4,5].map(s => (
                                         <Star key={s} className={cn("h-3 w-3", s <= (book.rating || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20")} />

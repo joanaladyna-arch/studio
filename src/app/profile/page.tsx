@@ -35,6 +35,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
+import { BookCover } from '@/components/book-cover';
 import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
@@ -43,16 +44,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
-
-const SPINE_COLORS = [
-  'bg-rose-100 text-rose-700 border-rose-200',
-  'bg-blue-100 text-blue-700 border-blue-200',
-  'bg-emerald-100 text-emerald-700 border-emerald-200',
-  'bg-amber-100 text-amber-700 border-amber-200',
-  'bg-purple-100 text-purple-700 border-purple-200',
-  'bg-cyan-100 text-cyan-700 border-cyan-200',
-  'bg-orange-100 text-orange-700 border-orange-200',
-];
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -323,24 +314,32 @@ export default function ProfilePage() {
             <Link href="/library">Voir toute ma PAL <ChevronRight className="ml-2 h-5 w-5" /></Link>
           </Button>
         </div>
-        <div className="relative px-2">
-          <div className="absolute bottom-0 left-0 right-0 h-4 bg-[#e8d5c8] rounded-full z-0" />
-          <div className="flex items-end gap-1.5 overflow-x-auto pb-4 pt-10 px-6 no-scrollbar min-h-[160px] max-h-[160px] z-10 relative">
-            {stats.palBooks.length > 0 ? (
-              stats.palBooks.map((book, idx) => (
-                <Link key={book.id} href={`/book/${book.id}`} className="shrink-0 transition-all hover:-translate-y-4 duration-500">
-                  <div className={cn("w-10 h-32 rounded-t-lg border-x border-t flex flex-col items-center justify-center p-1.5 shadow-md", SPINE_COLORS[idx % SPINE_COLORS.length])}>
-                    <span className="[writing-mode:vertical-rl] rotate-180 text-[8px] font-bold uppercase tracking-widest text-center truncate max-h-[100px] opacity-80">{book.title}</span>
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <div className="w-full text-center py-16 opacity-40">
-                <p className="italic font-headline text-xl">Votre étagère PAL est encore vide.</p>
-              </div>
+        {stats.palBooks.length > 0 ? (
+          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
+            {stats.palBooks.slice(0, 14).map((book: any, i: number) => (
+              <Link
+                key={book.id}
+                href={`/book/${book.id}`}
+                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
+                style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
+              >
+                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+              </Link>
+            ))}
+            {stats.palBooks.length > 14 && (
+              <Link
+                href="/library"
+                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl border-2 border-dashed border-primary/20 bg-white/40 flex items-center justify-center -ml-7 text-primary/60 font-bold text-sm italic hover:bg-white/70 transition-colors"
+              >
+                +{stats.palBooks.length - 14}
+              </Link>
             )}
           </div>
-        </div>
+        ) : (
+          <div className="w-full text-center py-16 opacity-40">
+            <p className="italic font-headline text-xl">Votre étagère PAL est encore vide.</p>
+          </div>
+        )}
       </section>
     </div>
   );

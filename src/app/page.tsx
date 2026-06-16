@@ -22,6 +22,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { BookCover } from '@/components/book-cover';
+import { cleanBookTitle, cleanAuthorName } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -267,8 +268,8 @@ export default function Home() {
                 <CardContent className="p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
                   <div className="space-y-8">
                     <div>
-                      <h3 className="text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">{currentRead.title}</h3>
-                      <p className="text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-3">{currentRead.author}</p>
+                      <h3 className="text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">{cleanBookTitle(currentRead.title)}</h3>
+                      <p className="text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-3">{cleanAuthorName(currentRead.author)}</p>
                     </div>
                     <div className="space-y-5">
                       <div className="flex justify-between text-xs font-bold uppercase tracking-widest opacity-60 italic">

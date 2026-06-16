@@ -29,7 +29,7 @@ import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { collection } from "firebase/firestore";
 import Link from "next/link";
@@ -257,8 +257,8 @@ export function BookCard({ book }: { book: UserBook }) {
         </div>
       </div>
       <div className="text-center px-2">
-        <h3 className="text-sm font-headline line-clamp-1 italic">{book.title}</h3>
-        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
+        <h3 className="text-sm font-headline line-clamp-1 italic">{cleanBookTitle(book.title)}</h3>
+        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{cleanAuthorName(book.author)}</p>
       </div>
     </div>
   );

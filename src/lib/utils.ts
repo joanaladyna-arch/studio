@@ -71,3 +71,24 @@ export async function searchBnF(
  * vers /admin) restent toujours synchronisées.
  */
 export const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
+
+/**
+ * Nettoyage défensif, appliqué à l'AFFICHAGE, des artefacts catalographiques
+ * qui ont pu être enregistrés dans Firestore avant la correction de
+ * l'extraction BnF (mention de responsabilité dupliquée dans le titre,
+ * rôle "Auteur du texte" / "Traducteur" mélangé au nom). Une correction
+ * de la recherche ne change rien aux livres déjà ajoutés : ces fonctions
+ * rattrapent ces anciennes fiches sans avoir à les ré-ajouter.
+ */
+export function cleanBookTitle(title?: string | null): string {
+  if (!title) return title || "";
+  return title.split(" / ")[0].split(" ; ")[0].trim();
+}
+
+export function cleanAuthorName(author?: string | null): string {
+  if (!author) return author || "";
+  return author
+    .replace(/\.\s*(Auteur(?:e)?\s+du\s+texte|Traduct(?:eur|rice|ion)|Illustrateur(?:rice)?|Préfacier(?:e)?|Adaptateur(?:rice)?)\b\.?\s*/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
