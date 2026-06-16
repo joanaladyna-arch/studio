@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -49,6 +48,7 @@ import { signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Link from 'next/link';
 
 const LEVELS = [
   { label: "Bronze", min: 5, color: "text-amber-600", bg: "bg-amber-100" },
@@ -110,7 +110,7 @@ export default function ProfilePage() {
     const goals = {
       annual: profile?.annualGoal || 24,
       monthly: profile?.monthlyGoal || 2,
-      pages: profile?.annualPageGoal || 10000,
+      pages: profile?.annualGoalPages || 10000,
       audio: profile?.annualAudioGoal || 100
     };
 
@@ -173,6 +173,14 @@ export default function ProfilePage() {
     );
   }
 
+  const earnedBadges = Object.entries(stats.genreCounts)
+    .filter(([_, count]) => count >= 5)
+    .map(([genre, count]) => ({ genre, count }));
+
+  const earnedMedals = Object.entries(stats.tropeCounts)
+    .filter(([_, count]) => count >= 5)
+    .map(([trope, count]) => ({ trope, count }));
+
   return (
     <div className="space-y-12 animate-in fade-in duration-700 pb-20">
       <header className="flex flex-col md:flex-row justify-between items-center pt-8 gap-6 text-center md:text-left">
@@ -233,13 +241,13 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
                   <Apple className="h-3 w-3" /> iOS
                 </div>
-                <p className="text-[11px] font-medium italic text-muted-foreground">"Partager" > "Sur l'écran d'accueil".</p>
+                <p className="text-[11px] font-medium italic text-muted-foreground">"Partager" &gt; "Sur l'écran d'accueil".</p>
               </div>
               <div className="p-4 bg-white/40 rounded-2xl space-y-2">
                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
                   <Smartphone className="h-3 w-3" /> Android
                 </div>
-                <p className="text-[11px] font-medium italic text-muted-foreground">Menu ⋮ > "Installer l'application".</p>
+                <p className="text-[11px] font-medium italic text-muted-foreground">Menu ⋮ &gt; "Installer l'application".</p>
               </div>
             </div>
           </CardContent>
@@ -335,6 +343,115 @@ export default function ProfilePage() {
         </div>
       </section>
 
+      {/* Badges and Medals section added to Profile */}
+      <section className="space-y-12">
+        <div className="space-y-8">
+          <h2 className="text-3xl font-headline flex items-center gap-3 italic">
+            <Award className="h-8 w-8 text-primary/40" /> Badges de genres gagnés
+          </h2>
+          {earnedBadges.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {earnedBadges.map(({ genre, count }) => {
+                const getLevel = (c: number) => {
+                  if (c >= 50) return LEVELS[3];
+                  if (c >= 30) return LEVELS[2];
+                  if (c >= 15) return LEVELS[1];
+                  if (c >= 5) return LEVELS[0];
+                  return null;
+                };
+                const getNextGoal = (c: number) => {
+                  if (c < 5) return 5;
+                  if (c < 15) return 15;
+                  if (c < 30) return 30;
+                  if (c < 50) return 50;
+                  return 50;
+                };
+                const level = getLevel(count);
+                const nextGoal = getNextGoal(count);
+                const progress = (count / nextGoal) * 100;
+                return (
+                  <Card key={genre} className="glass-card border-none bg-white/40 shadow-sm overflow-hidden">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className={cn("p-3 rounded-2xl", level?.bg)}>
+                          <Shield className={cn("h-6 w-6", level?.color)} />
+                        </div>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level?.color)}>
+                          {level?.label}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-xl font-headline italic">{genre}</h3>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{count} livres lus</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Progress value={progress} className="h-1.5 bg-primary/5" />
+                        <p className="text-[8px] font-bold uppercase tracking-tighter opacity-40">{Math.round(progress)}% vers palier {nextGoal}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="italic text-muted-foreground text-sm text-center py-8 glass-card bg-white/20">Continuez vos lectures pour débloquer vos premières récompenses.</p>
+          )}
+        </div>
+
+        <div className="space-y-8">
+          <h2 className="text-3xl font-headline flex items-center gap-3 italic">
+            <Medal className="h-8 w-8 text-secondary/40" /> Médailles de tropes gagnées
+          </h2>
+          {earnedMedals.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {earnedMedals.map(({ trope, count }) => {
+                const getLevel = (c: number) => {
+                  if (c >= 50) return LEVELS[3];
+                  if (c >= 30) return LEVELS[2];
+                  if (c >= 15) return LEVELS[1];
+                  if (c >= 5) return LEVELS[0];
+                  return null;
+                };
+                const getNextGoal = (c: number) => {
+                  if (c < 5) return 5;
+                  if (c < 15) return 15;
+                  if (c < 30) return 30;
+                  if (c < 50) return 50;
+                  return 50;
+                };
+                const level = getLevel(count);
+                const nextGoal = getNextGoal(count);
+                const progress = (count / nextGoal) * 100;
+                return (
+                  <Card key={trope} className="glass-card border-none bg-white/40 shadow-sm overflow-hidden">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className={cn("p-3 rounded-2xl", level?.bg)}>
+                          <Medal className={cn("h-6 w-6", level?.color)} />
+                        </div>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level?.color)}>
+                          {level?.label}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-xl font-headline italic">{trope}</h3>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{count} livres lus</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Progress value={progress} className="h-1.5 bg-secondary/5" />
+                        <p className="text-[8px] font-bold uppercase tracking-tighter opacity-40">{Math.round(progress)}% vers palier {nextGoal}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="italic text-muted-foreground text-sm text-center py-8 glass-card bg-white/20">Continuez vos lectures pour débloquer vos premières médailles.</p>
+          )}
+        </div>
+      </section>
+
       <div className="flex justify-center">
         <Button asChild variant="ghost" className="rounded-full h-14 px-10 italic font-headline text-xl text-primary/60 hover:text-primary">
           <Link href="/library">Accéder à ma bibliothèque complète <BookOpen className="ml-3 h-5 w-5" /></Link>
@@ -354,7 +471,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [bio, setBio] = useState(profile?.bio || '');
   const [annualGoal, setAnnualGoal] = useState(profile?.annualGoal || 24);
   const [monthlyGoal, setMonthlyGoal] = useState(profile?.monthlyGoal || 2);
-  const [annualPageGoal, setAnnualPageGoal] = useState(profile?.annualPageGoal || 10000);
+  const [annualGoalPages, setAnnualGoalPages] = useState(profile?.annualGoalPages || 10000);
   const [annualAudioGoal, setAnnualAudioGoal] = useState(profile?.annualAudioGoal || 100);
   const [favoriteGenres, setFavoriteGenres] = useState<string[]>(profile?.favoriteGenres || []);
   const [favoriteTropes, setFavoriteTropes] = useState<string[]>(profile?.favoriteTropes || []);
@@ -365,7 +482,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setBio(profile.bio || '');
       setAnnualGoal(profile.annualGoal || 24);
       setMonthlyGoal(profile.monthlyGoal || 2);
-      setAnnualPageGoal(profile.annualPageGoal || 10000);
+      setAnnualGoalPages(profile.annualGoalPages || 10000);
       setAnnualAudioGoal(profile.annualAudioGoal || 100);
       setFavoriteGenres(profile.favoriteGenres || []);
       setFavoriteTropes(profile.favoriteTropes || []);
@@ -380,7 +497,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       bio: bio.trim(),
       annualGoal: Number(annualGoal),
       monthlyGoal: Number(monthlyGoal),
-      annualPageGoal: Number(annualPageGoal),
+      annualGoalPages: Number(annualGoalPages),
       annualAudioGoal: Number(annualAudioGoal),
       favoriteGenres: favoriteGenres,
       favoriteTropes: favoriteTropes,
@@ -461,14 +578,14 @@ function EditProfileDialog({ profile }: { profile: any }) {
 
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Pages : {annualPageGoal.toLocaleString()}</Label>
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Pages : {annualGoalPages.toLocaleString()}</Label>
                   </div>
                   <Slider 
-                    value={[annualPageGoal]} 
+                    value={[annualGoalPages]} 
                     min={100} 
                     max={100000} 
                     step={100} 
-                    onValueChange={(v) => setAnnualPageGoal(v[0])}
+                    onValueChange={(v) => setAnnualGoalPages(v[0])}
                     className="py-4"
                   />
                 </div>
