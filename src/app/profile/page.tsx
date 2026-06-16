@@ -49,13 +49,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Link from 'next/link';
 
-const LEVELS = [
-  { label: "Bronze", min: 5, color: "text-amber-600", bg: "bg-amber-100" },
-  { label: "Silver", min: 15, color: "text-slate-400", bg: "bg-slate-100" },
-  { label: "Gold", min: 30, color: "text-yellow-500", bg: "bg-yellow-100" },
-  { label: "Diamond", min: 50, color: "text-cyan-400", bg: "bg-cyan-100" },
-];
-
 const SPINE_COLORS = [
   'bg-rose-100 text-rose-700 border-rose-200',
   'bg-blue-100 text-blue-700 border-blue-200',

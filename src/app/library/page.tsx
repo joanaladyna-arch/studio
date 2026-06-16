@@ -421,4 +421,5 @@ function BookListItem({ book }: { book: Book }) {
         </div>
       </CardContent>
     </Card>
+  )
 }

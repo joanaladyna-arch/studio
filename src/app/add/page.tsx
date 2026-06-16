@@ -73,9 +73,6 @@ export default function AddBookPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [isDePlume, setIsDePlume] = useState(false);
 
-  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
-  const [manualBook, setManualBook] = useState({ title: "", author: "" });
-
   const libraryQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, "users", user.uid, "books");
@@ -287,7 +284,7 @@ export default function AddBookPage() {
         
         <div className="grid grid-cols-2 gap-4">
           <Button variant="outline" onClick={() => setIsScannerOpen(true)} className="h-16 rounded-2xl font-headline italic text-xl gap-3"><Scan className="h-6 w-6" /> Scanner</Button>
-          <Button variant="outline" onClick={() => setIsManualDialogOpen(true)} className="h-16 rounded-2xl font-headline italic text-xl gap-3"><Edit3 className="h-6 w-6" /> Manuel</Button>
+          <Button variant="outline" onClick={() => {}} className="h-16 rounded-2xl font-headline italic text-xl gap-3"><Edit3 className="h-6 w-6" /> Manuel (Bientôt)</Button>
         </div>
       </div>
 
@@ -380,7 +377,7 @@ export default function AddBookPage() {
           <div className="p-10 space-y-8">
             <div className="flex p-2 bg-primary/5 rounded-[2rem] gap-2">
               <Button variant={scanMode === 'barcode' ? 'default' : 'ghost'} onClick={() => setScanMode('barcode')} className="flex-1 h-16 font-headline italic text-xl"><Barcode className="h-6 w-6 mr-3" /> Code-Barres</Button>
-              <Button variant={scanMode === 'cover' ? 'default' : 'ghost'} onClick={() => setMode('cover')} className="flex-1 h-16 font-headline italic text-xl"><Camera className="h-6 w-6 mr-3" /> Couverture</Button>
+              <Button variant={scanMode === 'cover' ? 'default' : 'ghost'} onClick={() => setScanMode('cover')} className="flex-1 h-16 font-headline italic text-xl"><Camera className="h-6 w-6 mr-3" /> Couverture</Button>
             </div>
             {scanMode === "cover" && <Button onClick={captureCover} disabled={isProcessingScan} className="w-full h-20 rounded-[2rem] bg-primary text-2xl font-headline italic">Identifier la couverture</Button>}
           </div>

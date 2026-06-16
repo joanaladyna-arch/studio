@@ -83,7 +83,7 @@ export default function BadgesMedalsPage() {
           <Award className="h-6 w-6 text-primary" />
           <h2 className="text-2xl font-headline italic">Badges de Genres</h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {GENRES_LIST.map(genre => {
             const count = genreStats[genre];
             const level = getLevel(count);
@@ -96,17 +96,17 @@ export default function BadgesMedalsPage() {
                 "glass-card border-none transition-all duration-500 overflow-hidden bg-white/40",
                 isUnlocked ? "shadow-sm border-primary/10" : "opacity-30 grayscale"
               )}>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className={cn("p-2 rounded-xl", level ? level.bg : "bg-muted")}>
-                      {isUnlocked ? <Shield className={cn("h-4 w-4", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-4 w-4 text-muted-foreground/40" />}
+                    <div className={cn("p-1.5 rounded-lg", level ? level.bg : "bg-muted")}>
+                      {isUnlocked ? <Shield className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-headline italic line-clamp-1">{genre}</h3>
+                  <div className="space-y-0.5">
+                    <h3 className="text-[10px] font-headline italic line-clamp-1">{genre}</h3>
                     <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest">{count} lus</p>
                   </div>
-                  <Progress value={progress} className="h-1 bg-primary/5" />
+                  <Progress value={progress} className="h-0.5 bg-primary/5" />
                 </CardContent>
               </Card>
             );
@@ -116,10 +116,10 @@ export default function BadgesMedalsPage() {
 
       <section className="space-y-6">
         <div className="flex items-center gap-3">
-          <Medal className="h-6 w-6 text-secondary" />
+          <MedalIcon className="h-6 w-6 text-secondary" />
           <h2 className="text-2xl font-headline italic">Médailles de Tropes</h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {TROPES_LIST.map(trope => {
             const count = tropeStats[trope];
             const level = getLevel(count);
@@ -132,17 +132,17 @@ export default function BadgesMedalsPage() {
                 "glass-card border-none transition-all duration-500 overflow-hidden bg-white/40",
                 isUnlocked ? "shadow-sm border-secondary/10" : "opacity-30 grayscale"
               )}>
-                <CardContent className="p-4 space-y-3">
+                <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div className={cn("p-2 rounded-xl", level ? level.bg : "bg-muted")}>
-                      {isUnlocked ? <Medal className={cn("h-4 w-4", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-4 w-4 text-muted-foreground/40" />}
+                    <div className={cn("p-1.5 rounded-lg", level ? level.bg : "bg-muted")}>
+                      {isUnlocked ? <MedalIcon className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                     </div>
                   </div>
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-headline italic line-clamp-1">{trope}</h3>
+                  <div className="space-y-0.5">
+                    <h3 className="text-[10px] font-headline italic line-clamp-1">{trope}</h3>
                     <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest">{count} lus</p>
                   </div>
-                  <Progress value={progress} className="h-1 bg-secondary/5" />
+                  <Progress value={progress} className="h-0.5 bg-secondary/5" />
                 </CardContent>
               </Card>
             );
