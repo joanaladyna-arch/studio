@@ -54,6 +54,8 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 import { 
   Book, 
   STATUSES, 
@@ -115,30 +117,38 @@ export default function BookDetailPage() {
       return;
     }
     setIsSaving(true);
-    try {
-      await updateDoc(bookRef, {
-        ...editedData,
-        lastUpdated: serverTimestamp()
-      });
+    
+    updateDoc(bookRef, {
+      ...editedData,
+      lastUpdated: serverTimestamp()
+    })
+    .then(() => {
       toast({ title: "Sanctuaire mis à jour", description: "Vos modifications ont été gravées." });
-    } catch (e) {
-      console.error("PLUME Firestore Error:", e);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder. Vérifiez votre connexion." });
-    } finally {
+    })
+    .catch(async (error) => {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: bookRef.path,
+        operation: 'update',
+        requestResourceData: editedData,
+      }));
+    })
+    .finally(() => {
       setIsSaving(false);
-    }
+    });
   };
 
   const handleDelete = async () => {
     if (!bookRef) return;
     if (!confirm("Voulez-vous vraiment retirer cette pépite ?")) return;
-    try {
-      await deleteDoc(bookRef);
-      router.push("/library");
-      toast({ title: "Pépite retirée", description: "L'œuvre a quitté votre collection." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Erreur", description: "Suppression impossible." });
-    }
+    
+    deleteDoc(bookRef)
+      .then(() => {
+        router.push("/library");
+        toast({ title: "Pépite retirée", description: "L'œuvre a quitté votre collection." });
+      })
+      .catch(async () => {
+        toast({ variant: "destructive", title: "Erreur", description: "Suppression impossible." });
+      });
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

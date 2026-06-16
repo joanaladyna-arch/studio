@@ -267,16 +267,22 @@ export default function AddBookPage() {
 
     const booksRef = collection(db, "users", user.uid, "books");
 
-    try {
-      await addDoc(booksRef, bookData);
-      toast({ title: "Livre ajouté", description: `${pendingBook.title} est dans votre écrin.` });
-      setPendingBook(null);
-    } catch (error: any) {
-      console.error("Firestore error:", error);
-      toast({ variant: "destructive", title: "Erreur Firestore", description: "Vérifiez vos permissions ou connexion." });
-    } finally {
-      setIsAdding(false);
-    }
+    addDoc(booksRef, bookData)
+      .then(() => {
+        toast({ title: "Livre ajouté", description: `${pendingBook.title} est dans votre écrin.` });
+        setPendingBook(null);
+      })
+      .catch(async (error) => {
+        console.error("Firestore error:", error);
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: booksRef.path,
+          operation: 'create',
+          requestResourceData: bookData,
+        }));
+      })
+      .finally(() => {
+        setIsAdding(false);
+      });
   };
 
   const handleManualAdd = () => {
