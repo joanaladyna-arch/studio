@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -19,7 +18,8 @@ import {
   Plus,
   Loader2,
   ChevronRight,
-  Target
+  Target,
+  Award
 } from "lucide-react";
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
