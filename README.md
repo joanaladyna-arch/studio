@@ -9,13 +9,10 @@ Bienvenue dans votre sanctuaire littéraire précieux et authentique.
 - **Authentification** : Firebase Auth
 - **IA** : Genkit (Gemini 2.5 Flash)
 
-## Déploiement
-Ce projet est prêt pour :
-1. **Vercel** : Détection automatique de Next.js.
-2. **Firebase App Hosting** : Via `apphosting.yaml`.
+## Déploiement sur Vercel
+1. Connectez votre dépôt GitHub à Vercel.
+2. Ajoutez les variables d'environnement listées dans `.env.example`.
+3. Vercel détectera automatiquement Next.js et déploiera l'application.
 
-## Configuration
-Assurez-vous de configurer les variables d'environnement listées dans `.env.example` sur votre plateforme de déploiement.
-
-### Synchronisation GitHub
+## Synchronisation GitHub
 Le fichier `.gitignore` a été configuré pour optimiser le poids du dépôt et permettre une synchronisation fluide avec `joanaladyna-arch/PLUME-Journal-de-lecture`.
