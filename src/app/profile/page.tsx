@@ -10,6 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Settings, 
   Share2, 
@@ -39,7 +40,9 @@ import {
   Pencil,
   BookMarked,
   Tags,
-  Target
+  Target,
+  Shield,
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -52,6 +55,13 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+const LEVELS = [
+  { label: "Bronze", min: 5, color: "text-amber-600", bg: "bg-amber-100" },
+  { label: "Silver", min: 15, color: "text-slate-400", bg: "bg-slate-100" },
+  { label: "Gold", min: 30, color: "text-yellow-500", bg: "bg-yellow-100" },
+  { label: "Diamond", min: 50, color: "text-cyan-400", bg: "bg-cyan-100" },
+];
 
 export default function ProfilePage() {
   const { user } = useUser();
@@ -93,6 +103,15 @@ export default function ProfilePage() {
     const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
     const listeningHours = readBooks.reduce((acc, b) => acc + (b.format === 'audio' ? (b.duration || 0) : 0), 0);
     
+    // Genre & Trope stats for earned badges/medals
+    const genreCounts: Record<string, number> = {};
+    const tropeCounts: Record<string, number> = {};
+    
+    readBooks.forEach(b => {
+      b.genres?.forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; });
+      b.tropes?.forEach(t => { tropeCounts[t] = (tropeCounts[t] || 0) + 1; });
+    });
+
     return {
       readCount: readBooks.length,
       palCount: palBooks.length,
@@ -102,9 +121,38 @@ export default function ProfilePage() {
       ebookCount,
       audioCount,
       pagesRead,
-      listeningHours
+      listeningHours,
+      genreCounts,
+      tropeCounts
     };
   }, [books]);
+
+  const getLevel = (count: number) => {
+    if (count >= 50) return LEVELS[3];
+    if (count >= 30) return LEVELS[2];
+    if (count >= 15) return LEVELS[1];
+    if (count >= 5) return LEVELS[0];
+    return null;
+  };
+
+  const getNextGoal = (count: number) => {
+    if (count < 5) return 5;
+    if (count < 15) return 15;
+    if (count < 30) return 30;
+    return 50;
+  };
+
+  const earnedGenreBadges = useMemo(() => {
+    return Object.entries(stats.genreCounts)
+      .filter(([_, count]) => count >= 5)
+      .sort((a, b) => b[1] - a[1]);
+  }, [stats.genreCounts]);
+
+  const earnedTropeMedals = useMemo(() => {
+    return Object.entries(stats.tropeCounts)
+      .filter(([_, count]) => count >= 5)
+      .sort((a, b) => b[1] - a[1]);
+  }, [stats.tropeCounts]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -283,11 +331,11 @@ export default function ProfilePage() {
               <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-60">Genres favoris</h3>
             </div>
             <div className="flex flex-wrap gap-2">
-              {profile?.preferredGenres?.length ? profile.preferredGenres.map((g: string) => (
+              {profile?.favoriteGenres?.length ? profile.favoriteGenres.map((g: string) => (
                 <Badge key={g} className="bg-primary/10 text-primary border-none text-[10px] uppercase font-bold tracking-widest px-3 py-1">
                   {g}
                 </Badge>
-              )) : <p className="italic text-muted-foreground text-sm">Sélectionnez vos genres préférés.</p>}
+              )) : <p className="italic text-muted-foreground text-sm">Sélectionnez vos genres préférés dans votre profil.</p>}
             </div>
           </Card>
           <Card className="glass-card p-8 border-none bg-white/40">
@@ -296,13 +344,110 @@ export default function ProfilePage() {
               <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-60">Tropes fétiches</h3>
             </div>
             <div className="flex flex-wrap gap-2">
-              {profile?.preferredTropes?.length ? profile.preferredTropes.map((t: string) => (
+              {profile?.favoriteTropes?.length ? profile.favoriteTropes.map((t: string) => (
                 <Badge key={t} className="bg-secondary/20 text-secondary-foreground border-none text-[10px] uppercase font-bold tracking-widest px-3 py-1">
                   {t}
                 </Badge>
-              )) : <p className="italic text-muted-foreground text-sm">Sélectionnez vos tropes fétiches.</p>}
+              )) : <p className="italic text-muted-foreground text-sm">Sélectionnez vos tropes fétiches dans votre profil.</p>}
             </div>
           </Card>
+        </div>
+      </section>
+
+      {/* Earned Rewards Sections */}
+      <section className="space-y-12">
+        <div className="space-y-8">
+          <h2 className="text-3xl font-headline flex items-center gap-3 italic">
+            <Award className="h-8 w-8 text-primary" /> Badges de genres gagnés
+          </h2>
+          {earnedGenreBadges.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {earnedGenreBadges.map(([genre, count]) => {
+                const level = getLevel(count);
+                const nextGoal = getNextGoal(count);
+                const progress = (count / nextGoal) * 100;
+                return (
+                  <Card key={genre} className="glass-card border-none shadow-md overflow-hidden bg-white/60">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className={cn("p-3 rounded-2xl", level?.bg)}>
+                          <Shield className={cn("h-6 w-6", level?.color)} />
+                        </div>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level?.color)}>
+                          {level?.label}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-xl font-headline italic">{genre}</h3>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                          {count} livres lus
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
+                          <span>Objectif {nextGoal}</span>
+                          <span>{Math.round(progress)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-1.5 bg-primary/5" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="italic text-muted-foreground text-center py-10 glass-card bg-white/20">
+              Continuez vos lectures pour débloquer vos premières récompenses.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-8">
+          <h2 className="text-3xl font-headline flex items-center gap-3 italic">
+            <Medal className="h-8 w-8 text-secondary" /> Médailles de tropes gagnées
+          </h2>
+          {earnedTropeMedals.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {earnedTropeMedals.map(([trope, count]) => {
+                const level = getLevel(count);
+                const nextGoal = getNextGoal(count);
+                const progress = (count / nextGoal) * 100;
+                return (
+                  <Card key={trope} className="glass-card border-none shadow-md overflow-hidden bg-white/60 border-secondary/20">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className={cn("p-3 rounded-2xl", level?.bg)}>
+                          <Medal className={cn("h-6 w-6", level?.color)} />
+                        </div>
+                        <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level?.color)}>
+                          {level?.label}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-xl font-headline italic">{trope}</h3>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                          {count} livres lus
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
+                          <span>Objectif {nextGoal}</span>
+                          <span>{Math.round(progress)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-1.5 bg-secondary/5" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            earnedGenreBadges.length === 0 && (
+              <p className="italic text-muted-foreground text-center py-10 glass-card bg-white/20">
+                Lisez plus de livres avec vos tropes favoris pour gagner des médailles.
+              </p>
+            )
+          )}
         </div>
       </section>
 
@@ -345,8 +490,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [annualPageGoal, setAnnualPageGoal] = useState(profile?.annualPageGoal || 10000);
   const [annualHourGoal, setAnnualHourGoal] = useState(profile?.annualHourGoal || 100);
   const [format, setFormat] = useState<BookFormat>(profile?.preferredFormat || 'papier');
-  const [genres, setGenres] = useState<string[]>(profile?.preferredGenres || []);
-  const [tropes, setTropes] = useState<string[]>(profile?.preferredTropes || []);
+  const [favoriteGenres, setFavoriteGenres] = useState<string[]>(profile?.favoriteGenres || []);
+  const [favoriteTropes, setFavoriteTropes] = useState<string[]>(profile?.favoriteTropes || []);
 
   useEffect(() => {
     if (profile) {
@@ -357,8 +502,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setAnnualPageGoal(profile.annualPageGoal || 10000);
       setAnnualHourGoal(profile.annualHourGoal || 100);
       setFormat(profile.preferredFormat || 'papier');
-      setGenres(profile.preferredGenres || []);
-      setTropes(profile.preferredTropes || []);
+      setFavoriteGenres(profile.favoriteGenres || []);
+      setFavoriteTropes(profile.favoriteTropes || []);
     }
   }, [profile]);
 
@@ -376,8 +521,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
       annualPageGoal: Number(annualPageGoal),
       annualHourGoal: Number(annualHourGoal),
       preferredFormat: format,
-      preferredGenres: genres,
-      preferredTropes: tropes,
+      favoriteGenres: favoriteGenres,
+      favoriteTropes: favoriteTropes,
       updatedAt: serverTimestamp()
     };
 
@@ -467,37 +612,29 @@ function EditProfileDialog({ profile }: { profile: any }) {
             </div>
 
             <div className="space-y-6">
-              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Genres de Prédilection</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 italic">Genres favoris (Sélectionnez vos coups de cœur)</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {GENRES_LIST.map(g => (
-                  <button 
-                    key={g} 
-                    onClick={() => toggleItem(genres, setGenres, g)}
-                    className={cn(
-                      "text-[10px] px-4 py-2 rounded-full border transition-all uppercase tracking-widest",
-                      genres.includes(g) ? "bg-primary text-white border-primary" : "bg-white/50 border-transparent"
-                    )}
-                  >
-                    {g}
-                  </button>
+                  <div key={g} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl hover:bg-white transition-colors cursor-pointer" onClick={() => toggleItem(favoriteGenres, setFavoriteGenres, g)}>
+                    <Checkbox id={`genre-${g}`} checked={favoriteGenres.includes(g)} onCheckedChange={() => toggleItem(favoriteGenres, setFavoriteGenres, g)} />
+                    <label htmlFor={`genre-${g}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                      {g}
+                    </label>
+                  </div>
                 ))}
               </div>
             </div>
 
             <div className="space-y-6">
-              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Tropes Fétiches</Label>
-              <div className="flex flex-wrap gap-2">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 italic">Tropes fétiches (Sélectionnez vos thèmes favoris)</Label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {TROPES_LIST.map(t => (
-                  <button 
-                    key={t} 
-                    onClick={() => toggleItem(tropes, setTropes, t)}
-                    className={cn(
-                      "text-[10px] px-4 py-2 rounded-full border transition-all uppercase tracking-widest",
-                      tropes.includes(t) ? "bg-secondary text-secondary-foreground border-secondary" : "bg-white/50 border-transparent"
-                    )}
-                  >
-                    {t}
-                  </button>
+                  <div key={t} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl hover:bg-white transition-colors cursor-pointer" onClick={() => toggleItem(favoriteTropes, setFavoriteTropes, t)}>
+                    <Checkbox id={`trope-${t}`} checked={favoriteTropes.includes(t)} onCheckedChange={() => toggleItem(favoriteTropes, setFavoriteTropes, t)} />
+                    <label htmlFor={`trope-${t}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                      {t}
+                    </label>
+                  </div>
                 ))}
               </div>
             </div>

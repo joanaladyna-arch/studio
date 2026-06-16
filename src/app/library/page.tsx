@@ -80,16 +80,17 @@ export interface Book {
 }
 
 export const GENRES_LIST = [
-  "Romance", "Dark Romance", "Fantasy", "Romantasy", "Thriller", 
-  "Young Adult", "New Adult", "Sci-Fi", "Historique", "Contemporain", 
-  "Horreur", "Classiques", "Manga", "Non Fiction"
+  "Dark Romance", "Romance", "Rom-Com", "Romantic Suspense", "Thriller", 
+  "Mystery", "Polar", "Fantasy", "Romantasy", "Dystopian", 
+  "Young Adult", "New Adult", "Contemporary", "Horror", 
+  "Manga", "Biography", "True Crime"
 ];
 
 export const TROPES_LIST = [
   "Enemies to Lovers", "Friends to Lovers", "Slow Burn", "Forced Proximity", 
-  "Found Family", "Grumpy x Sunshine", "Fake Dating", "One Bed", 
-  "Sports Romance", "Touch Her And You Die", "Age Gap", "Soulmates", 
-  "Forbidden Love", "Morally Grey"
+  "Found Family", "Fake Dating", "Grumpy x Sunshine", "One Bed", 
+  "Age Gap", "Forbidden Love", "Second Chance", 
+  "Touch Her And You Die", "Who Did This to You"
 ];
 
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {
