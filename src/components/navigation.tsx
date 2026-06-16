@@ -26,18 +26,16 @@ export function Navigation() {
   const { toast } = useToast();
 
   const handleLogout = async () => {
-    console.log("PLUME Auth: Déconnexion demandée depuis la navigation.");
     if (!auth) return;
     try {
       await signOut(auth);
-      console.log("PLUME Auth: Déconnexion réussie.");
       toast({
         title: "Déconnexion",
         description: "À bientôt sur Plume !",
       });
       router.push("/login");
     } catch (error) {
-      console.error("PLUME Auth: Erreur lors de la déconnexion", error);
+      console.error("PLUME Auth Error:", error);
     }
   };
 
@@ -45,12 +43,14 @@ export function Navigation() {
 
   return (
     <>
-      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-20 items-center justify-center gap-4 px-8">
-        <div className="flex items-center gap-2 mr-6 cursor-pointer" onClick={() => router.push("/")}>
-          <Feather className="h-6 w-6 text-primary" />
-          <span className="font-headline text-2xl tracking-widest italic text-primary/80 uppercase">PLUME</span>
+      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-8 px-10 shadow-sm">
+        <div className="flex items-center gap-3 mr-10 cursor-pointer group" onClick={() => router.push("/")}>
+          <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+             <Feather className="h-6 w-6 text-primary" />
+          </div>
+          <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">PLUME</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -59,28 +59,28 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group flex items-center gap-2 transition-all duration-300 py-2 px-4 rounded-full",
+                  "group flex items-center gap-3 transition-all duration-500 py-3 px-6 rounded-2xl",
                   isActive 
-                    ? "text-primary bg-primary/10 font-medium shadow-sm" 
-                    : "text-muted-foreground hover:text-primary hover:bg-primary/5"
+                    ? "text-primary bg-primary/5 font-medium shadow-[inset_0_0_20px_rgba(0,0,0,0.02)]" 
+                    : "text-muted-foreground hover:text-primary hover:bg-white"
                 )}
               >
-                <Icon className={cn("h-4 w-4 transition-transform duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
-                <span className="text-xs font-headline italic">{item.label}</span>
+                <Icon className={cn("h-5 w-5 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
+                <span className="text-sm font-headline italic">{item.label}</span>
               </Link>
             );
           })}
         </div>
         <button 
           onClick={handleLogout}
-          className="ml-4 text-muted-foreground hover:text-destructive transition-colors p-2 rounded-full hover:bg-red-50"
+          className="ml-8 text-muted-foreground hover:text-destructive transition-all p-3 rounded-full hover:bg-red-50 group"
           title="Déconnexion"
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-6 w-6 group-hover:rotate-12 transition-transform" />
         </button>
       </nav>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-2xl border-t border-white/40 px-1 py-2 flex justify-around items-center md:hidden h-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 py-3 flex justify-around items-center md:hidden h-24 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -89,21 +89,21 @@ export function Navigation() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 transition-all duration-500 p-1 rounded-2xl min-w-[50px]",
+                "flex flex-col items-center justify-center gap-1.5 transition-all duration-700 p-2 rounded-2xl min-w-[60px]",
                 isActive 
                   ? "text-primary" 
                   : "text-muted-foreground"
               )}
             >
               <div className={cn(
-                "p-1.5 rounded-xl transition-all duration-300",
-                isActive ? "bg-primary/10 scale-110" : "bg-transparent"
+                "p-2 rounded-xl transition-all duration-500",
+                isActive ? "bg-primary/10 scale-125 shadow-sm" : "bg-transparent"
               )}>
                 <Icon className={cn("h-5 w-5", isActive && "fill-primary/20")} />
               </div>
               <span className={cn(
-                "text-[9px] font-headline italic tracking-tight font-bold transition-all",
-                isActive ? "opacity-100" : "opacity-60"
+                "text-[10px] font-headline italic tracking-tight font-bold transition-all",
+                isActive ? "opacity-100" : "opacity-40"
               )}>{item.label}</span>
             </Link>
           );

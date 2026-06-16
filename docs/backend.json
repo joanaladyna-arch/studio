@@ -3,29 +3,33 @@
   "entities": {
     "Book": {
       "title": "Book",
-      "description": "A book in the user's library.",
+      "description": "A premium book entry in the user's library.",
       "type": "object",
       "properties": {
+        "id": { "type": "string" },
         "title": { "type": "string" },
+        "subtitle": { "type": "string" },
         "author": { "type": "string" },
+        "authorId": { "type": "string" },
+        "series": { "type": "string" },
+        "seriesId": { "type": "string" },
+        "volume": { "type": "string" },
         "publisher": { "type": "string" },
         "collection": { "type": "string" },
         "isbn": { "type": "string" },
         "publicationDate": { "type": "string" },
         "language": { "type": "string" },
-        "series": { "type": "string" },
-        "volume": { "type": "string" },
         "status": { "type": "string", "enum": ["pal", "progress", "read", "dnf", "pause", "reread"] },
-        "format": { "type": "string", "enum": ["papier", "ebook", "audio"], "description": "Reading format of the book." },
+        "format": { "type": "string", "enum": ["papier", "ebook", "kindle", "kobo", "audio", "audible", "audiolib", "autre"] },
         "favorite": { "type": "boolean" },
+        "dePlume": { "type": "boolean", "description": "Livre faisant partie de la collection prestigieuse De Plume." },
         "cover": { "type": "string" },
         "rank": { "type": "string", "enum": ["diamant", "royale", "doree", "argentee", "simple", "froissee", "brisee", "dnf"] },
         "genres": { "type": "array", "items": { "type": "string" } },
         "tropes": { "type": "array", "items": { "type": "string" } },
+        "themes": { "type": "array", "items": { "type": "string" } },
         "description": { "type": "string" },
         "pages": { "type": "number" },
-        "duration": { "type": "number", "description": "Duration in decimal hours for audiobooks." },
-        "narrator": { "type": "string", "description": "Narrator for audiobooks." },
         "progress": { "type": "number" },
         "pagesRead": { "type": "number" },
         "rating": { "type": "number" },
@@ -34,40 +38,30 @@
         "favoriteCharacters": { "type": "string" },
         "memorableScene": { "type": "string" },
         "emotions": { "type": "array", "items": { "type": "string" } },
+        "dateAdded": { "type": "string", "format": "date-time" },
         "startDate": { "type": "string", "format": "date" },
         "endDate": { "type": "string", "format": "date" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "abandonDate": { "type": "string", "format": "date" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "author", "status"]
     },
-    "JournalEntry": {
-      "title": "JournalEntry",
-      "description": "A reading or listening note.",
-      "type": "object",
-      "properties": {
-        "type": { "type": "string", "enum": ["lecture", "écoute"] },
-        "title": { "type": "string" },
-        "content": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" }
-      },
-      "required": ["type", "title", "content", "date"]
-    },
     "UserProfile": {
       "title": "UserProfile",
-      "description": "The user's settings and reading goals.",
+      "description": "User profile with reading goals and preferences.",
       "type": "object",
       "properties": {
         "name": { "type": "string" },
         "pseudo": { "type": "string" },
+        "bio": { "type": "string" },
+        "avatarUrl": { "type": "string" },
         "annualGoal": { "type": "number" },
         "annualPageGoal": { "type": "number" },
         "annualHourGoal": { "type": "number" },
-        "theme": { "type": "string" },
-        "avatarUrl": { "type": "string" },
-        "bio": { "type": "string" },
-        "preferredFormat": { "type": "string", "enum": ["papier", "ebook", "audio"] },
         "preferredGenres": { "type": "array", "items": { "type": "string" } },
-        "preferredTropes": { "type": "array", "items": { "type": "string" } }
+        "preferredTropes": { "type": "array", "items": { "type": "string" } },
+        "favoriteAuthor": { "type": "string" },
+        "favoriteQuote": { "type": "string" }
       }
     }
   },
@@ -82,10 +76,6 @@
     "/users/{userId}/books/{bookId}": {
       "schema": "Book",
       "description": "Collection of books in the user's library."
-    },
-    "/users/{userId}/journal/{entryId}": {
-      "schema": "JournalEntry",
-      "description": "User's reading and listening notes."
     }
   }
 }
