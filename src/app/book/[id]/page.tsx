@@ -461,7 +461,7 @@ export default function BookDetailPage() {
                  <div className="space-y-4">
                    <Label className="flex items-center gap-2 italic text-2xl font-headline"><MessageSquare className="h-5 w-5 text-primary/40" /> Mon avis personnel</Label>
                    <Textarea 
-                      value={editedData.review} 
+                      value={editedData.review || ""} 
                       onChange={(e) => setEditedData({ ...editedData, review: e.target.value })}
                       placeholder="Comment ce voyage a-t-il résonné en vous ?"
                       className="min-h-[180px] bg-white/40 border-none rounded-[2rem] p-8 italic text-lg shadow-inner focus-visible:ring-primary/20"
@@ -471,7 +471,7 @@ export default function BookDetailPage() {
                  <div className="space-y-4">
                    <Label className="flex items-center gap-2 italic text-2xl font-headline"><Quote className="h-5 w-5 text-primary/40" /> Citation fétiche</Label>
                    <Textarea 
-                      value={editedData.favoriteQuote} 
+                      value={editedData.favoriteQuote || ""} 
                       onChange={(e) => setEditedData({ ...editedData, favoriteQuote: e.target.value })}
                       placeholder="Une phrase à ne jamais oublier..."
                       className="min-h-[100px] bg-white/40 border-none rounded-3xl p-8 italic border-l-8 border-primary/10 shadow-sm"
@@ -482,7 +482,7 @@ export default function BookDetailPage() {
                     <div className="space-y-4">
                       <Label className="flex items-center gap-2 italic opacity-60"><PersonStanding className="h-4 w-4" /> Personnages favoris</Label>
                       <Input 
-                        value={editedData.favoriteCharacters} 
+                        value={editedData.favoriteCharacters || ""} 
                         onChange={(e) => setEditedData({ ...editedData, favoriteCharacters: e.target.value })}
                         className="h-14 bg-white/40 border-none rounded-2xl italic text-lg shadow-sm"
                       />
@@ -490,7 +490,7 @@ export default function BookDetailPage() {
                     <div className="space-y-4">
                       <Label className="flex items-center gap-2 italic opacity-60"><MapPin className="h-4 w-4" /> Scène marquante</Label>
                       <Input 
-                        value={editedData.memorableScene} 
+                        value={editedData.memorableScene || ""} 
                         onChange={(e) => setEditedData({ ...editedData, memorableScene: e.target.value })}
                         className="h-14 bg-white/40 border-none rounded-2xl italic text-lg shadow-sm"
                       />
@@ -551,24 +551,24 @@ export default function BookDetailPage() {
                     <div className="space-y-5">
                        <div className="space-y-2">
                          <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Titre précis</Label>
-                         <Input value={editedData.title} onChange={(e) => setEditedData({ ...editedData, title: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                         <Input value={editedData.title || ""} onChange={(e) => setEditedData({ ...editedData, title: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                        </div>
                        <div className="space-y-2">
                          <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Auteur</Label>
-                         <Input value={editedData.author} onChange={(e) => setEditedData({ ...editedData, author: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                         <Input value={editedData.author || ""} onChange={(e) => setEditedData({ ...editedData, author: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                        </div>
                        <div className="space-y-2">
                          <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Éditeur / Maison</Label>
-                         <Input value={editedData.publisher} onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                         <Input value={editedData.publisher || ""} onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                        </div>
                        <div className="grid grid-cols-2 gap-4">
                          <div className="space-y-2">
                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Langue</Label>
-                           <Input value={editedData.language} onChange={(e) => setEditedData({ ...editedData, language: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                           <Input value={editedData.language || ""} onChange={(e) => setEditedData({ ...editedData, language: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                          </div>
                          <div className="space-y-2">
                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Pages</Label>
-                           <Input type="number" value={editedData.pages} onChange={(e) => setEditedData({ ...editedData, pages: Number(e.target.value) })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                           <Input type="number" value={editedData.pages ?? ""} onChange={(e) => setEditedData({ ...editedData, pages: Number(e.target.value) })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                          </div>
                        </div>
                     </div>
@@ -580,11 +580,11 @@ export default function BookDetailPage() {
                        <div className="grid grid-cols-2 gap-4">
                          <div className="space-y-2">
                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Série</Label>
-                           <Input value={editedData.series} onChange={(e) => setEditedData({ ...editedData, series: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                           <Input value={editedData.series || ""} onChange={(e) => setEditedData({ ...editedData, series: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                          </div>
                          <div className="space-y-2">
                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Tome n°</Label>
-                           <Input value={editedData.volume} onChange={(e) => setEditedData({ ...editedData, volume: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                           <Input value={editedData.volume || ""} onChange={(e) => setEditedData({ ...editedData, volume: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                          </div>
                        </div>
                        <div className="space-y-2">
@@ -605,7 +605,7 @@ export default function BookDetailPage() {
                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Narrateur</Label>
                            <div className="relative">
                               <Mic className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                              <Input value={editedData.narrator} onChange={(e) => setEditedData({ ...editedData, narrator: e.target.value })} className="pl-12 bg-white/40 border-none h-12 rounded-xl italic shadow-sm" />
+                              <Input value={editedData.narrator || ""} onChange={(e) => setEditedData({ ...editedData, narrator: e.target.value })} className="pl-12 bg-white/40 border-none h-12 rounded-xl italic shadow-sm" />
                            </div>
                          </div>
                        )}
@@ -657,4 +657,3 @@ export default function BookDetailPage() {
     </div>
   );
 }
-
