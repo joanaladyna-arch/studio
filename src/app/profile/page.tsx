@@ -36,7 +36,8 @@ import {
   Shield,
   Lock,
   Calendar,
-  FileText
+  FileText,
+  Trophy
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -343,7 +344,6 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Badges and Medals section added to Profile */}
       <section className="space-y-12">
         <div className="space-y-8">
           <h2 className="text-3xl font-headline flex items-center gap-3 italic">
