@@ -28,11 +28,11 @@ export default function StatsPage() {
   const { data: books = [], loading } = useCollection(booksQuery);
 
   const stats = useMemo(() => {
-    const read = books.filter(b => b.status === 'read');
+    const read = books.filter(b => b.status === 'read' || b.status === 'reread');
     const progress = books.filter(b => b.status === 'progress');
     const dnf = books.filter(b => b.status === 'dnf');
     const totalPages = books.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
-    const favorites = books.filter(b => b.favorite).length;
+    const favorites = books.filter(b => b.favorite || b.dePlume).length;
     
     // Most read publisher
     const publisherCounts: Record<string, number> = {};
@@ -63,11 +63,10 @@ export default function StatsPage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-24">
-      <Navigation />
-
-      <header className="text-center space-y-2">
+      <header className="text-center space-y-2 pt-8">
         <h1 className="text-5xl font-headline italic">Mes statistiques</h1>
         <p className="text-primary/60 italic font-medium">L'analyse douce de votre voyage littéraire.</p>
+        <p className="text-[10px] uppercase tracking-widest opacity-40 font-bold">Source : users/{user?.uid}/books</p>
       </header>
 
       {loading ? (
@@ -123,7 +122,7 @@ export default function StatsPage() {
                   <p className="text-xs text-muted-foreground italic">Lectures gravées dans votre cœur de plume.</p>
                </div>
                <div className="pt-6 border-t border-primary/5">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Bientôt : Top genres et thématiques</p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Statistiques réelles issues de votre bibliothèque</p>
                </div>
             </Card>
           </section>

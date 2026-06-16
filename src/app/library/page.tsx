@@ -28,14 +28,15 @@ import {
   CheckCircle2,
   Clock,
   LayoutGrid,
-  List
+  List,
+  AlertCircle
 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
 
@@ -141,10 +142,20 @@ export default function LibraryPage() {
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
-    return query(collection(db, "users", user.uid, "books"), orderBy("dateAdded", "desc"));
+    // On retire l'orderBy pour éviter que Firestore ne masque les docs sans dateAdded
+    return collection(db, "users", user.uid, "books");
   }, [db, user]);
 
-  const { data: books = [], loading } = useCollection(booksQuery);
+  const { data: booksRaw = [], loading } = useCollection(booksQuery);
+
+  // Tri en mémoire pour garantir la visibilité de TOUS les livres
+  const books = useMemo(() => {
+    return [...booksRaw].sort((a, b) => {
+      const dateA = a.dateAdded?.seconds || 0;
+      const dateB = b.dateAdded?.seconds || 0;
+      return dateB - dateA;
+    });
+  }, [booksRaw]);
 
   const counts = useMemo(() => {
     const res: Record<string, number> = { all: books.length, pal: 0, progress: 0, read: 0, dePlume: 0 };
@@ -177,9 +188,15 @@ export default function LibraryPage() {
   return (
     <div className="space-y-10 animate-paper pb-32">
       <header className="space-y-8 pt-4">
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-4">
           <h1 className="text-6xl font-headline tracking-tight italic">Ma Bibliothèque</h1>
           <p className="text-primary/60 italic font-medium">Votre univers littéraire centralisé.</p>
+          
+          {/* Debug Message */}
+          <div className="flex items-center justify-center gap-2 py-2 px-4 bg-primary/5 rounded-full max-w-xs mx-auto text-primary/60 text-xs italic font-bold">
+            <AlertCircle className="h-3 w-3" />
+            Nombre de livres Firestore : {books.length}
+          </div>
         </div>
         
         <div className="flex flex-col md:flex-row gap-4 max-w-4xl mx-auto items-center">

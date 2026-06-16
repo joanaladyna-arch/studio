@@ -26,7 +26,7 @@ import {
   FileText
 } from "lucide-react";
 import Image from 'next/image';
-import { cn } from '@/utils';
+import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc, orderBy } from 'firebase/firestore';
@@ -51,13 +51,19 @@ export default function Home() {
     return query(
       collection(db, 'users', user.uid, 'books'),
       where('status', '==', 'progress'),
-      orderBy('dateAdded', 'desc'),
       limit(1)
     );
   }, [db, user]);
 
   const { data: currentReads = [], loading: readingLoading } = useCollection(currentReadQuery);
-  const currentRead = currentReads[0];
+  // Tri en mémoire pour le livre actuel
+  const currentRead = useMemo(() => {
+    return [...currentReads].sort((a, b) => {
+      const dateA = a.dateAdded?.seconds || 0;
+      const dateB = b.dateAdded?.seconds || 0;
+      return dateB - dateA;
+    })[0];
+  }, [currentReads]);
 
   const allBooksQuery = useMemo(() => {
     if (!db || !user) return null;
