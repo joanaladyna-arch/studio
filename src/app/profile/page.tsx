@@ -428,22 +428,40 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [loading, setLoading] = useState(false);
   
   // Fields state
-  const [name, setName] = useState(profile?.name || '');
-  const [pseudo, setPseudo] = useState(profile?.pseudo || '');
-  const [bio, setBio] = useState(profile?.bio || '');
-  const [favoriteQuote, setFavoriteQuote] = useState(profile?.favoriteQuote || '');
-  const [favoriteAuthor, setFavoriteAuthor] = useState(profile?.favoriteAuthor || '');
-  const [preferredFormat, setPreferredFormat] = useState<string>(profile?.preferredFormat || 'papier');
+  const [name, setName] = useState('');
+  const [pseudo, setPseudo] = useState('');
+  const [bio, setBio] = useState('');
+  const [favoriteQuote, setFavoriteQuote] = useState('');
+  const [favoriteAuthor, setFavoriteAuthor] = useState('');
+  const [preferredFormat, setPreferredFormat] = useState<string>('papier');
   
   // Goals state
-  const [annualGoal, setAnnualGoal] = useState(profile?.annualGoal || 24);
-  const [monthlyGoal, setMonthlyGoal] = useState(profile?.monthlyGoal || 2);
-  const [annualGoalPages, setAnnualGoalPages] = useState(profile?.annualGoalPages || 10000);
-  const [annualAudioGoal, setAnnualAudioGoal] = useState(profile?.annualAudioGoal || 100);
+  const [annualGoal, setAnnualGoal] = useState(24);
+  const [monthlyGoal, setMonthlyGoal] = useState(2);
+  const [annualGoalPages, setAnnualGoalPages] = useState(10000);
+  const [annualAudioGoal, setAnnualAudioGoal] = useState(100);
   
   // Collections state
-  const [favoriteGenres, setFavoriteGenres] = useState<string[]>(profile?.favoriteGenres || []);
-  const [favoriteTropes, setFavoriteTropes] = useState<string[]>(profile?.favoriteTropes || []);
+  const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
+  const [favoriteTropes, setFavoriteTropes] = useState<string[]>([]);
+
+  // Initialize state when profile is loaded or dialog opens
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setPseudo(profile.pseudo || '');
+      setBio(profile.bio || '');
+      setFavoriteQuote(profile.favoriteQuote || '');
+      setFavoriteAuthor(profile.favoriteAuthor || '');
+      setPreferredFormat(profile.preferredFormat || 'papier');
+      setAnnualGoal(profile.annualGoal || 24);
+      setMonthlyGoal(profile.monthlyGoal || 2);
+      setAnnualGoalPages(profile.annualGoalPages || 10000);
+      setAnnualAudioGoal(profile.annualAudioGoal || 100);
+      setFavoriteGenres(profile.favoriteGenres || []);
+      setFavoriteTropes(profile.favoriteTropes || []);
+    }
+  }, [profile, open]);
 
   const handleSave = async () => {
     if (!db || !user) return;
@@ -507,6 +525,10 @@ function EditProfileDialog({ profile }: { profile: any }) {
                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Pseudo</Label>
                   <Input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="plume_voyageuse" className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner" />
                 </div>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Email (Lecture seule)</Label>
+                <Input value={user?.email || ''} readOnly className="h-14 rounded-2xl bg-primary/5 border-none italic text-lg opacity-60" />
               </div>
               <div className="space-y-3">
                 <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Ma Bio de Lectrice</Label>
