@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -14,13 +13,7 @@ import {
   User as UserIcon, 
   CheckCircle2, 
   Plus, 
-  Info,
   Globe,
-  Star,
-  Bookmark,
-  Smartphone,
-  Tablet,
-  Headphones,
   Heart
 } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +24,7 @@ import Image from "next/image";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +63,6 @@ export default function AuthorPage() {
     const fetchAuthorUniverse = async () => {
       setLoading(true);
       try {
-        // Bio via Open Library
         const olRes = await fetch(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(authorName)}`);
         const olData = await olRes.json();
         if (olData.docs?.[0]) {
@@ -79,7 +72,6 @@ export default function AuthorPage() {
            setAuthorPhoto(`https://covers.openlibrary.org/a/id/${olData.docs[0].id}-L.jpg`);
         }
 
-        // Bibliographie via Google Books
         const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
         const response = await fetch(url);
         const data = await response.json();
@@ -107,7 +99,7 @@ export default function AuthorPage() {
           setResults(formatted);
         }
       } catch (e) {
-        console.error("Author universe search error:", e);
+        console.error(e);
       } finally {
         setLoading(false);
       }
@@ -228,97 +220,99 @@ export default function AuthorPage() {
         </div>
       )}
 
-      {/* Add Confirmation Dialog */}
+      {/* FIXED AND SCROLLABLE MODAL FOR ADDING BOOKS */}
       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
-        <DialogContent className="glass-card border-none max-w-xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl">
-          <DialogHeader className="p-10 border-b border-primary/5 bg-white/40">
+        <DialogContent className="glass-card border-none max-w-xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl flex flex-col max-h-[90vh]">
+          <DialogHeader className="p-10 border-b border-primary/5 bg-white/40 shrink-0">
             <DialogTitle className="font-headline text-4xl italic">Ajouter la pépite</DialogTitle>
           </DialogHeader>
           
-          <div className="p-10 space-y-10">
-            <div className="flex gap-8 items-start">
-               <div className="relative h-44 w-32 shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/60">
-                  <Image src={pendingBook?.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={pendingBook?.title || ""} fill className="object-cover" />
-               </div>
-               <div className="space-y-3 flex-1">
-                 <h3 className="font-headline italic text-3xl leading-tight">{pendingBook?.title}</h3>
-                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{pendingBook?.author}</p>
-                 <div className="pt-2 flex flex-wrap gap-2">
-                   <Badge className="bg-primary/5 text-primary border-none text-[10px] uppercase font-bold tracking-widest">{pendingBook?.publisher}</Badge>
-                   <Badge variant="outline" className="border-primary/20 text-primary/60 italic text-[10px]">{pendingBook?.language || "Français"}</Badge>
+          <ScrollArea className="flex-1 overflow-y-auto">
+            <div className="p-10 space-y-10">
+              <div className="flex gap-8 items-start">
+                 <div className="relative h-44 w-32 shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/60">
+                    <Image src={pendingBook?.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={pendingBook?.title || ""} fill className="object-cover" />
                  </div>
-               </div>
-            </div>
-
-            <div className="space-y-8">
-              <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-60">Quelle est votre intention ?</label>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(STATUSES).map(([key, val]) => (
-                    <Button 
-                      key={key} 
-                      variant="outline" 
-                      onClick={() => setSelectedStatus(key as BookStatus)}
-                      className={cn(
-                        "rounded-full border-primary/10 text-[10px] h-11 px-5 uppercase font-bold tracking-widest transition-all", 
-                        selectedStatus === key ? "bg-primary text-white border-primary shadow-lg" : "bg-white/60 hover:bg-white"
-                      )}
-                    >
-                      {val.label}
-                    </Button>
-                  ))}
-                </div>
+                 <div className="space-y-3 flex-1">
+                   <h3 className="font-headline italic text-3xl leading-tight">{pendingBook?.title}</h3>
+                   <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{pendingBook?.author}</p>
+                   <div className="pt-2 flex flex-wrap gap-2">
+                     <Badge className="bg-primary/5 text-primary border-none text-[10px] uppercase font-bold tracking-widest">{pendingBook?.publisher}</Badge>
+                     <Badge variant="outline" className="border-primary/20 text-primary/60 italic text-[10px]">{pendingBook?.language || "Français"}</Badge>
+                   </div>
+                 </div>
               </div>
 
-              <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-60">Format de la pépite</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(FORMATS).map(([key, val]) => {
-                    const Icon = val.icon;
-                    return (
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-60">Quelle est votre intention ?</label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(STATUSES).map(([key, val]) => (
                       <Button 
                         key={key} 
                         variant="outline" 
-                        onClick={() => setSelectedFormat(key as BookFormat)}
+                        onClick={() => setSelectedStatus(key as BookStatus)}
                         className={cn(
-                          "rounded-2xl border-primary/10 h-14 flex items-center gap-3 transition-all", 
-                          selectedFormat === key ? "bg-primary text-white border-primary shadow-lg" : "bg-white/60 hover:bg-white"
+                          "rounded-full border-primary/10 text-[10px] h-11 px-5 uppercase font-bold tracking-widest transition-all", 
+                          selectedStatus === key ? "bg-primary text-white border-primary shadow-lg" : "bg-white/60 hover:bg-white"
                         )}
                       >
-                        <Icon className="h-5 w-5" />
-                        <span className="font-headline italic text-lg">{val.label}</span>
+                        {val.label}
                       </Button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div className="pt-4 border-t border-primary/5 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="font-headline italic text-xl">Ajouter à De Plume</p>
-                  <p className="text-[10px] uppercase tracking-widest opacity-40 font-bold">L'écrin de vos favoris absolus</p>
+                <div className="space-y-4">
+                  <label className="text-[10px] font-bold uppercase tracking-[0.4em] opacity-60">Format de la pépite</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.entries(FORMATS).map(([key, val]) => {
+                      const Icon = val.icon;
+                      return (
+                        <Button 
+                          key={key} 
+                          variant="outline" 
+                          onClick={() => setSelectedFormat(key as BookFormat)}
+                          className={cn(
+                            "rounded-2xl border-primary/10 h-14 flex items-center gap-3 transition-all", 
+                            selectedFormat === key ? "bg-primary text-white border-primary shadow-lg" : "bg-white/60 hover:bg-white"
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span className="font-headline italic text-lg">{val.label}</span>
+                        </Button>
+                      );
+                    })}
+                  </div>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => setIsDePlume(!isDePlume)}
-                  className={cn("rounded-full h-14 w-14 transition-all", isDePlume ? "text-primary bg-primary/10 shadow-inner" : "text-muted-foreground/20")}
-                >
-                  <Heart className={cn("h-8 w-8", isDePlume && "fill-primary")} />
-                </Button>
+
+                <div className="pt-4 border-t border-primary/5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="font-headline italic text-xl">Ajouter à De Plume</p>
+                    <p className="text-[10px] uppercase tracking-widest opacity-40 font-bold">L'écrin de vos favoris absolus</p>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setIsDePlume(!isDePlume)}
+                    className={cn("rounded-full h-14 w-14 transition-all", isDePlume ? "text-primary bg-primary/10 shadow-inner" : "text-muted-foreground/20")}
+                  >
+                    <Heart className={cn("h-8 w-8", isDePlume && "fill-primary")} />
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
+          </ScrollArea>
 
-          <DialogFooter className="p-10 border-t border-primary/5 bg-white/60">
-            <div className="flex w-full justify-end gap-6">
-              <Button variant="ghost" onClick={() => setPendingBook(null)} className="rounded-2xl h-14 px-8 italic font-headline text-xl">Annuler</Button>
+          <DialogFooter className="p-10 border-t border-primary/5 bg-white/60 shrink-0">
+            <div className="flex w-full justify-end gap-4 sm:gap-6">
+              <Button variant="ghost" onClick={() => setPendingBook(null)} className="rounded-2xl h-14 px-6 sm:px-8 italic font-headline text-xl">Annuler</Button>
               <Button 
                 onClick={confirmAdd} 
                 disabled={isAdding}
-                className="rounded-[2rem] bg-primary hover:bg-primary/90 font-headline italic text-2xl px-14 h-16 shadow-2xl shadow-primary/20 transition-transform active:scale-95"
+                className="rounded-[2rem] bg-primary hover:bg-primary/90 font-headline italic text-xl sm:text-2xl px-10 sm:px-14 h-16 shadow-2xl shadow-primary/20 transition-transform active:scale-95 flex-1 sm:flex-none"
               >
-                {isAdding ? <Loader2 className="h-6 w-6 animate-spin" /> : "Ajouter à ma bibliothèque"}
+                {isAdding ? <Loader2 className="h-6 w-6 animate-spin" /> : "Enregistrer ce livre"}
               </Button>
             </div>
           </DialogFooter>
