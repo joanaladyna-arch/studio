@@ -1,7 +1,8 @@
 
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,15 @@ import { collection, query, where } from "firebase/firestore";
 export default function SharePage() {
   const { user } = useUser();
   const db = useFirestore();
+  const searchParams = useSearchParams();
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
+
+  // Présélectionne le livre passé en paramètre (ex: bouton "Exporter vers
+  // les réseaux" depuis la fiche d'un livre) dès qu'il devient disponible.
+  useEffect(() => {
+    const bookParam = searchParams.get("book");
+    if (bookParam) setSelectedBookId(bookParam);
+  }, [searchParams]);
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -29,7 +38,7 @@ export default function SharePage() {
   const { data: books = [], loading } = useCollection(booksQuery);
 
   const selectedBook = useMemo(() => {
-    if (selectedBookId) return books.find(b => b.id === selectedBookId);
+    if (selectedBookId) return books.find(b => b.id === selectedBookId) || books[0];
     return books[0];
   }, [books, selectedBookId]);
 

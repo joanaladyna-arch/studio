@@ -4,6 +4,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
@@ -261,6 +262,15 @@ export default function ProfilePage() {
             <h3 className="font-headline italic text-2xl flex items-center gap-3">
               <Shield className="h-6 w-6 text-primary/40" /> Genres de Prédilection
             </h3>
+            {toArray<string>(profile?.favoriteGenres).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 -mt-2">
+                {toArray<string>(profile?.favoriteGenres).map((g: string) => (
+                  <Badge key={g} variant="outline" className="rounded-full border-primary/15 text-primary/60 text-[9px] px-2.5 py-0.5 italic font-normal">
+                    {g}
+                  </Badge>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap gap-4">
               {stats.unlockedGenres.length > 0 ? (
                 stats.unlockedGenres.slice(0, 6).map(([genre]) => (
@@ -279,6 +289,15 @@ export default function ProfilePage() {
             <h3 className="font-headline italic text-2xl flex items-center gap-3">
               <Medal className="h-6 w-6 text-secondary/60" /> Tropes Favoris
             </h3>
+            {toArray<string>(profile?.favoriteTropes).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 -mt-2">
+                {toArray<string>(profile?.favoriteTropes).map((t: string) => (
+                  <Badge key={t} variant="outline" className="rounded-full border-secondary/20 text-secondary/70 text-[9px] px-2.5 py-0.5 italic font-normal">
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap gap-4">
               {stats.unlockedTropes.length > 0 ? (
                 stats.unlockedTropes.slice(0, 6).map(([trope]) => (

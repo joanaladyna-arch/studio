@@ -16,7 +16,8 @@ import {
   Loader2,
   Camera,
   Link as LinkIcon,
-  Upload
+  Upload,
+  Share2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -320,6 +321,28 @@ export default function BookDetailPage() {
                    ))}
                  </div>
                </div>
+
+               <div className="grid sm:grid-cols-2 gap-6">
+                 <div className="space-y-3">
+                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Début de lecture (facultatif)</Label>
+                   <Input
+                     type="date"
+                     value={(editedData as any).readStartDate || ""}
+                     onChange={(e) => setEditedData({ ...editedData, readStartDate: e.target.value } as any)}
+                     className="h-12 rounded-xl bg-white/40 border-none italic"
+                   />
+                 </div>
+                 <div className="space-y-3">
+                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Fin de lecture (facultatif)</Label>
+                   <Input
+                     type="date"
+                     value={(editedData as any).readEndDate || ""}
+                     onChange={(e) => setEditedData({ ...editedData, readEndDate: e.target.value } as any)}
+                     className="h-12 rounded-xl bg-white/40 border-none italic"
+                   />
+                 </div>
+               </div>
+
                <div className="space-y-6">
                  <Label className="italic text-3xl font-headline">Mon Avis & Réflexions</Label>
                  <Textarea 
@@ -328,6 +351,36 @@ export default function BookDetailPage() {
                   placeholder="Qu'est-ce que cette lecture a gravé en vous ?"
                   className="min-h-[250px] rounded-[2rem] bg-white/40 border-none p-10 italic text-xl shadow-inner resize-none focus-visible:ring-1 focus-visible:ring-primary/20" 
                  />
+               </div>
+
+               <div className="grid sm:grid-cols-2 gap-6">
+                 <div className="space-y-3">
+                   <Label className="italic text-xl font-headline">Citation préférée</Label>
+                   <Textarea
+                     value={editedData.favoriteQuote || ""}
+                     onChange={(e) => setEditedData({ ...editedData, favoriteQuote: e.target.value })}
+                     placeholder="Une phrase qui vous a marquée..."
+                     className="min-h-[120px] rounded-2xl bg-white/40 border-none p-6 italic resize-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                   />
+                 </div>
+                 <div className="space-y-3">
+                   <Label className="italic text-xl font-headline">Votre personnage pépite</Label>
+                   <Input
+                     value={(editedData as any).favoriteCharacter || ""}
+                     onChange={(e) => setEditedData({ ...editedData, favoriteCharacter: e.target.value } as any)}
+                     placeholder="Le personnage qui vous a le plus marquée"
+                     className="h-12 rounded-xl bg-white/40 border-none italic"
+                   />
+                 </div>
+               </div>
+
+               <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                 <Button onClick={handleSave} disabled={isSaving} className="flex-1 h-14 rounded-2xl bg-primary font-headline italic text-lg shadow-md">
+                   {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer mon journal
+                 </Button>
+                 <Button asChild variant="outline" className="flex-1 h-14 rounded-2xl font-headline italic text-lg border-primary/20">
+                   <Link href={`/share?book=${bookId}`}><Share2 className="mr-3 h-5 w-5" /> Exporter vers les réseaux</Link>
+                 </Button>
                </div>
             </TabsContent>
           </Tabs>

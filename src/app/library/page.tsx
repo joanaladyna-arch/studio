@@ -75,6 +75,9 @@ export interface UserBook {
   dePlume?: boolean;
   emotions?: string[];
   favoriteQuote?: string;
+  favoriteCharacter?: string;
+  readStartDate?: string;
+  readEndDate?: string;
 }
 
 export type Book = UserBook;

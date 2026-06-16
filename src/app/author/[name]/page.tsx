@@ -246,9 +246,9 @@ export default function AuthorPage() {
         .catch(async () => {
           errorEmitter.emit('permission-error', new FirestorePermissionError({ path: booksRef.path, operation: 'create', requestResourceData: bookData }));
         });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Add Book From Author Error:", err);
-      toast({ variant: "destructive", title: "Impossible d'ajouter le livre" });
+      toast({ variant: "destructive", title: "Impossible d'ajouter le livre", description: err?.message || "Erreur inconnue." });
     } finally {
       setIsAdding(false);
     }
