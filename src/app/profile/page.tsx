@@ -78,12 +78,15 @@ export default function ProfilePage() {
   const { data: booksRaw = [] } = useCollection(booksQuery);
 
   const stats = useMemo(() => {
-    const allBooks = (booksRaw as unknown as Book[]);
+    const allBooks = (booksRaw as unknown as Book[]) || [];
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     const palBooks = allBooks.filter(b => b.status === 'pal');
     
-    const pagesRead = readBooks.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
-    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (b.pagesRead || 0) / 50 : 0), 0);
+    const pagesRead = readBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
+    const audioHours = readBooks.reduce((acc, b) => {
+      const isAudio = ['audio', 'audible', 'audiolib'].includes(b.format || '');
+      return acc + (isAudio ? (Number(b.pagesRead) || 0) / 50 : 0);
+    }, 0);
     
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -95,18 +98,18 @@ export default function ProfilePage() {
     });
 
     const goals = {
-      annual: profile?.annualGoal || 24,
-      monthly: profile?.monthlyGoal || 2,
-      pages: profile?.annualGoalPages || 10000,
-      audio: profile?.annualAudioGoal || 100
+      annual: Number(profile?.annualGoal) || 24,
+      monthly: Number(profile?.monthlyGoal) || 2,
+      pages: Number(profile?.annualGoalPages) || 10000,
+      audio: Number(profile?.annualAudioGoal) || 100
     };
 
-    // Badges calculation
     const genreCounts: Record<string, number> = {};
     const tropeCounts: Record<string, number> = {};
+    
     readBooks.forEach(b => {
-      b.genres?.forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1);
-      b.tropes?.forEach(t => tropeCounts[t] = (tropeCounts[t] || 0) + 1);
+      (b.genres || []).forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1);
+      (b.tropes || []).forEach(t => tropeCounts[t] = (tropeCounts[t] || 0) + 1);
     });
 
     const unlockedGenres = Object.entries(genreCounts).filter(([_, count]) => count >= 5);
@@ -119,8 +122,8 @@ export default function ProfilePage() {
       pagesRead,
       audioHours: Math.round(audioHours),
       goals,
-      annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
-      monthlyProgress: Math.min(100, Math.round((monthlyRead.length / goals.monthly) * 100)),
+      annualProgress: Math.min(100, Math.round((readBooks.length / (goals.annual || 1)) * 100)),
+      monthlyProgress: Math.min(100, Math.round((monthlyRead.length / (goals.monthly || 1)) * 100)),
       pagesProgress: Math.min(100, Math.round((pagesRead / (goals.pages || 1)) * 100)),
       audioProgress: Math.min(100, Math.round((audioHours / (goals.audio || 1)) * 100)),
       unlockedGenres,
@@ -150,6 +153,7 @@ export default function ProfilePage() {
       if (auth?.currentUser) await updateProfile(auth.currentUser, { photoURL: url });
       toast({ title: 'Photo mise à jour', description: 'Votre nouvelle identité est gravée.' });
     } catch (error) {
+      console.error("Profile Upload Error:", error);
       toast({ variant: 'destructive', title: 'Erreur d\'importation' });
     } finally {
       setUploading(false);
@@ -164,7 +168,7 @@ export default function ProfilePage() {
   );
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Plume';
-  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200/200`;
+  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'plume'}/200/200`;
 
   return (
     <div className="space-y-16 animate-paper pb-20">
@@ -203,7 +207,7 @@ export default function ProfilePage() {
       {profile?.favoriteQuote && (
         <Card className="glass-card border-none bg-white/40 p-12 text-center space-y-6 shadow-sm">
           <p className="text-3xl font-headline italic text-primary leading-relaxed">"{profile.favoriteQuote}"</p>
-          {profile.favoriteAuthor && <p className="text-[10px] uppercase font-bold tracking-[0.5em] opacity-40">— {profile.favoriteAuthor}</p>}
+          {profile?.favoriteAuthor && <p className="text-[10px] uppercase font-bold tracking-[0.5em] opacity-40">— {profile.favoriteAuthor}</p>}
         </Card>
       )}
 
@@ -250,7 +254,7 @@ export default function ProfilePage() {
             </h3>
             <div className="flex flex-wrap gap-4">
               {stats.unlockedGenres.length > 0 ? (
-                stats.unlockedGenres.slice(0, 6).map(([genre, count]) => (
+                stats.unlockedGenres.slice(0, 6).map(([genre]) => (
                   <div key={genre} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-primary/5">
                     <Shield className="h-8 w-8 text-amber-500" />
                     <span className="text-[10px] font-bold uppercase text-center truncate w-full">{genre}</span>
@@ -268,7 +272,7 @@ export default function ProfilePage() {
             </h3>
             <div className="flex flex-wrap gap-4">
               {stats.unlockedTropes.length > 0 ? (
-                stats.unlockedTropes.slice(0, 6).map(([trope, count]) => (
+                stats.unlockedTropes.slice(0, 6).map(([trope]) => (
                   <div key={trope} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-secondary/5">
                     <Medal className="h-8 w-8 text-secondary" />
                     <span className="text-[10px] font-bold uppercase text-center truncate w-full">{trope}</span>
@@ -340,10 +344,10 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setBio(profile.bio || '');
       setFavoriteQuote(profile.favoriteQuote || '');
       setFavoriteAuthor(profile.favoriteAuthor || '');
-      setAnnualGoal(profile.annualGoal || 24);
-      setMonthlyGoal(profile.monthlyGoal || 2);
-      setAnnualGoalPages(profile.annualGoalPages || 10000);
-      setAnnualAudioGoal(profile.annualAudioGoal || 100);
+      setAnnualGoal(Number(profile.annualGoal) || 24);
+      setMonthlyGoal(Number(profile.monthlyGoal) || 2);
+      setAnnualGoalPages(Number(profile.annualGoalPages) || 10000);
+      setAnnualAudioGoal(Number(profile.annualAudioGoal) || 100);
       setFavoriteFormat(profile.favoriteFormat || 'papier');
       setFavoriteGenres(profile.favoriteGenres || []);
       setFavoriteTropes(profile.favoriteTropes || []);
@@ -364,6 +368,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées avec succès.' });
       setOpen(false);
     } catch (e) {
+      console.error("Profile Save Error:", e);
       toast({ variant: 'destructive', title: 'Erreur de sauvegarde' });
     } finally {
       setLoading(false);
@@ -371,7 +376,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
   };
 
   const toggle = (list: string[], setList: (l: string[]) => void, item: string) => {
-    setList(list.includes(item) ? list.filter(i => i !== item) : [...list, item]);
+    const currentList = list || [];
+    setList(currentList.includes(item) ? currentList.filter(i => i !== item) : [...currentList, item]);
   };
 
   return (
@@ -387,7 +393,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
         </DialogHeader>
         
         <ScrollArea className="flex-1 w-full">
-          <div className="p-8 space-y-16 pb-24">
+          <div className="p-8 space-y-16 pb-12">
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Informations Personnelles</h3>
               <div className="grid gap-8">
@@ -467,11 +473,11 @@ function EditProfileDialog({ profile }: { profile: any }) {
                         key={g} 
                         className={cn(
                           "flex items-center space-x-3 p-4 rounded-2xl cursor-pointer transition-all border",
-                          favoriteGenres.includes(g) ? "bg-primary/10 border-primary/20 shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60"
+                          (favoriteGenres || []).includes(g) ? "bg-primary/10 border-primary/20 shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60"
                         )} 
                         onClick={() => toggle(favoriteGenres, setFavoriteGenres, g)}
                       >
-                        <Checkbox checked={favoriteGenres.includes(g)} className="border-primary/20 data-[state=checked]:bg-primary" /> 
+                        <Checkbox checked={(favoriteGenres || []).includes(g)} className="border-primary/20 data-[state=checked]:bg-primary" /> 
                         <span className="italic font-headline text-sm">{g}</span>
                       </div>
                     ))}
@@ -486,11 +492,11 @@ function EditProfileDialog({ profile }: { profile: any }) {
                         key={t} 
                         className={cn(
                           "flex items-center space-x-3 p-4 rounded-2xl cursor-pointer transition-all border",
-                          favoriteTropes.includes(t) ? "bg-secondary/10 border-secondary/20 shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60"
+                          (favoriteTropes || []).includes(t) ? "bg-secondary/10 border-secondary/20 shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60"
                         )} 
                         onClick={() => toggle(favoriteTropes, setFavoriteTropes, t)}
                       >
-                        <Checkbox checked={favoriteTropes.includes(t)} className="border-secondary/20 data-[state=checked]:bg-secondary" /> 
+                        <Checkbox checked={(favoriteTropes || []).includes(t)} className="border-secondary/20 data-[state=checked]:bg-secondary" /> 
                         <span className="italic font-headline text-sm">{t}</span>
                       </div>
                     ))}
@@ -501,7 +507,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
           </div>
         </ScrollArea>
         
-        <DialogFooter className="p-8 border-t bg-white/60 shrink-0 gap-4 sm:gap-0">
+        <DialogFooter className="p-8 border-t bg-white/60 shrink-0 gap-4 sm:gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl px-8 rounded-2xl">Annuler</Button>
           <Button onClick={handleSave} disabled={loading} className="h-16 px-16 rounded-[2rem] bg-primary text-2xl font-headline italic shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95">
             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Graver mon identité"}
