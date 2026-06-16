@@ -55,7 +55,7 @@ export default function SignupPage() {
 
       toast({
         title: "Bienvenue sur Plume !",
-        description: `Votre sanctuaire littéraire est prêt, ${name}.`,
+        description: `Votre réserve littéraire est prête, ${name}.`,
       });
       
       router.replace("/");

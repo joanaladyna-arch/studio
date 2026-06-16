@@ -26,12 +26,13 @@ import {
   FileText,
   ChevronRight,
   Shield,
+  ShieldCheck,
   Medal,
   Award,
   Heart
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { cn, toArray } from '@/lib/utils';
+import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
 import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -163,7 +164,7 @@ export default function ProfilePage() {
   if (profileLoading) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
-      <p className="font-headline italic text-primary/60">Ouverture de votre sanctuaire...</p>
+      <p className="font-headline italic text-primary/60">Ouverture de votre réserve...</p>
     </div>
   );
 
@@ -198,6 +199,14 @@ export default function ProfilePage() {
         </div>
         <div className="flex flex-col gap-4 w-full md:w-auto">
             <EditProfileDialog profile={profile} />
+            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-amber-600 hover:bg-amber-50 font-headline italic text-lg transition-colors">
+                <Link href="/subscription"><Crown className="h-5 w-5 mr-3" /> Abonnement</Link>
+            </Button>
+            {user?.email && ADMIN_EMAILS.includes(user.email) && (
+              <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+                  <Link href="/admin"><ShieldCheck className="h-5 w-5 mr-3" /> Administration</Link>
+              </Button>
+            )}
             <Button variant="ghost" onClick={handleLogout} className="rounded-full h-14 px-8 text-destructive hover:bg-rose-50 font-headline italic text-lg transition-colors">
                 <LogOut className="h-5 w-5 mr-3" /> Déconnexion
             </Button>
@@ -387,12 +396,12 @@ function EditProfileDialog({ profile }: { profile: any }) {
           <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
+      <DialogContent className="max-w-4xl h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
         <DialogHeader className="p-8 border-b bg-white/40 shrink-0">
           <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 w-full min-h-0">
+        <div className="flex-1 min-h-0 w-full overflow-y-auto">
           <div className="p-8 space-y-16 pb-12">
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Informations Personnelles</h3>
@@ -505,7 +514,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
               </div>
             </div>
           </div>
-        </ScrollArea>
+        </div>
         
         <DialogFooter className="p-8 border-t bg-white/60 shrink-0 gap-4 sm:gap-2">
           <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl px-8 rounded-2xl">Annuler</Button>

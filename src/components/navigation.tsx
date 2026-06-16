@@ -3,9 +3,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useAuth } from "@/firebase";
+import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, Crown, ShieldCheck } from "lucide-react";
+import { cn, ADMIN_EMAILS } from "@/lib/utils";
+import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -22,8 +22,19 @@ const navItems = [
 export function Navigation() {
   const pathname = usePathname();
   const auth = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+
+  // "Abonnement" est visible pour tout le monde (page des 3 formules).
+  // "Admin" n'apparaît que pour le(s) email(s) autorisé(s) — la page
+  // /admin existe mais ne doit être visible que pour Joana.
+  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const allNavItems = [
+    ...navItems,
+    { href: "/subscription", label: "Abonnement", icon: Crown },
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
+  ];
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -51,7 +62,7 @@ export function Navigation() {
           <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">PLUME</span>
         </div>
         <div className="flex items-center gap-2">
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
             return (

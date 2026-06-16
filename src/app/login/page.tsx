@@ -103,7 +103,7 @@ export default function LoginPage() {
             <Feather className="h-6 w-6" />
           </div>
           <CardTitle className="text-3xl font-headline italic">Heureux de vous revoir</CardTitle>
-          <CardDescription className="italic">Retrouvez votre sanctuaire littéraire.</CardDescription>
+          <CardDescription className="italic">Retrouvez votre réserve littéraire.</CardDescription>
         </CardHeader>
         <CardContent>
           {user ? (

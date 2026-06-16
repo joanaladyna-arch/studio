@@ -17,9 +17,8 @@ import { useUser, useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
 
 export default function AddBookPage() {
   const { user } = useUser();
@@ -27,6 +26,7 @@ export default function AddBookPage() {
   const { toast } = useToast();
   
   const [queryStr, setQueryStr] = useState("");
+  const [searchMode, setSearchMode] = useState<"general" | "publisher">("general");
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [pendingBook, setPendingBook] = useState<any | null>(null);
@@ -38,7 +38,7 @@ export default function AddBookPage() {
     e.preventDefault();
     const searchVal = queryStr.trim();
     if (!searchVal) {
-      toast({ title: "Champ vide", description: "Veuillez saisir un titre ou un auteur." });
+      toast({ title: "Champ vide", description: "Veuillez saisir un titre, un auteur, un éditeur ou un ISBN." });
       return;
     }
     if (!db || isSearching) return; // Évite les recherches concurrentes (double-clic, touche Entrée répétée)
@@ -48,6 +48,18 @@ export default function AddBookPage() {
 
     let allResults: any[] = [];
 
+    // Détection automatique d'une recherche par ISBN (10 ou 13 chiffres,
+    // tirets/espaces tolérés) : on bascule alors la requête Google Books
+    // sur l'opérateur "isbn:" pour une correspondance exacte plutôt
+    // qu'une recherche floue, et la Master DB sur le champ isbn.
+    const cleanedDigits = searchVal.replace(/[-\s]/g, "");
+    const isIsbnQuery = /^\d{10}(\d{3})?$/.test(cleanedDigits);
+    const googleQuery = isIsbnQuery
+      ? `isbn:${cleanedDigits}`
+      : searchMode === "publisher"
+        ? `inpublisher:${searchVal}`
+        : searchVal;
+
     try {
       // 1 & 2. Recherche Master Database (Plume) et Google Books en parallèle :
       // ces deux sources sont indépendantes, les attendre en série n'apporte
@@ -55,13 +67,18 @@ export default function AddBookPage() {
       const [masterSettled, googleSettled] = await Promise.allSettled([
         (async () => {
           const masterRef = collection(db, "masterBooks");
-          // Recherche simple par égalité ou préfixe (attention aux index Firestore)
-          const q = query(masterRef, where("title", ">=", searchVal), where("title", "<=", searchVal + "\uf8ff"));
+          // Recherche par préfixe sur le champ pertinent selon le mode
+          // (titre par défaut, éditeur, ou ISBN en correspondance exacte).
+          const q = isIsbnQuery
+            ? query(masterRef, where("isbn13", "==", cleanedDigits))
+            : searchMode === "publisher"
+              ? query(masterRef, where("publisher", ">=", searchVal), where("publisher", "<=", searchVal + "\uf8ff"))
+              : query(masterRef, where("title", ">=", searchVal), where("title", "<=", searchVal + "\uf8ff"));
           const masterSnap = await getDocs(q);
           return masterSnap.docs.map(d => ({ ...d.data(), id: d.id, source: "master" }));
         })(),
         (async () => {
-          const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchVal)}&maxResults=10`;
+          const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(googleQuery)}&maxResults=10`;
           const res = await fetchWithTimeout(gUrl, {}, 8000);
           if (!res.ok) return [];
           const data = await res.json();
@@ -110,7 +127,12 @@ export default function AddBookPage() {
       // 3. Fallback Open Library (si toujours peu de résultats, timeout 8s également)
       if (allResults.length < 5) {
         try {
-          const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchVal)}&limit=5`;
+          const olQuery = isIsbnQuery
+            ? `isbn:${cleanedDigits}`
+            : searchMode === "publisher"
+              ? `publisher:${searchVal}`
+              : searchVal;
+          const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(olQuery)}&limit=5`;
           const res = await fetchWithTimeout(olUrl, {}, 8000);
           if (res.ok) {
             const data = await res.json();
@@ -165,9 +187,9 @@ export default function AddBookPage() {
         const masterRef = doc(collection(db, "masterBooks"));
         masterBookId = masterRef.id;
         await setDoc(masterRef, {
-          title: pendingBook.title,
+          title: pendingBook.title || "Titre inconnu",
           subtitle: pendingBook.subtitle || "",
-          author: pendingBook.author,
+          author: pendingBook.author || "Auteur inconnu",
           cover: pendingBook.cover || "",
           isbn13: pendingBook.isbn || "",
           isbn10: pendingBook.isbn10 || "",
@@ -176,7 +198,7 @@ export default function AddBookPage() {
           pageCount: pendingBook.pages || 0,
           language: pendingBook.language || "",
           publishedDate: pendingBook.publishedDate || "",
-          genres: pendingBook.genres || [],
+          genres: toArray<string>(pendingBook.genres),
           updatedAt: serverTimestamp(),
           source: "discovered"
         });
@@ -188,10 +210,10 @@ export default function AddBookPage() {
       // masterBook, sans quoi ils ne se débloqueraient jamais.
       const userBookData = {
         masterBookId,
-        title: pendingBook.title,
-        author: pendingBook.author,
+        title: pendingBook.title || "Titre inconnu",
+        author: pendingBook.author || "Auteur inconnu",
         cover: pendingBook.cover || "",
-        genres: pendingBook.genres || [],
+        genres: toArray<string>(pendingBook.genres),
         status: selectedStatus,
         format: selectedFormat,
         dateAdded: serverTimestamp(),
@@ -199,11 +221,18 @@ export default function AddBookPage() {
 
       await addDoc(collection(db, "users", user.uid, "books"), userBookData);
       
-      toast({ title: "Pépite ajoutée", description: `${pendingBook.title} est dans votre sanctuaire.` });
+      toast({ title: "Pépite ajoutée", description: `${pendingBook.title} est dans votre réserve.` });
       setPendingBook(null);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Add Book Error:", err);
-      toast({ variant: "destructive", title: "Impossible d'ajouter le livre" });
+      // On affiche le vrai message d'erreur (ex: règles Firestore, champ
+      // invalide...) plutôt qu'un message générique, pour pouvoir
+      // diagnostiquer sans avoir besoin d'ouvrir la console du navigateur.
+      toast({
+        variant: "destructive",
+        title: "Impossible d'ajouter le livre",
+        description: err?.message || "Erreur inconnue.",
+      });
     } finally {
       setIsAdding(false);
     }
@@ -216,17 +245,43 @@ export default function AddBookPage() {
         <p className="text-primary/60 italic">Recherchez dans la base Plume ou sur le web.</p>
       </header>
 
-      <form onSubmit={searchBooks} className="max-w-2xl mx-auto flex gap-4">
-        <Input 
-          placeholder="Titre, auteur ou ISBN..." 
-          value={queryStr}
-          onChange={(e) => setQueryStr(e.target.value)}
-          className="h-14 rounded-2xl bg-white/60 border-white shadow-sm italic text-lg"
-        />
-        <Button type="submit" disabled={isSearching} className="h-14 px-8 rounded-2xl bg-primary text-lg font-headline italic">
-          {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
-        </Button>
-      </form>
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="flex justify-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSearchMode("general")}
+            className={cn(
+              "rounded-full h-9 px-5 text-[10px] uppercase font-bold tracking-widest transition-all",
+              searchMode === "general" ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40"
+            )}
+          >
+            Titre, auteur ou ISBN
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setSearchMode("publisher")}
+            className={cn(
+              "rounded-full h-9 px-5 text-[10px] uppercase font-bold tracking-widest transition-all",
+              searchMode === "publisher" ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40"
+            )}
+          >
+            Éditeur (BMR, Nox, Hugo...)
+          </Button>
+        </div>
+        <form onSubmit={searchBooks} className="flex gap-4">
+          <Input 
+            placeholder={searchMode === "publisher" ? "Nom de l'éditeur (BMR, Nox, Chatterley, Hugo, &H...)" : "Titre, auteur ou ISBN..."}
+            value={queryStr}
+            onChange={(e) => setQueryStr(e.target.value)}
+            className="h-14 rounded-2xl bg-white/60 border-white shadow-sm italic text-lg"
+          />
+          <Button type="submit" disabled={isSearching} className="h-14 px-8 rounded-2xl bg-primary text-lg font-headline italic">
+            {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
+          </Button>
+        </form>
+      </div>
 
       <div className="max-w-4xl mx-auto grid gap-6">
         {results.map((book) => (
@@ -239,6 +294,7 @@ export default function AddBookPage() {
                 <div className="space-y-1">
                   <h3 className="text-xl font-headline italic leading-tight">{book.title}</h3>
                   <p className="text-xs text-muted-foreground font-bold uppercase">{book.author}</p>
+                  {book.publisher && <p className="text-[10px] text-primary/50 italic">{book.publisher}</p>}
                   {book.source === 'master' && (
                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px] mt-2">
                       Base Plume
@@ -257,9 +313,9 @@ export default function AddBookPage() {
       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
         <DialogContent className="glass-card max-w-lg p-0 overflow-hidden flex flex-col max-h-[90vh] border-none">
           <DialogHeader className="p-10 border-b bg-white/40">
-            <DialogTitle className="font-headline text-3xl italic">Ajouter au sanctuaire</DialogTitle>
+            <DialogTitle className="font-headline text-3xl italic">Ajouter dans ma réserve</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <div className="p-10 space-y-8">
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Intention</label>
@@ -298,7 +354,7 @@ export default function AddBookPage() {
                 </div>
               </div>
             </div>
-          </ScrollArea>
+          </div>
           <DialogFooter className="p-10 border-t bg-white/60">
             <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic">
               {isAdding ? <Loader2 className="animate-spin" /> : "Confirmer l'ajout"}

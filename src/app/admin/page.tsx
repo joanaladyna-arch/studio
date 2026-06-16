@@ -3,7 +3,7 @@
 
 import { useState, useRef } from "react";
 import { useUser, useFirestore } from "@/firebase";
-import { collection, doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp, getDoc, getDocs, arrayUnion } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,10 +24,7 @@ import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, fetchWithTimeout } from "@/lib/utils";
-
-// LISTE DES EMAILS ADMINS AUTORISÉS
-const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
+import { cn, fetchWithTimeout, ADMIN_EMAILS } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -43,6 +40,7 @@ export default function AdminPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importResults, setImportResults] = useState<{ success: number; errors: number } | null>(null);
+  const [isSyncingAuthors, setIsSyncingAuthors] = useState(false);
 
   // Simple Admin check
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
@@ -144,13 +142,18 @@ export default function AdminPage() {
           }, { merge: true });
         }
 
-        // 3. Création/Mise à jour Authors si présent
-        const actualAuthors = bookData.author.split(",").map(s => s.trim());
+        // 3. Création/Mise à jour Authors si présent — on référence aussi
+        // l'œuvre elle-même (titre + ID de la fiche maître) sur la fiche
+        // auteur, pour que sa bibliographie se complète au fil des imports
+        // au lieu de ne stocker que son nom.
+        const actualAuthors = bookData.author.split(",").map((s: string) => s.trim()).filter(Boolean);
         for (const authName of actualAuthors) {
           const authId = slugify(authName);
           await setDoc(doc(db, "authors", authId), {
             name: authName,
             slug: authId,
+            works: arrayUnion(bookData.title),
+            bookIds: arrayUnion(bookId),
             updatedAt: serverTimestamp()
           }, { merge: true });
         }
@@ -174,6 +177,52 @@ export default function AdminPage() {
       description: `${success} pépites ajoutées, ${errors} échecs.` 
     });
     setExcelData([]); // Clear data after import
+  };
+
+  // Reconstruit les fiches auteur (nom, œuvres, IDs des livres) à partir
+  // de TOUS les livres déjà présents dans masterBooks — pas seulement ceux
+  // importés par Excel, mais aussi ceux ajoutés via la recherche/l'API.
+  // Permet de compléter les fiches auteur après coup, sans réimporter.
+  const syncAuthors = async () => {
+    if (!db) return;
+    setIsSyncingAuthors(true);
+    let booksProcessed = 0;
+    let authorsTouched = 0;
+    try {
+      const snap = await getDocs(collection(db, "masterBooks"));
+      for (const bookDoc of snap.docs) {
+        const data = bookDoc.data();
+        const authorStr = (data.author || "").toString();
+        if (!authorStr) continue;
+        const authorNames = authorStr.split(",").map((s: string) => s.trim()).filter(Boolean);
+        for (const authName of authorNames) {
+          const authId = slugify(authName);
+          if (!authId) continue;
+          try {
+            await setDoc(doc(db, "authors", authId), {
+              name: authName,
+              slug: authId,
+              works: arrayUnion(data.title || "Titre inconnu"),
+              bookIds: arrayUnion(bookDoc.id),
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+            authorsTouched++;
+          } catch (err) {
+            console.error("Sync Author Error:", authName, err);
+          }
+        }
+        booksProcessed++;
+      }
+      toast({
+        title: "Synchronisation terminée",
+        description: `${booksProcessed} livres parcourus, ${authorsTouched} fiches auteur mises à jour.`
+      });
+    } catch (err) {
+      console.error("Sync Authors Error:", err);
+      toast({ variant: "destructive", title: "Échec de la synchronisation", description: "Vérifie les règles Firestore (lecture sur masterBooks, écriture sur authors)." });
+    } finally {
+      setIsSyncingAuthors(false);
+    }
   };
 
   const importByIsbn = async () => {
@@ -234,23 +283,23 @@ export default function AdminPage() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <CardTitle className="font-headline text-3xl italic flex items-center gap-3">
-                  <FileSpreadsheet className="h-8 w-8 text-emerald-500" /> Importer depuis Excel
+                  <FileSpreadsheet className="h-8 w-8 text-emerald-500" /> Importer ma base de données
                 </CardTitle>
-                <CardDescription className="italic">Colonnes : isbn13, title, authors, publisher, genres, tropes...</CardDescription>
+                <CardDescription className="italic">Fichier .xlsx, .xls ou .csv — colonnes : isbn13, title, authors, publisher, genres, tropes...</CardDescription>
               </div>
               <input 
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileUpload} 
                 className="hidden" 
-                accept=".xlsx"
+                accept=".xlsx,.xls,.csv"
               />
               <Button 
                 onClick={() => fileInputRef.current?.click()} 
                 variant="outline"
                 className="rounded-2xl h-14 px-8 border-emerald-200 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-50 italic font-headline text-xl"
               >
-                <Upload className="mr-3" /> Choisir .xlsx
+                <Upload className="mr-3" /> Choisir un fichier
               </Button>
             </div>
           </CardHeader>
@@ -355,7 +404,9 @@ export default function AdminPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-10 flex flex-col gap-4">
-               <Button variant="outline" className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">Synchroniser les Auteurs</Button>
+               <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+                 {isSyncingAuthors ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Synchroniser les Auteurs
+               </Button>
                <Button variant="outline" className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">Nettoyer les Genres</Button>
                <p className="text-[10px] text-center opacity-40 font-bold uppercase tracking-widest mt-4">Statut : En ligne et sécurisé</p>
             </CardContent>

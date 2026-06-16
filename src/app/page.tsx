@@ -97,7 +97,7 @@ export default function Home() {
   if (authLoading) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-6">
       <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
-      <p className="font-headline italic text-primary/60 text-2xl">Ouverture de votre sanctuaire...</p>
+      <p className="font-headline italic text-primary/60 text-2xl">Ouverture de votre réserve...</p>
     </div>
   );
 
@@ -246,7 +246,7 @@ export default function Home() {
           ) : (
             <Card className="glass-card p-24 text-center border-dashed border-primary/20 bg-white/20 group">
               <BookOpen className="h-20 w-20 mx-auto text-primary/20 mb-6 group-hover:scale-110 group-hover:text-primary/40 transition-all duration-700" />
-              <p className="text-primary/60 italic font-headline text-3xl mb-2">Sanctuaire paisible.</p>
+              <p className="text-primary/60 italic font-headline text-3xl mb-2">Réserve paisible.</p>
               <p className="text-muted-foreground italic text-xl">Aucune lecture en cours pour le moment.</p>
               <Button asChild variant="outline" className="mt-10 rounded-2xl border-primary/20 text-primary h-14 px-12 text-lg shadow-sm hover:bg-white">
                 <Link href="/add">Explorer vos étagères</Link>

@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'PLUME - Journal de Lecture',
     short_name: 'Plume',
-    description: 'Votre sanctuaire littéraire précieux et authentique.',
+    description: 'Votre réserve littéraire précieuse et authentique.',
     start_url: '/',
     display: 'standalone',
     background_color: '#fdf2f5',

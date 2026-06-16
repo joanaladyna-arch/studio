@@ -138,7 +138,7 @@ export default function BookDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!userBookRef || !confirm("Retirer ce livre de votre sanctuaire ?")) return;
+    if (!userBookRef || !confirm("Retirer ce livre de votre réserve ?")) return;
     try {
       await deleteDoc(userBookRef);
       toast({ title: "Livre retiré" });
@@ -161,7 +161,7 @@ export default function BookDetailPage() {
     return (
       <div className="p-20 text-center space-y-6">
         <h2 className="text-3xl font-headline italic">Livre introuvable</h2>
-        <p className="text-muted-foreground italic">Cette pépite semble avoir disparu de votre sanctuaire.</p>
+        <p className="text-muted-foreground italic">Cette pépite semble avoir disparu de votre réserve.</p>
         <Button asChild variant="outline" className="rounded-2xl italic font-headline">
           <Link href="/library">Retour à la bibliothèque</Link>
         </Button>
@@ -183,7 +183,7 @@ export default function BookDetailPage() {
       </header>
 
       <div className="grid lg:grid-cols-[350px_1fr] gap-16">
-        <div className="space-y-8">
+        <div className="space-y-8 max-w-[280px] mx-auto lg:max-w-none lg:mx-0 w-full">
           <div className="relative aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
             <Image 
               src={editedData.cover || masterBook?.cover || "https://picsum.photos/seed/p/400/600"} 
@@ -261,14 +261,19 @@ export default function BookDetailPage() {
           </Card>
 
           <Button variant="ghost" onClick={handleDelete} className="w-full text-destructive hover:text-destructive hover:bg-rose-50 rounded-2xl h-14 italic font-headline text-lg">
-            <Trash2 className="mr-3 h-5 w-5" /> Retirer du sanctuaire
+            <Trash2 className="mr-3 h-5 w-5" /> Retirer de la réserve
           </Button>
         </div>
 
         <div className="space-y-12">
           <div className="space-y-4">
             <h1 className="text-6xl font-headline italic leading-tight">{masterBook?.title || userBook.title}</h1>
-            <p className="text-3xl font-headline text-primary italic">{masterBook?.author || userBook.author}</p>
+            <Link
+              href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
+              className="text-3xl font-headline text-primary italic hover:underline inline-block"
+            >
+              {masterBook?.author || userBook.author}
+            </Link>
           </div>
 
           <Tabs defaultValue="overview">

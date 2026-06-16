@@ -214,7 +214,7 @@ export default function LibraryPage() {
           {loading ? (
             <div className="py-40 text-center flex flex-col items-center gap-6">
               <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
-              <p className="font-headline italic text-primary/40 text-xl">Exploration du sanctuaire...</p>
+              <p className="font-headline italic text-primary/40 text-xl">Exploration de la réserve...</p>
             </div>
           ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">

@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
@@ -27,7 +27,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
 
 export default function AuthorPage() {
   const params = useParams();
@@ -82,32 +82,71 @@ export default function AuthorPage() {
            }
         }
 
-        const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
-        const response = await fetchWithTimeout(url, {}, 8000);
-        const data = await response.json();
-        
-        if (data.items) {
-          const formatted = data.items.map((item: any) => {
-            const info = item.volumeInfo;
-            return {
-              id: item.id,
-              title: info.title,
-              subtitle: info.subtitle,
-              author: info.authors ? info.authors.join(", ") : authorName,
-              publisher: info.publisher,
-              cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
-              pages: info.pageCount || 0,
-              description: info.description || "",
-              publicationDate: info.publishedDate,
-              genres: info.categories || [],
-              language: "Français",
-              isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
-                    info.industryIdentifiers?.[0]?.identifier || 
-                    "N/A",
-            };
-          });
-          setResults(formatted);
-        }
+        // On interroge en parallèle Google Books (univers large) et la
+        // base Plume (masterBooks) : sans ça, les livres importés via
+        // Excel/admin mais peu présents sur Google Books n'apparaissent
+        // jamais sur la fiche de leur auteur.
+        const [googleSettled, masterSettled] = await Promise.allSettled([
+          (async () => {
+            const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
+            const response = await fetchWithTimeout(url, {}, 8000);
+            const data = await response.json();
+            if (!data.items) return [];
+            return data.items.map((item: any) => {
+              const info = item.volumeInfo;
+              return {
+                id: item.id,
+                title: info.title,
+                subtitle: info.subtitle,
+                author: info.authors ? info.authors.join(", ") : authorName,
+                publisher: info.publisher,
+                cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
+                pages: info.pageCount || 0,
+                description: info.description || "",
+                publicationDate: info.publishedDate,
+                genres: info.categories || [],
+                language: "Français",
+                isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier ||
+                      info.industryIdentifiers?.[0]?.identifier ||
+                      "N/A",
+              };
+            });
+          })(),
+          (async () => {
+            if (!db) return [];
+            const masterRef = collection(db, "masterBooks");
+            const q = query(masterRef, where("author", ">=", authorName), where("author", "<=", authorName + "\uf8ff"));
+            const snap = await getDocs(q);
+            return snap.docs.map(d => {
+              const data: any = d.data();
+              return {
+                id: d.id,
+                masterBookId: d.id,
+                title: data.title,
+                subtitle: data.subtitle,
+                author: data.author || authorName,
+                publisher: data.publisher,
+                cover: data.cover,
+                pages: data.pageCount || data.pages || 0,
+                description: data.description || "",
+                publicationDate: data.publishedDate,
+                genres: data.genres || [],
+                language: data.language || "Français",
+                isbn: data.isbn13 || data.isbn || "N/A",
+                source: "master",
+              };
+            });
+          })(),
+        ]);
+
+        const googleResults = googleSettled.status === "fulfilled" ? googleSettled.value : [];
+        const masterResults = masterSettled.status === "fulfilled" ? masterSettled.value : [];
+        // La base Plume (masterBooks) est prioritaire : on évite les doublons
+        // en excluant de Google Books tout titre déjà présent côté masterBooks.
+        const dedupedGoogle = googleResults.filter((g: any) =>
+          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase())
+        );
+        setResults([...masterResults, ...dedupedGoogle]);
       } catch (e) {
         console.error(e);
       } finally {
@@ -130,33 +169,38 @@ export default function AuthorPage() {
 
     setIsAdding(true);
     try {
-      // On crée d'abord la fiche bibliographique complète (livre, auteur,
-      // édition) dans masterBooks, comme pour l'ajout depuis la recherche —
-      // sans ça, la fiche détail du livre n'affiche pas l'éditeur, l'ISBN
+      // Si le livre vient déjà de la base Plume (masterBooks), on réutilise
+      // sa fiche existante au lieu d'en recréer une en double. Sinon
+      // (résultat Google Books), on crée la fiche bibliographique complète
+      // — sans ça, la fiche détail du livre n'affiche pas l'éditeur, l'ISBN
       // ou le résumé pour les livres ajoutés depuis la page auteur.
-      const masterRef = doc(collection(db, "masterBooks"));
-      await setDoc(masterRef, {
-        title: pendingBook.title,
-        subtitle: pendingBook.subtitle || "",
-        author: pendingBook.author,
-        cover: pendingBook.cover || "",
-        isbn13: pendingBook.isbn || "",
-        description: pendingBook.description || "",
-        publisher: pendingBook.publisher || "",
-        pageCount: pendingBook.pages || 0,
-        publishedDate: pendingBook.publicationDate || "",
-        genres: pendingBook.genres || [],
-        updatedAt: serverTimestamp(),
-        source: "discovered"
-      });
+      let masterBookId = pendingBook.masterBookId;
+      if (!masterBookId) {
+        const masterRef = doc(collection(db, "masterBooks"));
+        masterBookId = masterRef.id;
+        await setDoc(masterRef, {
+          title: pendingBook.title || "Titre inconnu",
+          subtitle: pendingBook.subtitle || "",
+          author: pendingBook.author || authorName,
+          cover: pendingBook.cover || "",
+          isbn13: pendingBook.isbn || "",
+          description: pendingBook.description || "",
+          publisher: pendingBook.publisher || "",
+          pageCount: pendingBook.pages || 0,
+          publishedDate: pendingBook.publicationDate || "",
+          genres: toArray<string>(pendingBook.genres),
+          updatedAt: serverTimestamp(),
+          source: "discovered"
+        });
+      }
 
       const booksRef = collection(db, "users", user.uid, "books");
       const bookData = {
-        masterBookId: masterRef.id,
-        title: pendingBook.title,
-        author: pendingBook.author,
+        masterBookId,
+        title: pendingBook.title || "Titre inconnu",
+        author: pendingBook.author || authorName,
         cover: pendingBook.cover || "",
-        genres: pendingBook.genres || [],
+        genres: toArray<string>(pendingBook.genres),
         status: selectedStatus,
         format: selectedFormat,
         dePlume: isDePlume,
@@ -167,7 +211,7 @@ export default function AuthorPage() {
 
       await addDoc(booksRef, bookData)
         .then(() => {
-          toast({ title: "Pépite ajoutée", description: `${pendingBook.title} a rejoint votre écrin.` });
+          toast({ title: "Pépite ajoutée", description: `${pendingBook.title} a rejoint votre réserve.` });
           setPendingBook(null);
         })
         .catch(async () => {
@@ -234,6 +278,11 @@ export default function AuthorPage() {
                       <div className="space-y-3">
                         <h3 className="text-2xl font-headline italic leading-tight group-hover:text-primary transition-colors">{book.title}</h3>
                         {book.subtitle && <p className="text-sm text-muted-foreground italic opacity-60">{book.subtitle}</p>}
+                        {book.source === 'master' && (
+                          <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px]">
+                            Base Plume
+                          </Badge>
+                        )}
                         <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest opacity-40 pt-2">
                           <span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {book.pages} pages</span>
                           <span className="flex items-center gap-2"><Globe className="h-4 w-4" /> {book.publisher || "Éditeur inconnu"}</span>

@@ -37,3 +37,10 @@ export async function fetchWithTimeout(
     clearTimeout(timeoutId);
   }
 }
+
+/**
+ * Liste des emails autorisés à accéder à /admin. Centralisé ici pour que
+ * la page admin et la navigation (qui doit savoir si elle affiche le lien
+ * vers /admin) restent toujours synchronisées.
+ */
+export const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
