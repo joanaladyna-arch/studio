@@ -35,6 +35,13 @@ import { cn } from "@/lib/utils";
 
 const searchCache: Record<string, any[]> = {};
 
+const validatePages = (p: any): number => {
+  const val = Number(p);
+  if (isNaN(val) || val < 0) return 0;
+  if (val > 3000) return 3000;
+  return val;
+};
+
 export default function AddBookPage() {
   const { user } = useUser();
   const db = useFirestore();
@@ -80,7 +87,7 @@ export default function AddBookPage() {
         author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
         publisher: doc.publisher ? doc.publisher[0] : "Éditeur inconnu",
         cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-        pages: doc.number_of_pages_median || 0,
+        pages: validatePages(doc.number_of_pages_median),
         description: doc.first_sentence ? doc.first_sentence[0] : "Résumé non disponible.",
         publicationDate: doc.first_publish_year ? doc.first_publish_year.toString() : "Date inconnue",
         genres: doc.subject ? doc.subject.slice(0, 5) : [],
@@ -128,7 +135,7 @@ export default function AddBookPage() {
             author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
             publisher: info.publisher || "Éditeur inconnu",
             cover: info.imageLinks?.thumbnail?.replace("http://", "https://") || null,
-            pages: info.pageCount || 0,
+            pages: validatePages(info.pageCount),
             description: info.description || "Aucun résumé disponible.",
             publicationDate: info.publishedDate || "Date inconnue",
             genres: info.categories || [],
@@ -179,7 +186,7 @@ export default function AddBookPage() {
       cover: pendingBook.cover || "https://picsum.photos/seed/placeholder/200/300",
       description: pendingBook.description,
       genres: pendingBook.genres,
-      pages: pendingBook.pages,
+      pages: validatePages(pendingBook.pages),
       status: selectedStatus,
       format: selectedFormat,
       favorite: false,
@@ -425,4 +432,3 @@ export default function AddBookPage() {
     </div>
   );
 }
-

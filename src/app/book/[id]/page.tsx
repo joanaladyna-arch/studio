@@ -72,6 +72,13 @@ const getLanguageName = (code: string | undefined) => {
   return LANGUAGE_MAP[cleanCode] || code.toUpperCase();
 };
 
+const validatePages = (p: any): number | undefined => {
+  const val = Number(p);
+  if (isNaN(val) || val < 0) return 0;
+  if (val > 3000) return 3000;
+  return val;
+};
+
 export default function BookDetailPage() {
   const params = useParams();
   const bookId = params.id as string;
@@ -156,7 +163,12 @@ export default function BookDetailPage() {
         const updates: Partial<Book> = {};
         
         if (!editedData.publisher) updates.publisher = info.publisher;
-        if (!editedData.pages) updates.pages = info.pageCount;
+        
+        const gPages = validatePages(info.pageCount);
+        if ((!editedData.pages || editedData.pages <= 0) && gPages && gPages > 0) {
+          updates.pages = gPages;
+        }
+
         if (!editedData.description) updates.description = info.description;
         if (!editedData.publicationDate) updates.publicationDate = info.publishedDate;
         if (!editedData.cover) updates.cover = info.imageLinks?.thumbnail?.replace("http://", "https://");
@@ -177,7 +189,12 @@ export default function BookDetailPage() {
       if (olData.docs?.[0]) {
         const doc = olData.docs[0];
         const updates: Partial<Book> = {};
-        if (!editedData.pages && doc.number_of_pages_median) updates.pages = doc.number_of_pages_median;
+        
+        const olPages = validatePages(doc.number_of_pages_median);
+        if ((!editedData.pages || editedData.pages <= 0) && olPages && olPages > 0) {
+          updates.pages = olPages;
+        }
+
         if (!editedData.publisher && doc.publisher) updates.publisher = doc.publisher?.[0];
         if (!editedData.publicationDate && doc.first_publish_year) updates.publicationDate = doc.first_publish_year?.toString();
         if (!editedData.cover && doc.cover_i) updates.cover = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
@@ -195,7 +212,7 @@ export default function BookDetailPage() {
                 publisher: e.publishers?.[0],
                 year: e.publish_date,
                 isbn: e.isbn_13?.[0] || e.isbn_10?.[0],
-                pages: e.number_of_pages,
+                pages: validatePages(e.number_of_pages),
                 cover: e.covers ? `https://covers.openlibrary.org/b/id/${e.covers[0]}-M.jpg` : null
               })));
            }
@@ -581,7 +598,21 @@ export default function BookDetailPage() {
                          </div>
                          <div className="space-y-2">
                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Pages</Label>
-                           <Input type="number" value={editedData.pages ?? ""} onChange={(e) => setEditedData({ ...editedData, pages: Number(e.target.value) })} className="bg-white/40 border-none h-12 rounded-xl italic" />
+                           <Input 
+                            type="number" 
+                            min="0"
+                            max="3000"
+                            value={editedData.pages ?? ""} 
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              if (!isNaN(val) && val >= 0 && val <= 3000) {
+                                setEditedData({ ...editedData, pages: val });
+                              } else if (e.target.value === "") {
+                                setEditedData({ ...editedData, pages: undefined });
+                              }
+                            }} 
+                            className="bg-white/40 border-none h-12 rounded-xl italic" 
+                           />
                          </div>
                        </div>
                     </div>
