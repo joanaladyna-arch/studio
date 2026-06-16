@@ -1,67 +1,60 @@
 
 {
   "entities": {
-    "Book": {
-      "title": "Book",
-      "description": "A premium book entry in the user's library.",
+    "MasterBook": {
+      "title": "MasterBook",
+      "description": "Universal book metadata stored in the central database.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "title": { "type": "string" },
         "subtitle": { "type": "string" },
         "author": { "type": "string" },
-        "authorId": { "type": "string" },
-        "series": { "type": "string" },
-        "seriesId": { "type": "string" },
-        "volume": { "type": "string" },
-        "publisher": { "type": "string" },
-        "collection": { "type": "string" },
-        "isbn": { "type": "string" },
-        "publicationDate": { "type": "string" },
+        "publisherId": { "type": "string" },
+        "collectionId": { "type": "string" },
+        "isbn10": { "type": "string" },
+        "isbn13": { "type": "string" },
+        "pageCount": { "type": "number" },
         "language": { "type": "string" },
-        "status": { "type": "string", "enum": ["pal", "progress", "read", "dnf", "pause", "reread"] },
-        "format": { "type": "string", "enum": ["papier", "ebook", "kindle", "kobo", "audio", "audible", "audiolib", "autre"] },
-        "favorite": { "type": "boolean" },
-        "dePlume": { "type": "boolean", "description": "Livre faisant partie de la collection prestigieuse De Plume." },
+        "publishedDate": { "type": "string" },
         "cover": { "type": "string" },
-        "rank": { "type": "string", "enum": ["diamant", "royale", "doree", "argentee", "simple", "froissee", "brisee", "dnf"] },
+        "description": { "type": "string" },
         "genres": { "type": "array", "items": { "type": "string" } },
         "tropes": { "type": "array", "items": { "type": "string" } },
-        "themes": { "type": "array", "items": { "type": "string" } },
-        "description": { "type": "string" },
-        "pages": { "type": "number" },
-        "progress": { "type": "number" },
-        "pagesRead": { "type": "number" },
+        "series": { "type": "string" },
+        "volume": { "type": "string" },
+        "source": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "author"]
+    },
+    "UserBook": {
+      "title": "UserBook",
+      "description": "User's personal reading data linked to a MasterBook.",
+      "type": "object",
+      "properties": {
+        "masterBookId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pal", "progress", "read", "dnf", "pause", "reread"] },
+        "format": { "type": "string", "enum": ["papier", "ebook", "kindle", "kobo", "audio", "audible", "audiolib", "autre"] },
         "rating": { "type": "number" },
         "review": { "type": "string" },
-        "favoriteQuote": { "type": "string" },
-        "favoriteCharacters": { "type": "string" },
-        "memorableScene": { "type": "string" },
-        "emotions": { "type": "array", "items": { "type": "string" } },
-        "dateAdded": { "type": "string", "format": "date-time" },
         "startDate": { "type": "string", "format": "date" },
         "endDate": { "type": "string", "format": "date" },
-        "abandonDate": { "type": "string", "format": "date" },
-        "lastUpdated": { "type": "string", "format": "date-time" }
+        "addedAt": { "type": "string", "format": "date-time" },
+        "personalNotes": { "type": "string" },
+        "favoriteQuotes": { "type": "array", "items": { "type": "string" } },
+        "plumeRank": { "type": "string" }
       },
-      "required": ["title", "author", "status"]
+      "required": ["masterBookId", "status"]
     },
-    "UserProfile": {
-      "title": "UserProfile",
-      "description": "User profile with reading goals and preferences.",
+    "Publisher": {
+      "title": "Publisher",
       "type": "object",
       "properties": {
         "name": { "type": "string" },
-        "pseudo": { "type": "string" },
-        "bio": { "type": "string" },
-        "avatarUrl": { "type": "string" },
-        "annualGoal": { "type": "number" },
-        "annualPageGoal": { "type": "number" },
-        "annualHourGoal": { "type": "number" },
-        "preferredGenres": { "type": "array", "items": { "type": "string" } },
-        "preferredTropes": { "type": "array", "items": { "type": "string" } },
-        "favoriteAuthor": { "type": "string" },
-        "favoriteQuote": { "type": "string" }
+        "slug": { "type": "string" },
+        "website": { "type": "string" },
+        "country": { "type": "string" },
+        "description": { "type": "string" }
       }
     }
   },
@@ -69,13 +62,17 @@
     "providers": ["google.com", "password"]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": "UserProfile",
-      "description": "User profile data."
+    "/masterBooks/{bookId}": {
+      "schema": "MasterBook",
+      "description": "Central book repository."
+    },
+    "/publishers/{publisherId}": {
+      "schema": "Publisher",
+      "description": "Global publishers list."
     },
     "/users/{userId}/books/{bookId}": {
-      "schema": "Book",
-      "description": "Collection of books in the user's library."
+      "schema": "UserBook",
+      "description": "User's personal library collection."
     }
   }
 }
