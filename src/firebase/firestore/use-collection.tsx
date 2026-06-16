@@ -25,10 +25,15 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         }));
         setData(docs);
         setLoading(false);
+        setError(null);
       },
       async (err) => {
+        console.error("PLUME Firestore Collection Error:", err);
+        // On tente de récupérer un chemin pour le contexte d'erreur
+        const path = (query as any)._query?.path?.segments?.join('/') || 'query';
+        
         const permissionError = new FirestorePermissionError({
-          path: 'query',
+          path: path,
           operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);

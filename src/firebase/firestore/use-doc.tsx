@@ -21,8 +21,10 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
       (doc) => {
         setData(doc.data() || null);
         setLoading(false);
+        setError(null);
       },
       async (err) => {
+        console.error("PLUME Firestore Doc Error:", err);
         const permissionError = new FirestorePermissionError({
           path: ref.path,
           operation: 'get',

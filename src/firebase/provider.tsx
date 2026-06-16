@@ -39,7 +39,7 @@ export function FirebaseProvider({
   auth: Auth | null;
   storage: FirebaseStorage | null;
 }) {
-  // Instance unique de l'écouteur d'authentification partagée par toute l'app
+  // L'état de l'utilisateur est géré de manière centrale ici
   const { user, loading } = useUserHook(auth);
 
   return (
@@ -56,14 +56,13 @@ export const useAuth = () => useContext(FirebaseContext).auth;
 export const useStorage = () => useContext(FirebaseContext).storage;
 
 /**
- * Hook personnalisé pour accéder à l'utilisateur actuel.
- * Récupère l'état partagé depuis le FirebaseProvider.
+ * Hook pour accéder à l'utilisateur actuel avec logs de débogage.
  */
 export function useUser() {
   const context = useContext(FirebaseContext);
   
-  // Logs demandés pour le débogage
-  console.log("AUTH USER", context.user?.uid);
+  // Toujours logger l'état pour assurer la visibilité lors du débogage
+  console.log("AUTH USER", context.user?.uid || "Non connecté");
   console.log("AUTH LOADING", context.loading);
   
   return { user: context.user, loading: context.loading };
