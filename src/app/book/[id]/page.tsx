@@ -1,10 +1,11 @@
 
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser, useFirestore, useDoc } from "@/firebase";
+import { useUser, useFirestore, useDoc, useStorage } from "@/firebase";
 import { doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -31,7 +32,10 @@ import {
   Book as BookIcon,
   Smartphone,
   Tablet,
-  Headphones
+  Headphones,
+  Camera,
+  Link as LinkIcon,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -44,6 +48,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -79,6 +84,7 @@ export default function BookDetailPage() {
   const bookId = params.id as string;
   const { user } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -91,7 +97,11 @@ export default function BookDetailPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [isEnriching, setIsEnriching] = useState(false);
+  const [isEditingCover, setIsEditingCover] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [newCoverUrl, setNewCoverUrl] = useState("");
   const [editedData, setEditedData] = useState<Partial<Book>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (book) {
@@ -100,7 +110,10 @@ export default function BookDetailPage() {
   }, [book]);
 
   const handleSave = async () => {
-    if (!bookRef) return;
+    if (!bookRef || !user) {
+      toast({ variant: "destructive", title: "Erreur", description: "Action impossible." });
+      return;
+    }
     setIsSaving(true);
     try {
       await updateDoc(bookRef, {
@@ -110,7 +123,7 @@ export default function BookDetailPage() {
       toast({ title: "Sanctuaire mis à jour", description: "Vos modifications ont été gravées." });
     } catch (e) {
       console.error("PLUME Firestore Error:", e);
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder." });
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder. Vérifiez votre connexion." });
     } finally {
       setIsSaving(false);
     }
@@ -125,6 +138,42 @@ export default function BookDetailPage() {
       toast({ title: "Pépite retirée", description: "L'œuvre a quitté votre collection." });
     } catch (e) {
       toast({ variant: "destructive", title: "Erreur", description: "Suppression impossible." });
+    }
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !user || !bookRef) return;
+
+    setIsUploading(true);
+    const coverRef = ref(storage, `users/${user.uid}/covers/${bookId}`);
+    try {
+      await uploadBytes(coverRef, file);
+      const url = await getDownloadURL(coverRef);
+      await updateDoc(bookRef, { cover: url, lastUpdated: serverTimestamp() });
+      setEditedData(prev => ({ ...prev, cover: url }));
+      setIsEditingCover(false);
+      toast({ title: "Couverture mise à jour", description: "La nouvelle image a été importée." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erreur", description: "Importation impossible." });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleCoverUrlSubmit = async () => {
+    if (!newCoverUrl.trim() || !bookRef) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(bookRef, { cover: newCoverUrl, lastUpdated: serverTimestamp() });
+      setEditedData(prev => ({ ...prev, cover: newCoverUrl }));
+      setIsEditingCover(false);
+      setNewCoverUrl("");
+      toast({ title: "Couverture mise à jour", description: "L'URL a été enregistrée." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erreur", description: "Mise à jour impossible." });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -198,19 +247,19 @@ export default function BookDetailPage() {
           <Button 
             variant="outline" 
             onClick={enrichMetadata} 
-            disabled={isEnriching}
+            disabled={isEnriching || isSaving}
             className="rounded-2xl border-primary/10 hover:bg-white italic h-14 px-8 shadow-sm"
           >
             {isEnriching ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : <Globe className="h-5 w-5 mr-3" />}
-            Enrichir la pépite
+            {isEnriching ? "Enrichissement..." : "Enrichir la pépite"}
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={isSaving}
+            disabled={isSaving || isEnriching}
             className="rounded-2xl bg-primary hover:bg-primary/90 h-14 px-10 shadow-xl shadow-primary/10 font-headline italic text-xl"
           >
             {isSaving ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : <Save className="h-5 w-5 mr-3" />}
-            Graver les modifications
+            {isSaving ? "Gravure..." : "Graver les modifications"}
           </Button>
         </div>
       </header>
@@ -218,15 +267,25 @@ export default function BookDetailPage() {
       <div className="grid lg:grid-cols-[400px_1fr] gap-16 items-start">
         {/* Sidebar: Media & Quick Status */}
         <div className="space-y-10 flex flex-col items-center lg:items-start">
-          <div className="relative w-full max-w-[240px] aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
-             <Image 
-               src={editedData.cover || "https://picsum.photos/seed/placeholder/600/900"} 
-               alt={editedData.title || ""} 
-               fill 
-               className="object-contain transition-transform duration-1000 group-hover:scale-105"
-               priority
-             />
-             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="relative w-full max-w-[280px] space-y-4">
+            <div className="relative aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
+              <Image 
+                src={editedData.cover || "https://picsum.photos/seed/placeholder/600/900"} 
+                alt={editedData.title || ""} 
+                fill 
+                className="object-contain transition-transform duration-1000 group-hover:scale-105"
+                priority
+              />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-6">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setIsEditingCover(true)}
+                  className="rounded-full font-headline italic"
+                >
+                  <Camera className="h-4 w-4 mr-2" /> Modifier
+                </Button>
+              </div>
+            </div>
           </div>
           
           <Card className="glass-card p-10 border-none bg-white/60 space-y-10 w-full shadow-sm">
@@ -380,7 +439,7 @@ export default function BookDetailPage() {
                     <div className="p-8 rounded-[2.5rem] bg-white/40 border border-white/60 space-y-4 shadow-sm">
                        <div className="flex justify-between items-center italic text-sm">
                          <span className="opacity-60">Ajouté le</span>
-                         <span className="font-bold">{editedData.dateAdded ? format(editedData.dateAdded.toDate(), "PPP", { locale: fr }) : "Maintenant"}</span>
+                         <span className="font-bold">{editedData.dateAdded?.toDate ? format(editedData.dateAdded.toDate(), "PPP", { locale: fr }) : "Maintenant"}</span>
                        </div>
                        {editedData.startDate && (
                          <div className="flex justify-between items-center italic text-sm">
@@ -599,6 +658,47 @@ export default function BookDetailPage() {
           </Tabs>
         </div>
       </div>
+
+      <Dialog open={isEditingCover} onOpenChange={setIsEditingCover}>
+        <DialogContent className="glass-card max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-headline italic text-2xl">Modifier la couverture</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-3">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">URL de l'image</Label>
+              <div className="flex gap-2">
+                <Input 
+                  value={newCoverUrl} 
+                  onChange={(e) => setNewCoverUrl(e.target.value)}
+                  placeholder="https://..." 
+                  className="bg-white/40 border-none italic h-12"
+                />
+                <Button onClick={handleCoverUrlSubmit} disabled={isSaving || !newCoverUrl.trim()}>Valider</Button>
+              </div>
+            </div>
+            
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-primary/10"></span></div>
+              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest"><span className="bg-background px-4 opacity-40">Ou</span></div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Depuis l'appareil</Label>
+              <Button 
+                variant="outline" 
+                className="w-full h-20 border-dashed border-primary/20 rounded-2xl flex flex-col gap-2 hover:bg-primary/5"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+                <span className="text-xs italic">{isUploading ? "Importation..." : "Choisir une photo"}</span>
+              </Button>
+              <input type="file" ref={fileInputRef} onChange={handleCoverUpload} className="hidden" accept="image/*" />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

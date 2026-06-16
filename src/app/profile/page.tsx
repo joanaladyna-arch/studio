@@ -40,10 +40,10 @@ import {
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
-import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
-import { signOut } from 'firebase/auth';
+import { signOut, updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -156,12 +156,15 @@ export default function ProfilePage() {
     if (!file || !storage || !user || !db) return;
 
     setUploading(true);
-    const storageRef = ref(storage, `avatars/${user.uid}/${file.name}`);
+    const storageRef = ref(storage, `users/${user.uid}/profile/avatar`);
     
     try {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       await setDoc(doc(db, 'users', user.uid), { avatarUrl: url }, { merge: true });
+      if (auth.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: url });
+      }
       toast({ title: 'Photo mise à jour', description: 'Votre nouvel avatar a été enregistré.' });
     } catch (error) {
       console.error('Upload error', error);
@@ -268,7 +271,6 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* Section Étagère PAL */}
       <section className="space-y-10 pt-10">
         <div className="flex items-center justify-between px-2">
           <div className="space-y-1">
@@ -287,10 +289,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="relative group px-2">
-          {/* L'étagère (planche de bois illustrée) */}
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-[#e8d5c8] rounded-full shadow-inner border-b-4 border-[#d4bcad] z-0" />
-          
-          {/* Les livres sous forme de dos */}
           <div className="flex items-end gap-1.5 overflow-x-auto pb-4 pt-10 px-6 no-scrollbar min-h-[280px] z-10 relative">
             {stats.palBooks.length > 0 ? (
               stats.palBooks.map((book, idx) => {
@@ -305,21 +304,11 @@ export default function ProfilePage() {
                       "w-12 sm:w-14 h-48 sm:h-60 rounded-t-lg border-x-2 border-t-2 flex flex-col items-center justify-center p-2 relative shadow-md",
                       colorClass
                     )}>
-                      {/* Titre vertical */}
                       <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-center truncate max-h-[160px] leading-tight opacity-80">
                         {book.title}
                       </span>
-                      
-                      {/* Détails illustrés */}
-                      <div className="absolute top-3 w-full flex justify-center opacity-20">
-                        <div className="h-0.5 w-3/4 bg-current rounded-full" />
-                      </div>
-                      <div className="absolute bottom-6 w-full flex flex-col items-center gap-1 opacity-20">
-                        <div className="h-0.5 w-3/4 bg-current rounded-full" />
-                        <div className="h-0.5 w-1/2 bg-current rounded-full" />
-                      </div>
-                      
-                      {/* Ombre portée sur l'étagère */}
+                      <div className="absolute top-3 w-full flex justify-center opacity-20"><div className="h-0.5 w-3/4 bg-current rounded-full" /></div>
+                      <div className="absolute bottom-6 w-full flex flex-col items-center gap-1 opacity-20"><div className="h-0.5 w-3/4 bg-current rounded-full" /><div className="h-0.5 w-1/2 bg-current rounded-full" /></div>
                       <div className="absolute -bottom-1 left-0 right-0 h-1 bg-black/10 blur-sm rounded-full" />
                     </div>
                   </Link>
@@ -332,11 +321,6 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-          
-          {/* Indicateur visuel de scroll si beaucoup de livres */}
-          {stats.palBooks.length > 8 && (
-            <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-8 h-32 bg-gradient-to-l from-background to-transparent pointer-events-none z-20 md:hidden" />
-          )}
         </div>
       </section>
 
@@ -507,6 +491,7 @@ export default function ProfilePage() {
 
 function EditProfileDialog({ profile }: { profile: any }) {
   const { user } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const storage = useStorage();
   const { toast } = useToast();
@@ -516,7 +501,6 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // States pour les champs
   const [name, setName] = useState('');
   const [pseudo, setPseudo] = useState('');
   const [bio, setBio] = useState('');
@@ -524,18 +508,13 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [favoriteAuthor, setFavoriteAuthor] = useState('');
   const [preferredFormat, setPreferredFormat] = useState<string>('papier');
   const [avatarUrl, setAvatarUrl] = useState('');
-  
-  // Objectifs
   const [annualGoal, setAnnualGoal] = useState(24);
   const [monthlyGoal, setMonthlyGoal] = useState(2);
   const [annualGoalPages, setAnnualGoalPages] = useState(10000);
   const [annualAudioGoal, setAnnualAudioGoal] = useState(100);
-  
-  // Thématiques
   const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
   const [favoriteTropes, setFavoriteTropes] = useState<string[]>([]);
 
-  // Initialisation à l'ouverture
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
@@ -558,11 +537,18 @@ function EditProfileDialog({ profile }: { profile: any }) {
     const file = e.target.files?.[0];
     if (!file || !storage || !user) return;
     setUploading(true);
-    const storageRef = ref(storage, `avatars/${user.uid}/modal-${Date.now()}`);
+    const storageRef = ref(storage, `users/${user.uid}/profile/avatar`);
     try {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       setAvatarUrl(url);
+      if (db) {
+        await updateDoc(doc(db, 'users', user.uid), { avatarUrl: url });
+      }
+      if (auth?.currentUser) {
+        await updateProfile(auth.currentUser, { photoURL: url });
+      }
+      toast({ title: 'Photo mise à jour', description: 'Votre nouvel avatar a été enregistré.' });
     } catch (error) {
       toast({ variant: 'destructive', title: 'Erreur Image', description: "Impossible d'importer la photo." });
     } finally {
@@ -571,7 +557,10 @@ function EditProfileDialog({ profile }: { profile: any }) {
   };
 
   const handleSave = async () => {
-    if (!db || !user) return;
+    if (!db || !user) {
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible d'accéder à la base de données." });
+      return;
+    }
     setLoading(true);
     
     const updatedData = {
@@ -593,6 +582,9 @@ function EditProfileDialog({ profile }: { profile: any }) {
 
     try {
       await setDoc(doc(db, 'users', user.uid), updatedData, { merge: true });
+      if (auth?.currentUser && updatedData.name) {
+        await updateProfile(auth.currentUser, { displayName: updatedData.name });
+      }
       toast({ title: 'Sanctuaire mis à jour', description: 'Vos préférences ont été gravées.' });
       setOpen(false);
     } catch (e) {
@@ -621,7 +613,6 @@ function EditProfileDialog({ profile }: { profile: any }) {
         
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-10 space-y-16 pb-20">
-            {/* Identity & Photo Section */}
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Informations Personnelles</h3>
               <div className="flex flex-col md:flex-row gap-10 items-center md:items-start">
@@ -660,7 +651,6 @@ function EditProfileDialog({ profile }: { profile: any }) {
               </div>
             </div>
 
-            {/* University & Preferences Section */}
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Mon Univers Littéraire</h3>
               <div className="grid md:grid-cols-2 gap-10">
@@ -690,7 +680,6 @@ function EditProfileDialog({ profile }: { profile: any }) {
               </div>
             </div>
 
-            {/* Goals Section */}
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Mes Défis</h3>
               <div className="grid md:grid-cols-2 gap-12">
@@ -713,7 +702,6 @@ function EditProfileDialog({ profile }: { profile: any }) {
               </div>
             </div>
 
-            {/* Thematics Section */}
             <div className="space-y-12">
               <div className="space-y-6">
                 <div className="flex items-center gap-3">

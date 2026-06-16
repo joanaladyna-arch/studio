@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
@@ -72,7 +73,6 @@ export default function AddBookPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [isDePlume, setIsDePlume] = useState(false);
 
-  // Manual entry states
   const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   const [manualBook, setManualBook] = useState({ title: "", author: "" });
 
@@ -133,7 +133,6 @@ export default function AddBookPage() {
           });
           setResults(finalResults);
         } else {
-          // Fallback OL
           const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=20`;
           const olRes = await fetch(olUrl);
           if (olRes.ok) {
@@ -250,7 +249,10 @@ export default function AddBookPage() {
   };
 
   const confirmAdd = async () => {
-    if (!db || !user || !pendingBook) return;
+    if (!db || !user || !pendingBook) {
+      toast({ variant: "destructive", title: "Erreur", description: "Utilisateur non connecté ou livre absent." });
+      return;
+    }
 
     setIsAdding(true);
     const bookData = {
@@ -265,15 +267,16 @@ export default function AddBookPage() {
 
     const booksRef = collection(db, "users", user.uid, "books");
 
-    addDoc(booksRef, bookData)
-      .then(() => {
-        toast({ title: "Livre ajouté", description: `${pendingBook.title} est dans votre écrin.` });
-        setPendingBook(null);
-      })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: booksRef.path, operation: 'create', requestResourceData: bookData }));
-      })
-      .finally(() => setIsAdding(false));
+    try {
+      await addDoc(booksRef, bookData);
+      toast({ title: "Livre ajouté", description: `${pendingBook.title} est dans votre écrin.` });
+      setPendingBook(null);
+    } catch (error: any) {
+      console.error("Firestore error:", error);
+      toast({ variant: "destructive", title: "Erreur Firestore", description: "Vérifiez vos permissions ou connexion." });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   const handleManualAdd = () => {
@@ -511,7 +514,6 @@ export default function AddBookPage() {
         </DialogContent>
       </Dialog>
 
-      {/* FIXED AND SCROLLABLE MODAL FOR ADDING BOOKS */}
       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
         <DialogContent className="glass-card border-none max-w-xl p-0 overflow-hidden bg-white/95 flex flex-col max-h-[90vh]">
           <DialogHeader className="p-10 border-b border-primary/5 bg-white/40 shrink-0">
