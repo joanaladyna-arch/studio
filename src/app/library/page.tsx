@@ -4,23 +4,15 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar as CalendarIcon, Hash, MessageSquare, Quote, PersonStanding, MapPin, Mic, Loader2, ChevronRight, X } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
-import { collection, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { collection } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
+import Link from "next/link";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
 export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
@@ -114,21 +106,12 @@ const CATEGORIES = [
   { id: "favorite", label: "Favoris" },
 ];
 
-export function formatDuration(decimalHours: number) {
-  const h = Math.floor(decimalHours);
-  const m = Math.round((decimalHours - h) * 60);
-  if (h === 0) return `${m}m`;
-  return `${h}h ${m}m`;
-}
-
 export default function LibraryPage() {
   const { user } = useUser();
   const db = useFirestore();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFormat, setSelectedFormat] = useState<BookFormat | "all">("all");
-  const [editingBook, setEditingBook] = useState<Book | null>(null);
-  const { toast } = useToast();
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -165,40 +148,6 @@ export default function LibraryPage() {
       return b.status === activeTab;
     });
   }, [activeTab, searchQuery, selectedFormat, books]);
-
-  const handleUpdateBook = async (updatedData: Partial<Book>) => {
-    if (!db || !user || !editingBook) return;
-    
-    const { id, ...dataToSave } = updatedData as any;
-
-    try {
-      const bookRef = doc(db, "users", user.uid, "books", editingBook.id);
-      await updateDoc(bookRef, dataToSave);
-      setEditingBook(null);
-      toast({ 
-        title: "Livre mis à jour", 
-        description: "Vos modifications ont été enregistrées avec succès." 
-      });
-    } catch (e) {
-      console.error("PLUME update error:", e);
-      toast({ 
-        variant: "destructive", 
-        title: "Erreur", 
-        description: "Impossible d'enregistrer les modifications." 
-      });
-    }
-  };
-
-  const handleDeleteBook = async (id: string) => {
-    if (!db || !user) return;
-    try {
-      await deleteDoc(doc(db, "users", user.uid, "books", id));
-      setEditingBook(null);
-      toast({ title: "Livre supprimé", description: "Le livre a été retiré de votre bibliothèque." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer le livre." });
-    }
-  };
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-32">
@@ -280,9 +229,9 @@ export default function LibraryPage() {
           ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-8">
               {filteredBooks.map((book) => (
-                <div key={book.id} onClick={() => setEditingBook(book as Book)} className="cursor-pointer">
+                <Link key={book.id} href={`/book/${book.id}`} className="group">
                   <BookCard book={book as Book} />
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -304,15 +253,6 @@ export default function LibraryPage() {
           <Plus className="h-7 w-7" />
         </Button>
       </Link>
-
-      {editingBook && (
-        <EditBookDialog 
-          book={editingBook} 
-          onClose={() => setEditingBook(null)} 
-          onSave={handleUpdateBook} 
-          onDelete={handleDeleteBook}
-        />
-      )}
     </div>
   );
 }
@@ -371,421 +311,8 @@ export function BookCard({ book }: { book: Book }) {
            {book.publisher && (
              <p className="text-[7px] text-primary/40 font-bold uppercase tracking-[0.2em] italic truncate">{book.publisher}</p>
            )}
-           {book.startDate && (
-             <p className="text-[7px] text-muted-foreground italic font-bold">Débuté : {format(new Date(book.startDate), "dd/MM/yy")}</p>
-           )}
         </div>
       </div>
     </div>
-  );
-}
-
-function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClose: () => void, onSave: (data: Partial<Book>) => void, onDelete: (id: string) => void }) {
-  const [genres, setGenres] = useState<string[]>(book.genres || []);
-  const [tropes, setTropes] = useState<string[]>(book.tropes || []);
-  const [emotions, setEmotions] = useState<string[]>(book.emotions || []);
-  const [status, setStatus] = useState<BookStatus>(book.status);
-  const [formatType, setFormatType] = useState<BookFormat>(book.format || "papier");
-  const [rank, setRank] = useState<RankType | undefined>(book.rank);
-  const [favorite, setFavorite] = useState(book.favorite);
-  const [rating, setRating] = useState(book.rating || 0);
-  const [review, setReview] = useState(book.review || "");
-  const [favoriteQuote, setFavoriteQuote] = useState(book.favoriteQuote || "");
-  const [favoriteCharacters, setFavoriteCharacters] = useState(book.favoriteCharacters || "");
-  const [memorableScene, setMemorableScene] = useState(book.memorableScene || "");
-  const [publisher, setPublisher] = useState(book.publisher || "");
-  const [pages, setPages] = useState(book.pages || 0);
-  const [duration, setDuration] = useState(book.duration || 0);
-  const [narrator, setNarrator] = useState(book.narrator || "");
-  const [series, setSeries] = useState(book.series || "");
-  const [volume, setVolume] = useState(book.volume || "");
-  
-  const [startDate, setStartDate] = useState<Date | undefined>(book.startDate ? new Date(book.startDate) : undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(book.endDate ? new Date(book.endDate) : undefined);
-
-  const toggleItem = (list: string[], setList: (l: string[]) => void, item: string) => {
-    if (list.includes(item)) setList(list.filter(i => i !== item));
-    else setList([...list, item]);
-  };
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[95vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-background/98">
-        <DialogHeader className="p-6 border-b border-primary/5 bg-white/40">
-          <div className="flex justify-between items-center">
-            <DialogTitle className="font-headline text-3xl italic">Ma Pépite Littéraire</DialogTitle>
-            <div className="flex gap-2">
-               <Badge variant="secondary" className={cn("text-[10px] font-bold uppercase", STATUSES[status].color, "text-white border-none")}>
-                {STATUSES[status].label}
-              </Badge>
-            </div>
-          </div>
-        </DialogHeader>
-        
-        <Tabs defaultValue="biblio" className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="bg-transparent border-b border-primary/5 px-6 gap-6 h-12 justify-start rounded-none">
-            <TabsTrigger value="biblio" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary px-0 font-headline italic">Bibliothèque</TabsTrigger>
-            <TabsTrigger value="review" className="rounded-none data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary px-0 font-headline italic">Avis de lecture</TabsTrigger>
-          </TabsList>
-
-          <ScrollArea className="flex-1">
-            <div className="p-8 space-y-12">
-              <TabsContent value="biblio" className="m-0 space-y-12">
-                <div className="flex flex-col md:flex-row gap-10 items-start">
-                   <div className="relative w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl bg-secondary/5 p-4 flex items-center justify-center shrink-0 border border-white/50">
-                      <div className="relative w-full h-full">
-                        <Image src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={book.title} fill className="object-contain" sizes="200px" />
-                      </div>
-                   </div>
-                   <div className="space-y-6 flex-1">
-                      <div className="space-y-2">
-                        <h3 className="text-3xl font-headline italic leading-tight">{book.title}</h3>
-                        <Link href={`/author/${encodeURIComponent(book.author)}`} className="text-sm text-primary font-bold uppercase tracking-[0.2em] hover:underline flex items-center gap-2">
-                          <UserIcon className="h-3.5 w-3.5" /> {book.author}
-                        </Link>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Éditeur</Label>
-                          <Input 
-                            value={publisher} 
-                            onChange={(e) => setPublisher(e.target.value)} 
-                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
-                            placeholder="Nom de l'éditeur"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">ISBN</Label>
-                          <Input 
-                            value={book.isbn || ""} 
-                            readOnly
-                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm opacity-50"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Saga / Série</Label>
-                          <Input 
-                            value={series} 
-                            onChange={(e) => setSeries(e.target.value)} 
-                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
-                            placeholder="Nom de la série"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Tome</Label>
-                          <Input 
-                            value={volume} 
-                            onChange={(e) => setVolume(e.target.value)} 
-                            className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
-                            placeholder="Numéro"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Format</Label>
-                          <div className="flex gap-2">
-                            {Object.entries(FORMATS).map(([key, val]) => {
-                              const Icon = val.icon;
-                              return (
-                                <Button 
-                                  key={key} 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => setFormatType(key as BookFormat)}
-                                  className={cn(
-                                    "rounded-xl border-primary/10 h-11 flex-1", 
-                                    formatType === key ? "bg-primary text-white border-primary" : "bg-white/40"
-                                  )}
-                                >
-                                  <Icon className="h-4 w-4" />
-                                </Button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        {formatType === 'audio' ? (
-                          <>
-                            <div className="space-y-1.5">
-                              <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Durée (Heures décimales)</Label>
-                              <Input 
-                                type="number"
-                                step="0.01"
-                                value={duration} 
-                                onChange={(e) => setDuration(parseFloat(e.target.value) || 0)} 
-                                className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
-                                placeholder="Ex: 12.75"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Narrateur</Label>
-                              <div className="relative">
-                                <Mic className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary/40" />
-                                <Input 
-                                  value={narrator} 
-                                  onChange={(e) => setNarrator(e.target.value)} 
-                                  className="h-11 pl-9 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
-                                  placeholder="Nom du narrateur"
-                                />
-                              </div>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="space-y-1.5">
-                            <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Pages</Label>
-                            <Input 
-                              type="number"
-                              value={pages} 
-                              onChange={(e) => setPages(parseInt(e.target.value) || 0)} 
-                              className="h-11 rounded-2xl bg-white/40 border-none italic text-sm shadow-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Date début</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-xl border-none bg-white/40", !startDate && "text-muted-foreground")}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {startDate ? format(startDate, "PPP", { locale: fr }) : "Choisir une date"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 glass-card">
-                              <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
-                              <div className="p-2 border-t border-primary/5 flex justify-end">
-                                <Button variant="ghost" size="sm" onClick={() => setStartDate(undefined)} className="text-[10px] uppercase font-bold tracking-widest text-destructive">Effacer</Button>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Date fin</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-xl border-none bg-white/40", !endDate && "text-muted-foreground")}>
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {endDate ? format(endDate, "PPP", { locale: fr }) : "Choisir une date"}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0 glass-card">
-                              <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
-                              <div className="p-2 border-t border-primary/5 flex justify-end">
-                                <Button variant="ghost" size="sm" onClick={() => setEndDate(undefined)} className="text-[10px] uppercase font-bold tracking-widest text-destructive">Effacer</Button>
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="space-y-6">
-                   <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Statut et Prestige</label>
-                   <div className="grid sm:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <p className="text-xs italic text-muted-foreground">Statut de lecture</p>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(STATUSES).map(([key, val]) => (
-                            <Button 
-                              key={key} 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => setStatus(key as BookStatus)}
-                              className={cn(
-                                "rounded-full border-primary/10 text-[10px] h-9 px-4", 
-                                status === key ? "bg-primary text-white border-primary" : "bg-white/40"
-                              )}
-                            >
-                              {val.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <p className="text-xs italic text-muted-foreground">Grade de Plume</p>
-                        <div className="flex flex-wrap gap-2">
-                          {Object.entries(RANKS).map(([key, val]) => {
-                            const Icon = val.icon;
-                            return (
-                              <Button 
-                                key={key} 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => setRank(key as RankType)}
-                                className={cn(
-                                  "rounded-full border-primary/10 h-9 px-3", 
-                                  rank === key ? "bg-primary/10 text-primary border-primary" : "bg-white/40"
-                                )}
-                              >
-                                <Icon className={cn("h-3.5 w-3.5 mr-2", rank === key ? val.color : "opacity-40")} />
-                                <span className="text-[9px]">{val.label.split(' ')[0]}</span>
-                              </Button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                   </div>
-                </div>
-
-                <div className="space-y-6">
-                  <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Genres et Tropes</label>
-                  <div className="space-y-4">
-                    <p className="text-xs italic text-muted-foreground">Genres</p>
-                    <div className="flex flex-wrap gap-2">
-                      {GENRES_LIST.map(g => (
-                        <button 
-                          key={g} 
-                          onClick={() => toggleItem(genres, setGenres, g)}
-                          className={cn(
-                            "text-[10px] px-4 py-2 rounded-full border transition-all uppercase tracking-widest",
-                            genres.includes(g) ? "bg-primary text-white border-primary" : "bg-white/50 border-transparent"
-                          )}
-                        >
-                          {g}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <p className="text-xs italic text-muted-foreground">Tropes</p>
-                    <div className="flex flex-wrap gap-2">
-                      {TROPES_LIST.map(t => (
-                        <button 
-                          key={t} 
-                          onClick={() => toggleItem(tropes, setTropes, t)}
-                          className={cn(
-                            "text-[10px] px-4 py-2 rounded-full border transition-all uppercase tracking-widest",
-                            tropes.includes(t) ? "bg-secondary text-secondary-foreground border-secondary" : "bg-white/50 border-transparent"
-                          )}
-                        >
-                          {t}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="review" className="m-0 space-y-12">
-                <div className="space-y-8">
-                  <div className="space-y-4">
-                    <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Note de lecture</label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star 
-                          key={star} 
-                          className={cn("h-8 w-8 cursor-pointer transition-all", star <= rating ? "text-amber-400 fill-amber-400 scale-110" : "text-muted-foreground/20")} 
-                          onClick={() => setRating(star)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid gap-8">
-                    <div className="space-y-4">
-                      <Label className="flex items-center gap-2 italic"><MessageSquare className="h-4 w-4 text-primary/40" /> Avis de lecture</Label>
-                      <Textarea 
-                        value={review} 
-                        onChange={(e) => setReview(e.target.value)} 
-                        placeholder="Qu'avez-vous pensé de cette œuvre ?" 
-                        className="min-h-[150px] bg-white/40 border-none rounded-3xl p-6 italic"
-                      />
-                    </div>
-
-                    <div className="space-y-4">
-                      <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Émotions ressenties</label>
-                      <div className="flex flex-wrap gap-2">
-                        {Object.entries(EMOTIONS).map(([key, val]) => (
-                          <button 
-                            key={key} 
-                            onClick={() => toggleItem(emotions, setEmotions, key)}
-                            className={cn(
-                              "text-[10px] px-4 py-2 rounded-full border transition-all uppercase tracking-widest flex items-center gap-2",
-                              emotions.includes(key) ? "bg-accent text-accent-foreground border-accent" : "bg-white/50 border-transparent"
-                            )}
-                          >
-                            <span>{val.icon}</span>
-                            <span>{val.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <Label className="flex items-center gap-2 italic"><Quote className="h-4 w-4 text-primary/40" /> Citation préférée</Label>
-                      <Textarea 
-                        value={favoriteQuote} 
-                        onChange={(e) => setFavoriteQuote(e.target.value)} 
-                        placeholder="Une phrase qui vous a marqué..." 
-                        className="min-h-[80px] bg-white/40 border-none rounded-3xl p-6 italic border-l-4 border-primary/20"
-                      />
-                    </div>
-
-                    <div className="grid sm:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <Label className="flex items-center gap-2 italic"><PersonStanding className="h-4 w-4 text-primary/40" /> Personnages favoris</Label>
-                        <Input 
-                          value={favoriteCharacters} 
-                          onChange={(e) => setFavoriteCharacters(e.target.value)} 
-                          className="bg-white/40 border-none rounded-2xl h-12 italic"
-                        />
-                      </div>
-                      <div className="space-y-4">
-                        <Label className="flex items-center gap-2 italic"><MapPin className="h-4 w-4 text-primary/40" /> Scène marquante</Label>
-                        <Input 
-                          value={memorableScene} 
-                          onChange={(e) => setMemorableScene(e.target.value)} 
-                          className="bg-white/40 border-none rounded-2xl h-12 italic"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </TabsContent>
-            </div>
-          </ScrollArea>
-        </Tabs>
-        
-        <DialogFooter className="p-8 border-t border-primary/5 bg-white/60 backdrop-blur-md">
-           <div className="flex w-full justify-between items-center">
-             <Button variant="ghost" onClick={() => onDelete(book.id)} className="text-destructive hover:bg-destructive/5 rounded-xl h-12 px-6">
-                <Trash2 className="h-4 w-4 mr-2" /> Supprimer
-             </Button>
-             <div className="flex gap-4">
-               <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-8">Annuler</Button>
-               <Button 
-                onClick={() => onSave({ 
-                  genres, 
-                  tropes, 
-                  emotions, 
-                  status, 
-                  format: formatType, 
-                  rank, 
-                  favorite, 
-                  publisher, 
-                  pages, 
-                  duration, 
-                  rating, 
-                  review, 
-                  favoriteQuote, 
-                  favoriteCharacters, 
-                  memorableScene, 
-                  series, 
-                  volume, 
-                  narrator,
-                  startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
-                  endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined
-                })} 
-                className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20"
-               >
-                 Enregistrer
-               </Button>
-             </div>
-           </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
