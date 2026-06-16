@@ -52,13 +52,6 @@ const SPINE_COLORS = [
   'bg-orange-100 text-orange-700 border-orange-200',
 ];
 
-const BADGE_LEVELS = [
-  { label: "Bronze", min: 5, color: "text-amber-600", bg: "bg-amber-100" },
-  { label: "Silver", min: 15, color: "text-slate-400", bg: "bg-slate-100" },
-  { label: "Gold", min: 30, color: "text-yellow-500", bg: "bg-yellow-100" },
-  { label: "Diamond", min: 50, color: "text-cyan-400", bg: "bg-cyan-100" },
-];
-
 export default function ProfilePage() {
   const { user } = useUser();
   const auth = useAuth();
@@ -388,12 +381,13 @@ function EditProfileDialog({ profile }: { profile: any }) {
           <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl">
-        <DialogHeader className="p-10 border-b bg-white/40 shrink-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
+        <DialogHeader className="p-8 border-b bg-white/40 shrink-0">
           <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1">
-          <div className="p-10 space-y-16 pb-20">
+        
+        <ScrollArea className="flex-1 w-full">
+          <div className="p-8 space-y-16 pb-24">
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Informations Personnelles</h3>
               <div className="grid gap-8">
@@ -506,9 +500,10 @@ function EditProfileDialog({ profile }: { profile: any }) {
             </div>
           </div>
         </ScrollArea>
-        <DialogFooter className="p-10 border-t bg-white/60 shrink-0">
-          <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl px-8">Annuler</Button>
-          <Button onClick={handleSave} disabled={loading} className="h-16 px-16 rounded-[2rem] bg-primary text-2xl font-headline italic shadow-xl shadow-primary/20">
+        
+        <DialogFooter className="p-8 border-t bg-white/60 shrink-0 gap-4 sm:gap-0">
+          <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl px-8 rounded-2xl">Annuler</Button>
+          <Button onClick={handleSave} disabled={loading} className="h-16 px-16 rounded-[2rem] bg-primary text-2xl font-headline italic shadow-xl shadow-primary/20 transition-all hover:scale-105 active:scale-95">
             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Graver mon identité"}
           </Button>
         </DialogFooter>
