@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { BookCover } from "@/components/book-cover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { cn, toArray } from "@/lib/utils";
-import { UserBook, MasterBook, STATUSES, RANKS, RankType } from "@/app/library/page";
+import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
 
@@ -91,6 +92,27 @@ export default function BookDetailPage() {
       }
     }
   }, [userBook, fetchMasterData]);
+
+  // Pré-remplit les genres depuis la fiche maître si le livre personnel
+  // n'en a pas encore (cas des livres ajoutés avant qu'on enrichisse les
+  // données à l'ajout) — ne s'exécute qu'une fois, dès que masterBook
+  // est disponible, sans jamais écraser un choix déjà fait.
+  useEffect(() => {
+    if (masterBook && toArray<string>(userBook?.genres).length === 0 && toArray<string>(masterBook.genres).length > 0) {
+      setEditedData(prev => ({ ...prev, genres: toArray<string>(masterBook.genres) }));
+    }
+  }, [masterBook]);
+
+  // Ajoute/retire un genre ou un trope de la liste personnelle de
+  // l'utilisatrice pour ce livre — ces champs alimentent directement le
+  // calcul des badges/médailles sur la page profil.
+  const toggleTag = (field: "genres" | "tropes", value: string) => {
+    const current = toArray<string>((editedData as any)[field]);
+    const updated = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+    setEditedData({ ...editedData, [field]: updated } as any);
+  };
 
   const handleSave = async () => {
     if (!userBookRef) return;
@@ -183,13 +205,12 @@ export default function BookDetailPage() {
         </div>
       </header>
 
-      <div className="grid lg:grid-cols-[350px_1fr] gap-16">
+      <div className="grid lg:grid-cols-[380px_1fr] gap-16">
         <div className="space-y-8 max-w-[280px] mx-auto lg:max-w-none lg:mx-0 w-full">
           <div className="relative aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
-            <Image 
-              src={editedData.cover || masterBook?.cover || "https://picsum.photos/seed/p/400/600"} 
+            <BookCover
+              src={editedData.cover || masterBook?.cover}
               alt={masterBook?.title || "Livre"} 
-              fill 
               className="object-contain" 
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -275,6 +296,9 @@ export default function BookDetailPage() {
             >
               {masterBook?.author || userBook.author}
             </Link>
+            {masterBook?.translator && (
+              <p className="text-sm text-muted-foreground italic">Traduit par {masterBook.translator}</p>
+            )}
           </div>
 
           <Tabs defaultValue="overview">
@@ -288,21 +312,60 @@ export default function BookDetailPage() {
                  <div className="space-y-1"><div className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> Pages</div><span className="text-foreground">{masterBook?.pageCount || masterBook?.pages || "N/A"}</span></div>
                  <div className="space-y-1"><div className="flex items-center gap-2"><Hash className="h-4 w-4" /> ISBN</div><span className="text-foreground">{masterBook?.isbn13 || masterBook?.isbn || "N/A"}</span></div>
                  <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{masterBook?.publisher || "N/A"}</span></div>
+                 <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Langue</div><span className="text-foreground">{masterBook?.language || "N/A"}</span></div>
                </div>
                <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm">
                  <h4 className="font-headline text-2xl italic mb-6 opacity-40">Résumé de la pépite</h4>
                  <p className="italic text-lg leading-relaxed text-muted-foreground">{masterBook?.description || "Cette œuvre attend que vous en décriviez l'essence."}</p>
                </div>
-               {(() => {
-                 const genres = toArray<string>(masterBook?.genres).length > 0 ? toArray<string>(masterBook?.genres) : toArray<string>(userBook.genres);
-                 return genres.length > 0 ? (
-                   <div className="flex flex-wrap gap-2">
-                     {genres.map((g) => (
-                       <Badge key={g} variant="outline" className="rounded-full border-primary/20 text-primary/70 italic text-xs px-4 py-1.5">{g}</Badge>
-                     ))}
-                   </div>
-                 ) : null;
-               })()}
+               <div className="space-y-4">
+                 <Label className="italic text-2xl font-headline">Genres</Label>
+                 <div className="flex flex-wrap gap-2">
+                   {GENRES_LIST.map((g) => {
+                     const isActive = toArray<string>(editedData.genres).includes(g);
+                     return (
+                       <button
+                         key={g}
+                         type="button"
+                         onClick={() => toggleTag("genres", g)}
+                         className={cn(
+                           "rounded-full border text-xs px-4 py-1.5 italic transition-all",
+                           isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60"
+                         )}
+                       >
+                         {g}
+                       </button>
+                     );
+                   })}
+                 </div>
+               </div>
+
+               <div className="space-y-4">
+                 <Label className="italic text-2xl font-headline">Tropes</Label>
+                 <div className="flex flex-wrap gap-2">
+                   {TROPES_LIST.map((t) => {
+                     const isActive = toArray<string>(editedData.tropes).includes(t);
+                     return (
+                       <button
+                         key={t}
+                         type="button"
+                         onClick={() => toggleTag("tropes", t)}
+                         className={cn(
+                           "rounded-full border text-xs px-4 py-1.5 italic transition-all",
+                           isActive ? "bg-secondary text-white border-secondary shadow-sm" : "border-secondary/20 text-secondary/70 bg-white/40 hover:bg-white/60"
+                         )}
+                       >
+                         {t}
+                       </button>
+                     );
+                   })}
+                 </div>
+                 <p className="text-[10px] text-muted-foreground italic">Cumulez 5 lectures avec le même genre ou trope pour débloquer le badge correspondant sur votre profil.</p>
+               </div>
+
+               <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-12 px-8 font-headline italic">
+                 {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer
+               </Button>
             </TabsContent>
 
             <TabsContent value="journal" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">

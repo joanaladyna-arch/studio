@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+import { BookCover } from "@/components/book-cover";
 import { errorEmitter } from "@/firebase/error-emitter";
 import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -147,6 +148,7 @@ export default function AuthorPage() {
               title: b.title,
               subtitle: "",
               author: b.author || authorName,
+              translator: b.translator || "",
               publisher: b.publisher,
               cover: b.cover || undefined,
               pages: 0,
@@ -215,6 +217,7 @@ export default function AuthorPage() {
           isbn13: pendingBook.isbn || "",
           description: pendingBook.description || "",
           publisher: pendingBook.publisher || "",
+          translator: pendingBook.translator || "",
           pageCount: pendingBook.pages || 0,
           publishedDate: pendingBook.publicationDate || "",
           genres: toArray<string>(pendingBook.genres),
@@ -300,7 +303,7 @@ export default function AuthorPage() {
                   <CardContent className="p-0 flex flex-col sm:flex-row">
                     <div className="relative w-full sm:w-44 aspect-[2/3] shrink-0 overflow-hidden bg-secondary/5 flex items-center justify-center p-4">
                       <div className="relative w-full h-full">
-                        <Image src={book.cover || "https://picsum.photos/seed/p/200/300"} alt={book.title} fill className="object-contain transition-transform duration-700 group-hover:scale-110" sizes="200px" />
+                        <BookCover src={book.cover} alt={book.title} className="object-contain transition-transform duration-700 group-hover:scale-110" />
                       </div>
                     </div>
                     <div className="p-8 flex flex-col flex-1 justify-between gap-6">
@@ -348,7 +351,7 @@ export default function AuthorPage() {
             <div className="p-10 space-y-10">
               <div className="flex gap-8 items-start">
                  <div className="relative h-44 w-32 shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/60">
-                    <Image src={pendingBook?.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={pendingBook?.title || ""} fill className="object-cover" />
+                    <BookCover src={pendingBook?.cover} alt={pendingBook?.title || ""} className="object-cover" />
                  </div>
                  <div className="space-y-3 flex-1">
                    <h3 className="font-headline italic text-3xl leading-tight">{pendingBook?.title}</h3>

@@ -26,6 +26,7 @@ import {
   Frown
 } from "lucide-react";
 import Image from "next/image";
+import { BookCover } from "@/components/book-cover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ export interface MasterBook {
   subtitle?: string;
   author: string;
   publisher?: string;
+  translator?: string;
   cover: string;
   description?: string;
   pages?: number;
@@ -243,12 +245,10 @@ export function BookCard({ book }: { book: UserBook }) {
   return (
     <div className="space-y-4 group cursor-pointer">
       <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/60 group-hover:shadow-2xl transition-all duration-700 bg-secondary/5 flex items-center justify-center">
-        <Image 
-          src={book.cover || "https://picsum.photos/seed/placeholder/200/300"} 
+        <BookCover
+          src={book.cover}
           alt={book.title || ""} 
-          fill 
           className="object-contain transition-transform duration-1000 group-hover:scale-105" 
-          sizes="(max-width: 768px) 50vw, 200px"
         />
         <div className="absolute top-3 right-3">
           <Badge className={cn("text-[8px] font-bold uppercase", STATUSES[book.status]?.color)}>

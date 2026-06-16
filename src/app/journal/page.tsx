@@ -17,6 +17,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import Link from "next/link";
 import Image from "next/image";
+import { BookCover } from "@/components/book-cover";
 
 export default function JournalPage() {
   const { user } = useUser();
@@ -100,7 +101,7 @@ export default function JournalPage() {
                     <CardContent className="p-6 space-y-4">
                         <div className="flex gap-4 items-start">
                             <div className="relative h-20 w-14 shrink-0 rounded-lg overflow-hidden shadow-sm">
-                                <Image src={book.cover || "https://picsum.photos/seed/p/200/300"} alt={book.title} fill className="object-cover" />
+                                <BookCover src={book.cover} alt={book.title} className="object-cover" />
                             </div>
                             <div className="space-y-1 overflow-hidden">
                                 <h4 className="font-headline italic text-lg line-clamp-1">{book.title}</h4>

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Image from 'next/image';
 import Link from 'next/link';
+import { BookCover } from '@/components/book-cover';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -58,13 +59,21 @@ export default function Home() {
 
   const { data: allBooks = [] } = useCollection(allBooksQuery);
 
+  const readBooks = useMemo(() => {
+    return allBooks
+      .filter(b => b.status === 'read' || b.status === 'reread')
+      .sort((a, b) => {
+        const da = a.dateAdded?.toDate ? a.dateAdded.toDate() : new Date(a.dateAdded || 0);
+        const db = b.dateAdded?.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded || 0);
+        return db.getTime() - da.getTime();
+      });
+  }, [allBooks]);
+
   const stats = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
-    
     const monthlyRead = readBooks.filter(b => {
       if (!b.dateAdded) return false;
       const d = b.dateAdded.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded);
@@ -193,6 +202,43 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="space-y-8">
+        <div className="flex justify-between items-center px-2">
+          <h2 className="text-4xl font-headline flex items-center gap-4 italic">
+            <BookOpen className="h-8 w-8 text-primary/40" /> Votre pile de lectures
+          </h2>
+          {readBooks.length > 0 && (
+            <Button asChild variant="link" className="text-primary italic text-lg group">
+              <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-2 transition-transform" /></Link>
+            </Button>
+          )}
+        </div>
+        {readBooks.length > 0 ? (
+          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
+            {readBooks.slice(0, 14).map((book, i) => (
+              <Link
+                key={book.id}
+                href={`/book/${book.id}`}
+                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
+                style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
+              >
+                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+              </Link>
+            ))}
+            {readBooks.length > 14 && (
+              <Link
+                href="/library"
+                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl border-2 border-dashed border-primary/20 bg-white/40 flex items-center justify-center -ml-7 text-primary/60 font-bold text-sm italic hover:bg-white/70 transition-colors"
+              >
+                +{readBooks.length - 14}
+              </Link>
+            )}
+          </div>
+        ) : (
+          <p className="text-muted-foreground italic px-2">Vos lectures terminées s'empileront ici, une à une.</p>
+        )}
+      </section>
+
       <div className="grid md:grid-cols-[1.8fr_1fr] gap-12">
         <section className="space-y-8">
           <div className="flex justify-between items-center">
@@ -211,13 +257,10 @@ export default function Home() {
             <Card className="glass-card overflow-hidden border-none group transition-all duration-1000 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)]">
               <div className="grid sm:grid-cols-[280px_1fr] gap-0">
                 <div className="relative aspect-[2/3] overflow-hidden">
-                  <Image 
-                    src={currentRead.cover || 'https://picsum.photos/seed/placeholder/600/900'} 
+                  <BookCover
+                    src={currentRead.cover}
                     alt={currentRead.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 280px"
                     className="object-cover group-hover:scale-110 transition-transform duration-1000"
-                    loading="eager"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent mix-blend-overlay" />
                 </div>

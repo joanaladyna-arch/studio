@@ -11,6 +11,7 @@ import {
   X
 } from "lucide-react";
 import Image from "next/image";
+import { BookCover } from "@/components/book-cover";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore } from "@/firebase";
@@ -118,6 +119,7 @@ export default function AddBookPage() {
             title: b.title || "Titre inconnu",
             subtitle: "",
             author: b.author || "Auteur inconnu",
+            translator: b.translator || "",
             cover: b.cover || undefined,
             isbn: b.isbn || "N/A",
             isbn10: "",
@@ -235,6 +237,7 @@ export default function AddBookPage() {
           isbn10: pendingBook.isbn10 || "",
           description: pendingBook.description || "",
           publisher: pendingBook.publisher || "",
+          translator: pendingBook.translator || "",
           pageCount: pendingBook.pages || 0,
           language: pendingBook.language || "",
           publishedDate: pendingBook.publishedDate || "",
@@ -328,7 +331,7 @@ export default function AddBookPage() {
           <Card key={book.id} className="glass-card overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-0 flex flex-col sm:flex-row">
               <div className="relative w-32 aspect-[2/3] bg-secondary/5 shrink-0">
-                <Image src={book.cover || "https://picsum.photos/seed/p/200/300"} alt={book.title} fill className="object-cover" />
+                <BookCover src={book.cover} alt={book.title} className="object-cover" />
               </div>
               <div className="p-6 flex flex-1 items-center justify-between gap-4">
                 <div className="space-y-1">

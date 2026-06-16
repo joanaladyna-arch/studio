@@ -58,18 +58,29 @@ function extractFirst(block: string, tag: string): string {
 }
 
 /**
- * Les notices d'autorité de la BnF nomment les auteurs au format
- * "Nom, Prénom (dates)" (ex: "Moncomble, Morgane (1992-....)"). Sans
- * cette conversion, l'affichage serait inversé et les doublons avec
- * Google Books (qui renvoie "Prénom Nom") ne seraient jamais détectés.
+ * Les notices d'autorité de la BnF nomment les créateurs au format
+ * "Nom, Prénom (dates). Rôle" (ex: "Lauren, Christina. Auteur du texte",
+ * "Roméo, Léna. Traducteur"). Le rôle, après le premier point, DOIT être
+ * retiré avant d'inverser nom/prénom — sinon il se retrouve injecté en
+ * plein milieu du nom affiché (ex: "Christina. Auteur du texte Lauren").
  */
 function normalizeAuthorName(raw: string): string {
-  const withoutDates = raw.replace(/\s*\([^)]*\)\s*$/, "").trim();
-  const parts = withoutDates.split(",");
+  // On retire d'abord la parenthèse de dates — qui peut elle-même
+  // contenir des points (ex: "1986-...." pour une personne encore en
+  // vie) — AVANT de chercher le séparateur de rôle, sinon le split sur
+  // "." tronque le nom au milieu de cette parenthèse.
+  const withoutDates = raw.replace(/\s*\([^)]*\)/, "").trim();
+  const namePart = withoutDates.split(".")[0].trim();
+  const parts = namePart.split(",");
   if (parts.length === 2 && parts[0].trim() && parts[1].trim()) {
     return `${parts[1].trim()} ${parts[0].trim()}`;
   }
-  return withoutDates;
+  return namePart;
+}
+
+/** Détecte si un créateur BnF est crédité comme traducteur·rice plutôt qu'auteur·e. */
+function isTranslatorRole(raw: string): boolean {
+  return /traduct/i.test(raw);
 }
 
 export async function GET(req: NextRequest) {
@@ -117,8 +128,17 @@ export async function GET(req: NextRequest) {
 
     const results = recordBlocks
       .map((block) => {
-        const title = extractFirst(block, "dc:title");
-        const creators = extractAll(block, "dc:creator").map(normalizeAuthorName);
+        // Le champ titre BnF inclut parfois la mention de responsabilité
+        // après un " / " (convention catalographique standard, ex: "Nos
+        // âmes tourmentées / Morgane Moncomble") — ce qui dupliquerait
+        // le nom de l'auteur, déjà affiché séparément, dans le titre.
+        const titleRaw = extractFirst(block, "dc:title");
+        const title = titleRaw.split(" / ")[0].trim();
+        // Les traducteurs sont des dc:creator à part, marqués par leur
+        // rôle ; on les sépare des véritables auteurs du texte.
+        const rawCreators = extractAll(block, "dc:creator");
+        const creators = rawCreators.filter((c) => !isTranslatorRole(c)).map(normalizeAuthorName);
+        const translators = rawCreators.filter((c) => isTranslatorRole(c)).map(normalizeAuthorName);
         const publisher = extractFirst(block, "dc:publisher").replace(/^Editeur\s*:?\s*/i, "");
         const date = extractFirst(block, "dc:date");
         const language = extractFirst(block, "dc:language");
@@ -131,6 +151,7 @@ export async function GET(req: NextRequest) {
           id: `bnf-${isbn || title}-${creators[0] || ""}`.slice(0, 140),
           title: title || "",
           author: creators.length ? creators.join(", ") : "",
+          translator: translators.length ? translators.join(", ") : "",
           publisher,
           publishedDate: (date.match(/\d{4}/) || [])[0] || date,
           publicationDate: (date.match(/\d{4}/) || [])[0] || date,
