@@ -1,42 +1,29 @@
 
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { 
   Search, 
-  Heart, 
-  Diamond, 
-  Crown, 
-  Star, 
-  Sparkles, 
-  BookText, 
-  Wind, 
-  Trash2, 
-  DoorOpen, 
-  Pause, 
-  RefreshCw, 
   Plus, 
-  Book as BookIcon, 
-  Tablet, 
-  Headphones, 
-  SlidersHorizontal, 
-  Loader2,
   Bookmark,
-  Smartphone,
+  Loader2,
   CheckCircle2,
-  Clock,
-  LayoutGrid,
-  List
+  RefreshCw,
+  Pause,
+  DoorOpen,
+  Book as BookIcon,
+  Tablet,
+  Smartphone,
+  Headphones
 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useCollection, useUser, useFirestore, useDoc } from "@/firebase";
-import { collection, doc, getDoc } from "firebase/firestore";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useCollection, useUser, useFirestore } from "@/firebase";
+import { collection } from "firebase/firestore";
 import Link from "next/link";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
@@ -53,6 +40,10 @@ export interface MasterBook {
   description?: string;
   pages?: number;
   isbn?: string;
+  isbn10?: string;
+  isbn13?: string;
+  genres?: string[];
+  tropes?: string[];
 }
 
 export interface UserBook {
@@ -69,6 +60,9 @@ export interface UserBook {
   cover?: string;
   genres?: string[];
   tropes?: string[];
+  pagesRead?: number;
+  favorite?: boolean;
+  dePlume?: boolean;
 }
 
 export type Book = UserBook;
@@ -124,7 +118,6 @@ export default function LibraryPage() {
   const db = useFirestore();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -133,18 +126,14 @@ export default function LibraryPage() {
 
   const { data: userBooks = [], loading } = useCollection<UserBook>(booksQuery);
 
-  const sortedBooks = useMemo(() => {
-    return [...userBooks].sort((a, b) => (b.dateAdded?.seconds || 0) - (a.dateAdded?.seconds || 0));
-  }, [userBooks]);
-
   const filteredBooks = useMemo(() => {
-    return sortedBooks.filter(b => {
+    return userBooks.filter(b => {
       const matchesSearch = (b.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
                            (b.author || "").toLowerCase().includes(searchQuery.toLowerCase());
       if (activeTab === "all") return matchesSearch;
       return b.status === activeTab && matchesSearch;
     });
-  }, [sortedBooks, activeTab, searchQuery]);
+  }, [userBooks, activeTab, searchQuery]);
 
   return (
     <div className="space-y-10 animate-paper pb-32">
@@ -191,10 +180,7 @@ export default function LibraryPage() {
               <p className="font-headline italic text-primary/40 text-xl">Exploration du sanctuaire...</p>
             </div>
           ) : filteredBooks.length > 0 ? (
-            <div className={cn(
-              "grid gap-10",
-              viewMode === 'grid' ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5" : "flex flex-col"
-            )}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
               {filteredBooks.map((book) => (
                 <Link key={book.id} href={`/book/${book.id}`} className="group">
                   <BookCard book={book} />

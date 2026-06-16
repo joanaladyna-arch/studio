@@ -5,7 +5,6 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,25 +15,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Crown, 
   Sparkles, 
-  Award, 
-  Medal as MedalIcon, 
-  BookOpen, 
+  Trophy,
   Headphones, 
   LogOut,
-  Mail,
   Camera,
   Loader2,
   Pencil,
   BookMarked,
-  Tags,
   Target,
-  Shield,
-  Calendar,
   FileText,
-  Trophy,
-  User as UserIcon,
-  Quote,
-  Star,
   ChevronRight
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -89,8 +78,8 @@ export default function ProfilePage() {
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     const palBooks = allBooks.filter(b => b.status === 'pal');
     
-    const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
-    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (b.pages || 0) / 50 : 0), 0);
+    const pagesRead = readBooks.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
+    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? 10 : 0), 0);
     
     const goals = {
       annual: profile?.annualGoal || 24,
@@ -103,7 +92,7 @@ export default function ProfilePage() {
       readCount: readBooks.length,
       palBooks,
       pagesRead,
-      audioHours: Math.round(audioHours),
+      audioHours,
       goals,
       annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
       pagesProgress: Math.min(100, Math.round((pagesRead / goals.pages) * 100)),
@@ -139,7 +128,12 @@ export default function ProfilePage() {
     }
   };
 
-  if (profileLoading) return <div className="h-[60vh] flex flex-col items-center justify-center gap-4"><Loader2 className="h-10 w-10 animate-spin text-primary/40" /><p className="font-headline italic text-primary/60">Ouverture de votre sanctuaire...</p></div>;
+  if (profileLoading) return (
+    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+      <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+      <p className="font-headline italic text-primary/60">Ouverture de votre sanctuaire...</p>
+    </div>
+  );
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Plume';
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200/200`;
@@ -153,11 +147,17 @@ export default function ProfilePage() {
               <AvatarImage src={userPhoto} className="object-cover" />
               <AvatarFallback className="font-headline italic text-3xl">PL</AvatarFallback>
             </Avatar>
-            <button onClick={() => fileInputRef.current?.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full" disabled={uploading}>
+            <button 
+              onClick={() => fileInputRef.current?.click()} 
+              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+              disabled={uploading}
+            >
               {uploading ? <Loader2 className="h-6 w-6 text-white animate-spin" /> : <Camera className="h-6 w-6 text-white" />}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-            <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white rounded-full p-2.5 border-4 border-white"><Crown className="h-6 w-6" /></div>
+            <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white rounded-full p-2.5 border-4 border-white">
+              <Crown className="h-6 w-6" />
+            </div>
           </div>
           <div className="space-y-3 text-center md:text-left">
             <h1 className="text-5xl font-headline italic tracking-tight">{userName}</h1>
@@ -180,7 +180,9 @@ export default function ProfilePage() {
       )}
 
       <section className="space-y-10">
-        <h2 className="text-4xl font-headline flex items-center gap-4 italic"><Target className="h-8 w-8 text-primary/40" /> Mes Défis</h2>
+        <h2 className="text-4xl font-headline flex items-center gap-4 italic">
+          <Target className="h-8 w-8 text-primary/40" /> Mes Défis
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {[
             { label: "Annuel", icon: Trophy, value: `${stats.readCount} / ${stats.goals.annual}`, progress: stats.annualProgress, color: "text-amber-500" },
@@ -188,9 +190,15 @@ export default function ProfilePage() {
             { label: "Audio", icon: Headphones, value: `${stats.audioHours}h / ${stats.goals.audio}h`, progress: stats.audioProgress, color: "text-purple-400" }
           ].map((item, i) => (
             <Card key={i} className="glass-card p-8 border-none bg-white/60 space-y-6">
-              <div className="flex justify-between items-center"><p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{item.label}</p><item.icon className={cn("h-6 w-6", item.color)} /></div>
+              <div className="flex justify-between items-center">
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{item.label}</p>
+                <item.icon className={cn("h-6 w-6", item.color)} />
+              </div>
               <p className="text-3xl font-headline italic">{item.value}</p>
-              <div className="space-y-3"><Progress value={item.progress} className="h-2 bg-primary/5" /><p className={cn("text-[10px] font-bold", item.color)}>{item.progress}% atteint</p></div>
+              <div className="space-y-3">
+                <Progress value={item.progress} className="h-2 bg-primary/5" />
+                <p className={cn("text-[10px] font-bold", item.color)}>{item.progress}% atteint</p>
+              </div>
             </Card>
           ))}
         </div>
@@ -198,8 +206,12 @@ export default function ProfilePage() {
 
       <section className="space-y-10 pt-10">
         <div className="flex items-center justify-between">
-          <h2 className="text-4xl font-headline italic flex items-center gap-4"><BookMarked className="h-8 w-8 text-primary/40" /> Mon étagère PAL</h2>
-          <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg"><Link href="/library">Voir toute ma PAL <ChevronRight className="ml-2 h-5 w-5" /></Link></Button>
+          <h2 className="text-4xl font-headline italic flex items-center gap-4">
+            <BookMarked className="h-8 w-8 text-primary/40" /> Mon étagère PAL
+          </h2>
+          <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
+            <Link href="/library">Voir toute ma PAL <ChevronRight className="ml-2 h-5 w-5" /></Link>
+          </Button>
         </div>
         <div className="relative px-2">
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-[#e8d5c8] rounded-full z-0" />
@@ -213,7 +225,9 @@ export default function ProfilePage() {
                 </Link>
               ))
             ) : (
-              <div className="w-full text-center py-16 opacity-40"><p className="italic font-headline text-xl">Votre étagère PAL est encore vide.</p></div>
+              <div className="w-full text-center py-16 opacity-40">
+                <p className="italic font-headline text-xl">Votre étagère PAL est encore vide.</p>
+              </div>
             )}
           </div>
         </div>
@@ -284,9 +298,15 @@ function EditProfileDialog({ profile }: { profile: any }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button className="h-16 px-12 rounded-[2rem] bg-primary text-white font-headline italic text-2xl shadow-xl"><Pencil className="h-6 w-6 mr-4" /> Modifier le Profil</Button></DialogTrigger>
+      <DialogTrigger asChild>
+        <Button className="h-16 px-12 rounded-[2rem] bg-primary text-white font-headline italic text-2xl shadow-xl">
+          <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
+        </Button>
+      </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95">
-        <DialogHeader className="p-10 border-b bg-white/40 shrink-0"><DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle></DialogHeader>
+        <DialogHeader className="p-10 border-b bg-white/40 shrink-0">
+          <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
+        </DialogHeader>
         <ScrollArea className="flex-1">
           <div className="p-10 space-y-16 pb-20">
             <div className="space-y-10">
@@ -323,19 +343,25 @@ function EditProfileDialog({ profile }: { profile: any }) {
                 </div>
                 <div className="space-y-4">
                   <Label className="text-[10px] uppercase font-bold opacity-60">Genres Préférés</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{GENRES_LIST.map(g => (
-                    <div key={g} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteGenres, setFavoriteGenres, g)}>
-                      <Checkbox checked={favoriteGenres.includes(g)} onCheckedChange={() => toggle(favoriteGenres, setFavoriteGenres, g)} /> <span className="italic font-headline text-sm">{g}</span>
-                    </div>
-                  ))}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {GENRES_LIST.map(g => (
+                      <div key={g} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteGenres, setFavoriteGenres, g)}>
+                        <Checkbox checked={favoriteGenres.includes(g)} onCheckedChange={() => toggle(favoriteGenres, setFavoriteGenres, g)} /> 
+                        <span className="italic font-headline text-sm">{g}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-4">
                   <Label className="text-[10px] uppercase font-bold opacity-60">Tropes Préférés</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{TROPES_LIST.map(t => (
-                    <div key={t} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteTropes, setFavoriteTropes, t)}>
-                      <Checkbox checked={favoriteTropes.includes(t)} onCheckedChange={() => toggle(favoriteTropes, setFavoriteTropes, t)} /> <span className="italic font-headline text-sm">{t}</span>
-                    </div>
-                  ))}</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {TROPES_LIST.map(t => (
+                      <div key={t} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteTropes, setFavoriteTropes, t)}>
+                        <Checkbox checked={favoriteTropes.includes(t)} onCheckedChange={() => toggle(favoriteTropes, setFavoriteTropes, t)} /> 
+                        <span className="italic font-headline text-sm">{t}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
