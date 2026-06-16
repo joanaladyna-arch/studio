@@ -38,7 +38,8 @@ import {
   User as UserIcon,
   Pencil,
   BookMarked,
-  Tags
+  Tags,
+  Target
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -80,7 +81,7 @@ export default function ProfilePage() {
 
   const stats = useMemo(() => {
     const allBooks = (books as unknown as Book[]);
-    const readBooks = allBooks.filter(b => b.status === 'read');
+    const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     const palBooks = allBooks.filter(b => b.status === 'pal');
     const progressBooks = allBooks.filter(b => b.status === 'progress');
     const dnfBooks = allBooks.filter(b => b.status === 'dnf');
@@ -89,8 +90,8 @@ export default function ProfilePage() {
     const ebookCount = allBooks.filter(b => b.format === 'ebook').length;
     const audioCount = allBooks.filter(b => b.format === 'audio').length;
 
-    const pagesRead = allBooks.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
-    const listeningHours = allBooks.reduce((acc, b) => acc + (b.format === 'audio' ? (b.duration || 0) : 0), 0);
+    const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
+    const listeningHours = readBooks.reduce((acc, b) => acc + (b.format === 'audio' ? (b.duration || 0) : 0), 0);
     
     return {
       readCount: readBooks.length,
@@ -106,11 +107,9 @@ export default function ProfilePage() {
   }, [books]);
 
   const handleLogout = async () => {
-    console.log("PLUME Auth: Déconnexion demandée depuis le profil.");
     if (!auth) return;
     try {
       await signOut(auth);
-      console.log("PLUME Auth: Déconnexion réussie.");
       toast({ title: 'Déconnexion', description: 'À bientôt sur Plume !' });
       router.push('/login');
     } catch (error) {
@@ -141,8 +140,14 @@ export default function ProfilePage() {
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Plume';
   const userSeed = user?.uid || user?.email || "plume-user";
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`;
+  
   const annualGoal = profile?.annualGoal || 24;
-  const progressPercent = Math.min(100, Math.round((stats.readCount / annualGoal) * 100));
+  const annualPageGoal = profile?.annualPageGoal || 10000;
+  const annualHourGoal = profile?.annualHourGoal || 100;
+
+  const bookProgressPercent = Math.min(100, Math.round((stats.readCount / annualGoal) * 100));
+  const pageProgressPercent = Math.min(100, Math.round((stats.pagesRead / annualPageGoal) * 100));
+  const hourProgressPercent = Math.min(100, Math.round((stats.listeningHours / annualHourGoal) * 100));
 
   if (profileLoading) {
     return (
@@ -233,57 +238,38 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <section className="space-y-6">
-           <h2 className="text-3xl font-headline flex items-center gap-3 italic">
-            <TrendingUp className="h-8 w-8 text-primary/40" /> Mon Objectif
-          </h2>
-          <Card className="glass-card p-8 border-none space-y-6 bg-white/40">
-                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Lectures annuelles</p>
-                    <p className="text-4xl font-headline italic">{stats.readCount} / {annualGoal}</p>
-                  </div>
-                  <Badge className="bg-primary/10 text-primary border-none text-lg font-headline px-4 py-1">{progressPercent}%</Badge>
-                </div>
-                <Progress value={progressPercent} className="h-3 bg-primary/5" />
-                <p className="text-center text-xs text-muted-foreground italic">
-                   {stats.readCount >= annualGoal ? "Objectif accompli ! Bravo !" : `Encore ${annualGoal - stats.readCount} pépites à découvrir.`}
-                </p>
-          </Card>
-        </section>
-
-        <section className="space-y-6">
-          <h2 className="text-3xl font-headline flex items-center gap-3 italic">
-            <Sparkles className="h-8 w-8 text-primary/40" /> Préférences
-          </h2>
-          <Card className="glass-card p-8 border-none bg-white/40 h-full">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Format favori</p>
-                <div className="flex items-center gap-2">
-                   {profile?.preferredFormat ? (
-                     <>
-                       {profile.preferredFormat === 'papier' && <BookIcon className="h-5 w-5 text-orange-700" />}
-                       {profile.preferredFormat === 'ebook' && <Tablet className="h-5 w-5 text-accent-foreground" />}
-                       {profile.preferredFormat === 'audio' && <Headphones className="h-5 w-5 text-primary" />}
-                       <span className="font-headline italic text-xl capitalize">{profile.preferredFormat}</span>
-                     </>
-                   ) : (
-                     <span className="italic text-muted-foreground">Non défini</span>
-                   )}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Médailles</p>
-                <div className="flex items-center gap-2">
-                   <Award className="h-5 w-5 text-amber-500" />
-                   <span className="font-headline italic text-xl">Niveau Or</span>
-                </div>
-              </div>
+      <div className="space-y-8">
+        <h2 className="text-3xl font-headline flex items-center gap-3 italic">
+          <Target className="h-8 w-8 text-primary/40" /> Objectifs de l'année
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card p-6 border-none bg-white/40 space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Livres</p>
+              <Badge className="bg-primary/10 text-primary border-none text-[10px]">{bookProgressPercent}%</Badge>
             </div>
+            <p className="text-2xl font-headline italic">{stats.readCount} / {annualGoal}</p>
+            <Progress value={bookProgressPercent} className="h-1.5 bg-primary/5" />
           </Card>
-        </section>
+          
+          <Card className="glass-card p-6 border-none bg-white/40 space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages</p>
+              <Badge className="bg-emerald-50 text-emerald-600 border-none text-[10px]">{pageProgressPercent}%</Badge>
+            </div>
+            <p className="text-2xl font-headline italic">{stats.pagesRead.toLocaleString()} / {annualPageGoal.toLocaleString()}</p>
+            <Progress value={pageProgressPercent} className="h-1.5 bg-emerald-50" />
+          </Card>
+
+          <Card className="glass-card p-6 border-none bg-white/40 space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Heures Audio</p>
+              <Badge className="bg-amber-50 text-amber-600 border-none text-[10px]">{hourProgressPercent}%</Badge>
+            </div>
+            <p className="text-2xl font-headline italic">{Math.round(stats.listeningHours)} / {annualHourGoal}</p>
+            <Progress value={hourProgressPercent} className="h-1.5 bg-amber-50" />
+          </Card>
+        </div>
       </div>
 
       <section className="space-y-8">
@@ -334,7 +320,7 @@ export default function ProfilePage() {
         <Card className="glass-card p-6 border-none text-center space-y-2 hover:scale-105 transition-transform bg-white/60">
           <FileArchive className="h-8 w-8 mx-auto text-emerald-400" />
           <p className="text-3xl font-headline italic">{stats.pagesRead.toLocaleString()}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages lues</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages parcourues</p>
         </Card>
         <Card className="glass-card p-6 border-none text-center space-y-2 hover:scale-105 transition-transform bg-white/60">
           <Timer className="h-8 w-8 mx-auto text-amber-500" />
@@ -356,6 +342,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [pseudo, setPseudo] = useState(profile?.pseudo || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [annualGoal, setAnnualGoal] = useState(profile?.annualGoal || 24);
+  const [annualPageGoal, setAnnualPageGoal] = useState(profile?.annualPageGoal || 10000);
+  const [annualHourGoal, setAnnualHourGoal] = useState(profile?.annualHourGoal || 100);
   const [format, setFormat] = useState<BookFormat>(profile?.preferredFormat || 'papier');
   const [genres, setGenres] = useState<string[]>(profile?.preferredGenres || []);
   const [tropes, setTropes] = useState<string[]>(profile?.preferredTropes || []);
@@ -366,6 +354,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setPseudo(profile.pseudo || '');
       setBio(profile.bio || '');
       setAnnualGoal(profile.annualGoal || 24);
+      setAnnualPageGoal(profile.annualPageGoal || 10000);
+      setAnnualHourGoal(profile.annualHourGoal || 100);
       setFormat(profile.preferredFormat || 'papier');
       setGenres(profile.preferredGenres || []);
       setTropes(profile.preferredTropes || []);
@@ -383,6 +373,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
       pseudo: pseudo.trim(),
       bio: bio.trim(),
       annualGoal: Number(annualGoal),
+      annualPageGoal: Number(annualPageGoal),
+      annualHourGoal: Number(annualHourGoal),
       preferredFormat: format,
       preferredGenres: genres,
       preferredTropes: tropes,
@@ -394,7 +386,6 @@ function EditProfileDialog({ profile }: { profile: any }) {
       toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées.' });
       setOpen(false);
     } catch (e) {
-      console.error("PLUME Firestore Error (Profile Save):", e);
       toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder votre profil.' });
     }
   };
@@ -437,32 +428,41 @@ function EditProfileDialog({ profile }: { profile: any }) {
               <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4" placeholder="Décrivez votre univers littéraire..." />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-3 gap-8">
               <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Annuel</Label>
+                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Livres</Label>
                 <Input type="number" value={annualGoal} onChange={(e) => setAnnualGoal(Number(e.target.value))} className="h-12 rounded-xl bg-white/40 border-none italic" />
               </div>
               <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Format Préféré</Label>
-                <div className="flex gap-2">
-                  {Object.entries(FORMATS).map(([key, val]) => {
-                    const Icon = val.icon;
-                    return (
-                      <Button 
-                        key={key} 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => setFormat(key as BookFormat)}
-                        className={cn(
-                          "rounded-xl border-primary/10 h-12 flex-1", 
-                          format === key ? "bg-primary text-white border-primary" : "bg-white/40"
-                        )}
-                      >
-                        <Icon className="h-4 w-4 mr-2" /> {val.label}
-                      </Button>
-                    );
-                  })}
-                </div>
+                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Pages</Label>
+                <Input type="number" value={annualPageGoal} onChange={(e) => setAnnualPageGoal(Number(e.target.value))} className="h-12 rounded-xl bg-white/40 border-none italic" />
+              </div>
+              <div className="space-y-4">
+                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Heures Audio</Label>
+                <Input type="number" value={annualHourGoal} onChange={(e) => setAnnualHourGoal(Number(e.target.value))} className="h-12 rounded-xl bg-white/40 border-none italic" />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Format Préféré</Label>
+              <div className="flex gap-2">
+                {Object.entries(FORMATS).map(([key, val]) => {
+                  const Icon = val.icon;
+                  return (
+                    <Button 
+                      key={key} 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setFormat(key as BookFormat)}
+                      className={cn(
+                        "rounded-xl border-primary/10 h-12 flex-1", 
+                        format === key ? "bg-primary text-white border-primary" : "bg-white/40"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 mr-2" /> {val.label}
+                    </Button>
+                  );
+                })}
               </div>
             </div>
 
@@ -516,4 +516,3 @@ function EditProfileDialog({ profile }: { profile: any }) {
     </Dialog>
   );
 }
-

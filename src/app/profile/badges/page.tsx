@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Award, Medal, BookOpen, Star, Sparkles, Diamond, Crown, Shield } from "lucide-react";
+import { Award, Medal, BookOpen, Star, Sparkles, Diamond, Crown, Shield, Lock } from "lucide-react";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { GENRES_LIST, TROPES_LIST, Book } from "@/app/library/page";
@@ -30,7 +30,8 @@ export default function BadgesMedalsPage() {
   const { data: allBooks = [] } = useCollection(booksQuery);
 
   const readBooks = useMemo(() => {
-    return (allBooks as unknown as Book[]).filter(b => b.status === 'read');
+    // Only count books with status 'read' or 'reread'
+    return (allBooks as unknown as Book[]).filter(b => b.status === 'read' || b.status === 'reread');
   }, [allBooks]);
 
   const genreStats = useMemo(() => {
@@ -57,8 +58,8 @@ export default function BadgesMedalsPage() {
 
   const getLevel = (count: number) => {
     if (count >= 50) return LEVELS[3];
-    if (count >= 30) return LEVELS[2];
     if (count >= 15) return LEVELS[1];
+    if (count >= 30) return LEVELS[2];
     if (count >= 5) return LEVELS[0];
     return null;
   };
@@ -77,13 +78,13 @@ export default function BadgesMedalsPage() {
       
       <header className="text-center space-y-4 pt-8">
         <h1 className="text-5xl font-headline italic tracking-tight">Badges & Médailles</h1>
-        <p className="text-primary/60 italic font-medium">Célébrez chaque chapitre de votre voyage littéraire.</p>
+        <p className="text-primary/60 italic font-medium">Célébrez vos lectures terminées. La PAL ne compte pas ici !</p>
       </header>
 
       <section className="space-y-8">
         <div className="flex items-center gap-3">
           <Award className="h-8 w-8 text-primary" />
-          <h2 className="text-3xl font-headline italic">Genre Badges</h2>
+          <h2 className="text-3xl font-headline italic">Badges de Genres</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {GENRES_LIST.map(genre => {
@@ -104,7 +105,7 @@ export default function BadgesMedalsPage() {
                       "p-3 rounded-2xl",
                       level ? level.bg : "bg-muted"
                     )}>
-                      <Shield className={cn("h-6 w-6", level ? level.color : "text-muted-foreground")} />
+                      {isUnlocked ? <Shield className={cn("h-6 w-6", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-6 w-6 text-muted-foreground/40" />}
                     </div>
                     {level && (
                       <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level.color)}>
@@ -120,7 +121,7 @@ export default function BadgesMedalsPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
-                      <span>Prochain palier : {nextGoal}</span>
+                      <span>{isUnlocked ? `Vers ${LEVELS.find(l => l.min === nextGoal)?.label || 'Diamond'}` : 'Vers Bronze'} ({nextGoal})</span>
                       <span>{Math.round(progress)}%</span>
                     </div>
                     <Progress value={progress} className="h-1.5 bg-primary/5" />
@@ -135,7 +136,7 @@ export default function BadgesMedalsPage() {
       <section className="space-y-8">
         <div className="flex items-center gap-3">
           <Medal className="h-8 w-8 text-secondary" />
-          <h2 className="text-3xl font-headline italic">Trope Medals</h2>
+          <h2 className="text-3xl font-headline italic">Médailles de Tropes</h2>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {TROPES_LIST.map(trope => {
@@ -156,7 +157,7 @@ export default function BadgesMedalsPage() {
                       "p-3 rounded-2xl",
                       level ? level.bg : "bg-muted"
                     )}>
-                      <Medal className={cn("h-6 w-6", level ? level.color : "text-muted-foreground")} />
+                      {isUnlocked ? <Medal className={cn("h-6 w-6", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-6 w-6 text-muted-foreground/40" />}
                     </div>
                     {level && (
                       <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level.color)}>
@@ -172,7 +173,7 @@ export default function BadgesMedalsPage() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
-                      <span>Prochain palier : {nextGoal}</span>
+                      <span>{isUnlocked ? `Vers ${LEVELS.find(l => l.min === nextGoal)?.label || 'Diamond'}` : 'Vers Bronze'} ({nextGoal})</span>
                       <span>{Math.round(progress)}%</span>
                     </div>
                     <Progress value={progress} className="h-1.5 bg-secondary/5" />

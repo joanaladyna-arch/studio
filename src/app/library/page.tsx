@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar, Hash, MessageSquare, Quote, PersonStanding, MapPin, Mic, Loader2 } from "lucide-react";
+import { Search, Heart, Diamond, Crown, Star, Sparkles, BookText, Wind, Trash2, DoorOpen, Pause, RefreshCw, Plus, Book as BookIcon, Tablet, Headphones, SlidersHorizontal, User as UserIcon, Calendar as CalendarIcon, Hash, MessageSquare, Quote, PersonStanding, MapPin, Mic, Loader2, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,9 @@ import Link from "next/link";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
 export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
@@ -166,7 +169,6 @@ export default function LibraryPage() {
   const handleUpdateBook = async (updatedData: Partial<Book>) => {
     if (!db || !user || !editingBook) return;
     
-    // Clean the update data to avoid sending fields that shouldn't be updated like 'id'
     const { id, ...dataToSave } = updatedData as any;
 
     try {
@@ -369,10 +371,8 @@ export function BookCard({ book }: { book: Book }) {
            {book.publisher && (
              <p className="text-[7px] text-primary/40 font-bold uppercase tracking-[0.2em] italic truncate">{book.publisher}</p>
            )}
-           {book.format === 'audio' && book.duration && (
-             <p className="text-[7px] text-primary font-bold uppercase tracking-widest flex items-center justify-center gap-1">
-               <Headphones className="h-2 w-2" /> {formatDuration(book.duration)}
-             </p>
+           {book.startDate && (
+             <p className="text-[7px] text-muted-foreground italic font-bold">Débuté : {format(new Date(book.startDate), "dd/MM/yy")}</p>
            )}
         </div>
       </div>
@@ -385,7 +385,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
   const [tropes, setTropes] = useState<string[]>(book.tropes || []);
   const [emotions, setEmotions] = useState<string[]>(book.emotions || []);
   const [status, setStatus] = useState<BookStatus>(book.status);
-  const [format, setFormat] = useState<BookFormat>(book.format || "papier");
+  const [formatType, setFormatType] = useState<BookFormat>(book.format || "papier");
   const [rank, setRank] = useState<RankType | undefined>(book.rank);
   const [favorite, setFavorite] = useState(book.favorite);
   const [rating, setRating] = useState(book.rating || 0);
@@ -399,6 +399,9 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
   const [narrator, setNarrator] = useState(book.narrator || "");
   const [series, setSeries] = useState(book.series || "");
   const [volume, setVolume] = useState(book.volume || "");
+  
+  const [startDate, setStartDate] = useState<Date | undefined>(book.startDate ? new Date(book.startDate) : undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(book.endDate ? new Date(book.endDate) : undefined);
 
   const toggleItem = (list: string[], setList: (l: string[]) => void, item: string) => {
     if (list.includes(item)) setList(list.filter(i => i !== item));
@@ -488,10 +491,10 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                                   key={key} 
                                   variant="outline" 
                                   size="sm"
-                                  onClick={() => setFormat(key as BookFormat)}
+                                  onClick={() => setFormatType(key as BookFormat)}
                                   className={cn(
                                     "rounded-xl border-primary/10 h-11 flex-1", 
-                                    format === key ? "bg-primary text-white border-primary" : "bg-white/40"
+                                    formatType === key ? "bg-primary text-white border-primary" : "bg-white/40"
                                   )}
                                 >
                                   <Icon className="h-4 w-4" />
@@ -500,7 +503,7 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                             })}
                           </div>
                         </div>
-                        {format === 'audio' ? (
+                        {formatType === 'audio' ? (
                           <>
                             <div className="space-y-1.5">
                               <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Durée (Heures décimales)</Label>
@@ -539,14 +542,41 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
                         )}
                       </div>
 
-                      <div className="flex flex-wrap gap-6 text-[11px] font-bold uppercase tracking-[0.2em] opacity-50 italic pt-2">
-                        <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary/40" /> {book.publicationDate}</div>
-                        {format === 'audio' && duration > 0 && (
-                          <div className="flex items-center gap-2 text-primary font-bold">
-                            <Mic className="h-4 w-4" /> Narré par : {narrator || "Inconnu"} 
-                            <span className="ml-2 opacity-60">({formatDuration(duration)})</span>
-                          </div>
-                        )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Date début</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-xl border-none bg-white/40", !startDate && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {startDate ? format(startDate, "PPP", { locale: fr }) : "Choisir une date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 glass-card">
+                              <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                              <div className="p-2 border-t border-primary/5 flex justify-end">
+                                <Button variant="ghost" size="sm" onClick={() => setStartDate(undefined)} className="text-[10px] uppercase font-bold tracking-widest text-destructive">Effacer</Button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase font-bold tracking-[0.3em] opacity-50">Date fin</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-xl border-none bg-white/40", !endDate && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {endDate ? format(endDate, "PPP", { locale: fr }) : "Choisir une date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 glass-card">
+                              <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                              <div className="p-2 border-t border-primary/5 flex justify-end">
+                                <Button variant="ghost" size="sm" onClick={() => setEndDate(undefined)} className="text-[10px] uppercase font-bold tracking-widest text-destructive">Effacer</Button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
                       </div>
                    </div>
                 </div>
@@ -726,7 +756,28 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
              <div className="flex gap-4">
                <Button variant="ghost" onClick={onClose} className="rounded-xl h-12 px-8">Annuler</Button>
                <Button 
-                onClick={() => onSave({ genres, tropes, emotions, status, format, rank, favorite, publisher, pages, duration, rating, review, favoriteQuote, favoriteCharacters, memorableScene, series, volume, narrator })} 
+                onClick={() => onSave({ 
+                  genres, 
+                  tropes, 
+                  emotions, 
+                  status, 
+                  format: formatType, 
+                  rank, 
+                  favorite, 
+                  publisher, 
+                  pages, 
+                  duration, 
+                  rating, 
+                  review, 
+                  favoriteQuote, 
+                  favoriteCharacters, 
+                  memorableScene, 
+                  series, 
+                  volume, 
+                  narrator,
+                  startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+                  endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined
+                })} 
                 className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20"
                >
                  Enregistrer
@@ -738,4 +789,3 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
     </Dialog>
   );
 }
-

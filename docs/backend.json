@@ -32,8 +32,8 @@
         "favoriteCharacters": { "type": "string" },
         "memorableScene": { "type": "string" },
         "emotions": { "type": "array", "items": { "type": "string" } },
-        "startDate": { "type": "string" },
-        "endDate": { "type": "string" },
+        "startDate": { "type": "string", "format": "date" },
+        "endDate": { "type": "string", "format": "date" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["title", "author", "status"]
@@ -58,6 +58,8 @@
         "name": { "type": "string" },
         "pseudo": { "type": "string" },
         "annualGoal": { "type": "number" },
+        "annualPageGoal": { "type": "number" },
+        "annualHourGoal": { "type": "number" },
         "theme": { "type": "string" },
         "avatarUrl": { "type": "string" },
         "bio": { "type": "string" },

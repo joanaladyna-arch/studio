@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -17,7 +18,8 @@ import {
   User as UserIcon,
   Plus,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  Target
 } from "lucide-react";
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
@@ -60,7 +62,7 @@ export default function Home() {
   const { data: allBooks = [], loading: booksLoading } = useCollection(allBooksQuery);
 
   const stats = useMemo(() => {
-    const readCount = allBooks.filter(b => b.status === 'read').length;
+    const readCount = allBooks.filter(b => b.status === 'read' || b.status === 'reread').length;
     const progressCount = allBooks.filter(b => b.status === 'progress').length;
     const annualGoal = profile?.annualGoal || 24;
     return [
@@ -190,17 +192,17 @@ export default function Home() {
                 </div>
                 <span className="font-headline text-2xl italic">Ma Bibliothèque</span>
               </Link>
-              <Link href="/coeur-de-plume" className="flex items-center gap-6 p-6 rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-primary/10 transition-all group shadow-sm">
+              <Link href="/profile/badges" className="flex items-center gap-6 p-6 rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-primary/10 transition-all group shadow-sm">
                 <div className="p-4 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Heart className="h-6 w-6 text-primary fill-primary/20" />
+                  <Award className="h-6 w-6 text-primary" />
+                </div>
+                <span className="font-headline text-2xl italic">Mes Badges</span>
+              </Link>
+              <Link href="/coeur-de-plume" className="flex items-center gap-6 p-6 rounded-[3rem] bg-amber-50 border border-white/60 hover:bg-amber-100/50 transition-all group shadow-sm">
+                <div className="p-4 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Heart className="h-6 w-6 text-amber-500 fill-amber-500/20" />
                 </div>
                 <span className="font-headline text-2xl italic">De Plume</span>
-              </Link>
-              <Link href="/profile" className="flex items-center gap-6 p-6 rounded-[3rem] bg-amber-50 border border-white/60 hover:bg-amber-100/50 transition-all group shadow-sm">
-                <div className="p-4 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <UserIcon className="h-6 w-6 text-amber-500" />
-                </div>
-                <span className="font-headline text-2xl italic">Mon Profil</span>
               </Link>
             </div>
           </div>
