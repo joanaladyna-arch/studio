@@ -268,7 +268,9 @@ export default function Home() {
                 <CardContent className="p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
                   <div className="space-y-8">
                     <div>
-                      <h3 className="text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">{cleanBookTitle(currentRead.title)}</h3>
+                      <h3 className="text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
+                        {cleanBookTitle(currentRead.title)}{currentRead.volume ? ` — ${currentRead.volume}` : ""}
+                      </h3>
                       <p className="text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-3">{cleanAuthorName(currentRead.author)}</p>
                     </div>
                     <div className="space-y-5">

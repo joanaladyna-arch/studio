@@ -104,7 +104,9 @@ export default function JournalPage() {
                                 <BookCover src={book.cover} alt={book.title} className="object-cover" />
                             </div>
                             <div className="space-y-1 overflow-hidden">
-                                <h4 className="font-headline italic text-lg line-clamp-1">{cleanBookTitle(book.title)}</h4>
+                                <h4 className="font-headline italic text-lg line-clamp-1">
+                                  {cleanBookTitle(book.title)}{(book as any).volume ? ` — ${(book as any).volume}` : ""}
+                                </h4>
                                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{cleanAuthorName(book.author)}</p>
                                 <div className="flex gap-1 pt-1">
                                     {[1,2,3,4,5].map(s => (

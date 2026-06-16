@@ -31,7 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { cn, toArray, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
-import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST } from "@/app/library/page";
+import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
 
@@ -106,7 +106,7 @@ export default function BookDetailPage() {
   // Ajoute/retire un genre ou un trope de la liste personnelle de
   // l'utilisatrice pour ce livre — ces champs alimentent directement le
   // calcul des badges/médailles sur la page profil.
-  const toggleTag = (field: "genres" | "tropes", value: string) => {
+  const toggleTag = (field: "genres" | "tropes" | "themes", value: string) => {
     const current = toArray<string>((editedData as any)[field]);
     const updated = current.includes(value)
       ? current.filter((v) => v !== value)
@@ -289,7 +289,12 @@ export default function BookDetailPage() {
       </div>
 
       <div className="space-y-4">
-        <h1 className="text-6xl font-headline italic leading-tight">{cleanBookTitle(masterBook?.title || userBook.title)}</h1>
+        <h1 className="text-6xl font-headline italic leading-tight">
+          {cleanBookTitle(masterBook?.title || userBook.title)}
+          {((editedData as any).volume || masterBook?.volume) && (
+            <span className="text-3xl text-primary/50 ml-3">— {(editedData as any).volume || masterBook?.volume}</span>
+          )}
+        </h1>
         <Link
           href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
           className="text-3xl font-headline text-primary italic hover:underline inline-block"
@@ -313,6 +318,16 @@ export default function BookDetailPage() {
                  <div className="space-y-1"><div className="flex items-center gap-2"><Hash className="h-4 w-4" /> ISBN</div><span className="text-foreground">{masterBook?.isbn13 || masterBook?.isbn || "N/A"}</span></div>
                  <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{masterBook?.publisher || "N/A"}</span></div>
                  <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Langue</div><span className="text-foreground">{masterBook?.language || "N/A"}</span></div>
+               </div>
+               <div className="space-y-3 max-w-xs">
+                 <Label className="italic text-xl font-headline">Tome / Volume</Label>
+                 <Input
+                   value={(editedData as any).volume || ""}
+                   onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)}
+                   placeholder="ex : Tome 1"
+                   className="h-11 rounded-xl bg-white/40 border-none italic"
+                 />
+                 <p className="text-[10px] text-muted-foreground italic">Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</p>
                </div>
                <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm">
                  <h4 className="font-headline text-2xl italic mb-6 opacity-40">Résumé de la pépite</h4>
@@ -361,6 +376,29 @@ export default function BookDetailPage() {
                    })}
                  </div>
                  <p className="text-[10px] text-muted-foreground italic">Cumulez 5 lectures avec le même genre ou trope pour débloquer le badge correspondant sur votre profil.</p>
+               </div>
+
+               <div className="space-y-4">
+                 <Label className="italic text-2xl font-headline text-amber-600">Thèmes principaux</Label>
+                 <div className="flex flex-wrap gap-2">
+                   {THEMES_LIST.map((t) => {
+                     const isActive = toArray<string>((editedData as any).themes).includes(t);
+                     return (
+                       <button
+                         key={t}
+                         type="button"
+                         onClick={() => toggleTag("themes", t)}
+                         className={cn(
+                           "rounded-full border text-xs px-4 py-1.5 italic transition-all",
+                           isActive ? "bg-amber-500 text-white border-amber-500 shadow-sm" : "border-amber-400/30 text-amber-700/70 bg-amber-50/40 hover:bg-amber-50"
+                         )}
+                       >
+                         {t}
+                       </button>
+                     );
+                   })}
+                 </div>
+                 <p className="text-[10px] text-muted-foreground italic">De quoi parle vraiment ce livre sur le fond — à ne pas confondre avec les tropes ci-dessus, qui décrivent le schéma de la relation amoureuse.</p>
                </div>
 
                <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-12 px-8 font-headline italic">

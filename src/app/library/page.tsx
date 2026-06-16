@@ -56,6 +56,7 @@ export interface MasterBook {
   isbn13?: string;
   genres?: string[];
   tropes?: string[];
+  volume?: string;
 }
 
 export interface UserBook {
@@ -72,6 +73,8 @@ export interface UserBook {
   cover?: string;
   genres?: string[];
   tropes?: string[];
+  themes?: string[];
+  volume?: string;
   pagesRead?: number;
   favorite?: boolean;
   dePlume?: boolean;
@@ -100,6 +103,20 @@ export const TROPES_LIST = [
   "Academic rivals", "Love triangle", "Soulmates", "Protector", "Revenge", 
   "Secret identity", "Childhood friends", "Opposites attract", "He falls first", 
   "She falls first", "Touch her and you die"
+];
+
+// Les thèmes principaux décrivent de QUOI parle le livre sur le fond
+// (sujets, contexte, propos) — à ne pas confondre avec les tropes, qui
+// décrivent un schéma narratif de la relation amoureuse.
+export const THEMES_LIST = [
+  "Amour", "Amour possessif", "Romance érotique", "Trahison", "Secrets",
+  "Espionnage", "École militaire", "Université", "Humour", "Famille",
+  "Amitié", "Vengeance", "Rédemption", "Pouvoir", "Justice", "Guerre",
+  "Crime organisé", "Survie", "Identité", "Deuil", "Résilience",
+  "Manipulation", "Jalousie", "Liberté", "Sacrifice", "Loyauté",
+  "Addiction", "Santé mentale", "Reconstruction de soi", "Littérature française",
+  "Politique", "Religion et foi", "Mythologie et légendes", "Milieu artistique",
+  "Milieu médical"
 ];
 
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {
@@ -257,7 +274,9 @@ export function BookCard({ book }: { book: UserBook }) {
         </div>
       </div>
       <div className="text-center px-2">
-        <h3 className="text-sm font-headline line-clamp-1 italic">{cleanBookTitle(book.title)}</h3>
+        <h3 className="text-sm font-headline line-clamp-1 italic">
+          {cleanBookTitle(book.title)}{(book as any).volume ? ` — ${(book as any).volume}` : ""}
+        </h3>
         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{cleanAuthorName(book.author)}</p>
       </div>
     </div>
