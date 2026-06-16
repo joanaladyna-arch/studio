@@ -35,7 +35,8 @@ import {
   Headphones,
   Camera,
   Link as LinkIcon,
-  X
+  X,
+  UserCircle
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -102,8 +103,8 @@ export default function BookDetailPage() {
   const fetchAuthorPhoto = async (name: string) => {
     if (!name || name === "Auteur inconnu") return;
     try {
-      const res = await fetch(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(name)}`);
-      const data = await res.json();
+      const olRes = await fetch(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(name)}`);
+      const data = await olRes.json();
       if (data.docs?.[0]) {
         setAuthorPhoto(`https://covers.openlibrary.org/a/id/${data.docs[0].id}-L.jpg`);
       }
@@ -214,7 +215,13 @@ export default function BookDetailPage() {
                 <Link href={`/author/${encodeURIComponent(editedData.author || "")}`} className="inline-flex items-center gap-3 text-3xl text-primary font-bold uppercase tracking-widest hover:opacity-70 group">
                   {editedData.author} <ChevronRight className="h-6 w-6 group-hover:translate-x-2 transition-transform" />
                 </Link>
-                {authorPhoto && <div className="h-16 w-16 relative rounded-full overflow-hidden border-2 border-white shadow-md"><Image src={authorPhoto} alt="" fill className="object-cover" /></div>}
+                <div className="h-16 w-16 relative rounded-full overflow-hidden border-2 border-white shadow-md bg-secondary/10 flex items-center justify-center">
+                  {authorPhoto ? (
+                    <Image src={authorPhoto} alt="" fill className="object-cover" />
+                  ) : (
+                    <UserCircle className="h-10 w-10 text-primary/20" />
+                  )}
+                </div>
               </div>
             </div>
           </section>

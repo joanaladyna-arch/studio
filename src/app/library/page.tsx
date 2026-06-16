@@ -80,17 +80,21 @@ export interface Book {
 }
 
 export const GENRES_LIST = [
-  "Dark Romance", "Romance", "Rom-Com", "Romantic Suspense", "Thriller", 
-  "Mystery", "Polar", "Fantasy", "Romantasy", "Dystopian", 
-  "Young Adult", "New Adult", "Contemporary", "Horror", 
-  "Manga", "Biography", "True Crime"
+  "Romance contemporaine", "Dark romance", "Fantasy", "Romantasy", "New romance", 
+  "Young adult", "New adult", "Thriller", "Suspense", "Policier", 
+  "Mystère", "Science-fiction", "Dystopie", "Historique", "Drame", 
+  "Développement personnel", "Témoignage", "Biographie", "Manga", "BD", "Poésie"
 ];
 
 export const TROPES_LIST = [
-  "Enemies to Lovers", "Friends to Lovers", "Slow Burn", "Forced Proximity", 
-  "Found Family", "Fake Dating", "Grumpy x Sunshine", "One Bed", 
-  "Age Gap", "Forbidden Love", "Second Chance", 
-  "Touch Her And You Die", "Who Did This to You"
+  "Enemies to lovers", "Friends to lovers", "Slow burn", "Fake dating", 
+  "Forced proximity", "Grumpy x sunshine", "Second chance", "Found family", 
+  "Age gap", "Brother’s best friend", "Best friend’s brother", "Marriage of convenience", 
+  "Forbidden love", "Workplace romance", "Sports romance", "Small town", 
+  "Billionaire", "Mafia", "Royal romance", "Single parent", "Roommates", 
+  "Academic rivals", "Love triangle", "Soulmates", "Protector", "Revenge", 
+  "Secret identity", "Childhood friends", "Opposites attract", "He falls first", 
+  "She falls first", "Touch her and you die"
 ];
 
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {
@@ -417,5 +421,4 @@ function BookListItem({ book }: { book: Book }) {
         </div>
       </CardContent>
     </Card>
-  );
 }

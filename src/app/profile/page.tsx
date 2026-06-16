@@ -99,13 +99,6 @@ export default function ProfilePage() {
     const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
     const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (b.pages || 0) / 50 : 0), 0);
     
-    const genreCounts: Record<string, number> = {};
-    const tropeCounts: Record<string, number> = {};
-    readBooks.forEach(b => {
-      b.genres?.forEach(g => { genreCounts[g] = (genreCounts[g] || 0) + 1; });
-      b.tropes?.forEach(t => { tropeCounts[t] = (tropeCounts[t] || 0) + 1; });
-    });
-
     const goals = {
       annual: profile?.annualGoal || 24,
       monthly: profile?.monthlyGoal || 2,
@@ -118,8 +111,6 @@ export default function ProfilePage() {
       palBooks,
       pagesRead,
       audioHours: Math.round(audioHours),
-      genreCounts,
-      tropeCounts,
       goals,
       annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
       pagesProgress: Math.min(100, Math.round((pagesRead / goals.pages) * 100)),
@@ -132,7 +123,9 @@ export default function ProfilePage() {
     try {
       await signOut(auth);
       router.push('/login');
-    } catch (e) {}
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'Erreur lors de la déconnexion' });
+    }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -217,12 +210,12 @@ export default function ProfilePage() {
         </div>
         <div className="relative px-2">
           <div className="absolute bottom-0 left-0 right-0 h-4 bg-[#e8d5c8] rounded-full z-0" />
-          <div className="flex items-end gap-1.5 overflow-x-auto pb-4 pt-10 px-6 no-scrollbar min-h-[280px] z-10 relative">
+          <div className="flex items-end gap-1.5 overflow-x-auto pb-4 pt-10 px-6 no-scrollbar min-h-[160px] max-h-[160px] z-10 relative">
             {stats.palBooks.length > 0 ? (
               stats.palBooks.map((book, idx) => (
-                <Link key={book.id} href={`/book/${book.id}`} className="shrink-0 transition-all hover:-translate-y-6 duration-500">
-                  <div className={cn("w-14 h-60 rounded-t-lg border-x-2 border-t-2 flex flex-col items-center justify-center p-2 shadow-md", SPINE_COLORS[idx % SPINE_COLORS.length])}>
-                    <span className="[writing-mode:vertical-rl] rotate-180 text-xs font-bold uppercase tracking-widest text-center truncate max-h-[160px] opacity-80">{book.title}</span>
+                <Link key={book.id} href={`/book/${book.id}`} className="shrink-0 transition-all hover:-translate-y-4 duration-500">
+                  <div className={cn("w-10 h-32 rounded-t-lg border-x border-t flex flex-col items-center justify-center p-1.5 shadow-md", SPINE_COLORS[idx % SPINE_COLORS.length])}>
+                    <span className="[writing-mode:vertical-rl] rotate-180 text-[8px] font-bold uppercase tracking-widest text-center truncate max-h-[100px] opacity-80">{book.title}</span>
                   </div>
                 </Link>
               ))
@@ -249,8 +242,10 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [favoriteQuote, setFavoriteQuote] = useState('');
   const [favoriteAuthor, setFavoriteAuthor] = useState('');
   const [annualGoal, setAnnualGoal] = useState(24);
+  const [monthlyGoal, setMonthlyGoal] = useState(2);
   const [annualGoalPages, setAnnualGoalPages] = useState(10000);
   const [annualAudioGoal, setAnnualAudioGoal] = useState(100);
+  const [favoriteFormat, setFavoriteFormat] = useState<BookFormat>('papier');
   const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
   const [favoriteTropes, setFavoriteTropes] = useState<string[]>([]);
 
@@ -261,8 +256,10 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setFavoriteQuote(profile.favoriteQuote || '');
       setFavoriteAuthor(profile.favoriteAuthor || '');
       setAnnualGoal(profile.annualGoal || 24);
+      setMonthlyGoal(profile.monthlyGoal || 2);
       setAnnualGoalPages(profile.annualGoalPages || 10000);
       setAnnualAudioGoal(profile.annualAudioGoal || 100);
+      setFavoriteFormat(profile.favoriteFormat || 'papier');
       setFavoriteGenres(profile.favoriteGenres || []);
       setFavoriteTropes(profile.favoriteTropes || []);
     }
@@ -273,8 +270,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
     setLoading(true);
     const data = {
       name, bio, favoriteQuote, favoriteAuthor,
-      annualGoal, annualGoalPages, annualAudioGoal,
-      favoriteGenres, favoriteTropes,
+      annualGoal, monthlyGoal, annualGoalPages, annualAudioGoal,
+      favoriteFormat, favoriteGenres, favoriteTropes,
       lastUpdated: serverTimestamp()
     };
     try {
@@ -296,31 +293,62 @@ function EditProfileDialog({ profile }: { profile: any }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button className="h-16 px-12 rounded-[2rem] bg-primary text-white font-headline italic text-2xl shadow-xl"><Pencil className="h-6 w-6 mr-4" /> Modifier le Profil</Button></DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95">
-        <DialogHeader className="p-10 border-b bg-white/40"><DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle></DialogHeader>
+        <DialogHeader className="p-10 border-b bg-white/40 shrink-0"><DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle></DialogHeader>
         <ScrollArea className="flex-1">
-          <div className="p-10 space-y-16">
-            <div className="space-y-6">
-              <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Nom / Pseudo</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg" /></div>
-              <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Ma Bio</Label><Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4" /></div>
+          <div className="p-10 space-y-16 pb-20">
+            <div className="space-y-10">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary/60 border-b pb-4">Informations Personnelles</h3>
+              <div className="grid gap-6">
+                <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Prénom / Nom</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg" /></div>
+                <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bio de Lectrice</Label><Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4" /></div>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Citation Favorite</Label><Input value={favoriteQuote} onChange={(e) => setFavoriteQuote(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic" /></div>
+                  <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Auteur Préféré</Label><Input value={favoriteAuthor} onChange={(e) => setFavoriteAuthor(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic" /></div>
+                </div>
+              </div>
             </div>
+
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary/60 border-b pb-4">Mes Défis</h3>
               <div className="grid md:grid-cols-2 gap-12">
                 <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Livres / An : <span className="text-primary italic ml-2">{annualGoal}</span></Label><Slider value={[annualGoal]} min={1} max={500} onValueChange={(v) => setAnnualGoal(v[0])} /></div>
-                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Pages / An : <span className="text-primary italic ml-2">{annualGoalPages}</span></Label><Slider value={[annualGoalPages]} min={100} max={100000} step={100} onValueChange={(v) => setAnnualGoalPages(v[0])} /></div>
+                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Livres / Mois : <span className="text-primary italic ml-2">{monthlyGoal}</span></Label><Slider value={[monthlyGoal]} min={1} max={100} onValueChange={(v) => setMonthlyGoal(v[0])} /></div>
+                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Pages / An : <span className="text-primary italic ml-2">{annualGoalPages.toLocaleString()}</span></Label><Slider value={[annualGoalPages]} min={100} max={100000} step={100} onValueChange={(v) => setAnnualGoalPages(v[0])} /></div>
+                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Heures Audio / An : <span className="text-primary italic ml-2">{annualAudioGoal}h</span></Label><Slider value={[annualAudioGoal]} min={1} max={1000} onValueChange={(v) => setAnnualAudioGoal(v[0])} /></div>
               </div>
             </div>
-            <div className="space-y-6">
-               <Label className="text-[10px] uppercase font-bold opacity-60">Genres de Prédilection</Label>
-               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">{GENRES_LIST.map(g => (
-                 <div key={g} className="flex items-center space-x-3 bg-white/40 p-4 rounded-2xl cursor-pointer" onClick={() => toggle(favoriteGenres, setFavoriteGenres, g)}>
-                   <Checkbox checked={favoriteGenres.includes(g)} /> <span className="italic font-headline">{g}</span>
-                 </div>
-               ))}</div>
+
+            <div className="space-y-10">
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary/60 border-b pb-4">Préférences Littéraires</h3>
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <Label className="text-[10px] uppercase font-bold opacity-60">Format Préféré</Label>
+                  <Select value={favoriteFormat} onValueChange={(v) => setFavoriteFormat(v as BookFormat)}>
+                    <SelectTrigger className="h-14 rounded-2xl bg-white/40 border-none italic text-lg"><SelectValue placeholder="Choisir un format" /></SelectTrigger>
+                    <SelectContent>{Object.entries(FORMATS).map(([k,v]) => (<SelectItem key={k} value={k} className="italic font-headline">{v.label}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-4">
+                  <Label className="text-[10px] uppercase font-bold opacity-60">Genres Préférés</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{GENRES_LIST.map(g => (
+                    <div key={g} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteGenres, setFavoriteGenres, g)}>
+                      <Checkbox checked={favoriteGenres.includes(g)} onCheckedChange={() => toggle(favoriteGenres, setFavoriteGenres, g)} /> <span className="italic font-headline text-sm">{g}</span>
+                    </div>
+                  ))}</div>
+                </div>
+                <div className="space-y-4">
+                  <Label className="text-[10px] uppercase font-bold opacity-60">Tropes Préférés</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{TROPES_LIST.map(t => (
+                    <div key={t} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteTropes, setFavoriteTropes, t)}>
+                      <Checkbox checked={favoriteTropes.includes(t)} onCheckedChange={() => toggle(favoriteTropes, setFavoriteTropes, t)} /> <span className="italic font-headline text-sm">{t}</span>
+                    </div>
+                  ))}</div>
+                </div>
+              </div>
             </div>
           </div>
         </ScrollArea>
-        <DialogFooter className="p-10 border-t bg-white/60">
+        <DialogFooter className="p-10 border-t bg-white/60 shrink-0">
           <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl">Annuler</Button>
           <Button onClick={handleSave} disabled={loading} className="h-16 px-16 rounded-[2rem] bg-primary text-2xl font-headline italic">
             {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Graver mes préférences"}

@@ -99,7 +99,6 @@ export default function AddBookPage() {
     setResults([]);
 
     try {
-      // Priorité Google Books
       const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=20&printType=books`;
       const gRes = await fetch(gUrl);
 
@@ -130,7 +129,6 @@ export default function AddBookPage() {
           });
           setResults(finalResults);
         } else {
-          // Fallback OpenLibrary
           const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=20`;
           const olRes = await fetch(olUrl);
           if (olRes.ok) {
@@ -250,6 +248,8 @@ export default function AddBookPage() {
       .then(() => {
         toast({ title: "Pépite enregistrée", description: `${pendingBook.title} est dans votre écrin.` });
         setPendingBook(null);
+        setSelectedStatus(null);
+        setSelectedFormat(null);
       })
       .catch(async (err) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -300,7 +300,7 @@ export default function AddBookPage() {
             const existing = findExistingBook(book);
             return (
               <Card key={book.id} className="glass-card overflow-hidden group">
-                <CardContent className="p-0 flex flex-col sm:row flex-row">
+                <CardContent className="p-0 flex flex-col sm:flex-row">
                   <div className="relative w-48 aspect-[2/3] shrink-0 bg-secondary/5"><Image src={book.cover || "https://picsum.photos/seed/p/200/300"} alt={book.title} fill className="object-contain" /></div>
                   <div className="p-8 flex flex-col flex-1 gap-6">
                     <div className="space-y-1">
@@ -380,7 +380,7 @@ export default function AddBookPage() {
           <div className="p-10 space-y-8">
             <div className="flex p-2 bg-primary/5 rounded-[2rem] gap-2">
               <Button variant={scanMode === 'barcode' ? 'default' : 'ghost'} onClick={() => setScanMode('barcode')} className="flex-1 h-16 font-headline italic text-xl"><Barcode className="h-6 w-6 mr-3" /> Code-Barres</Button>
-              <Button variant={scanMode === 'cover' ? 'default' : 'ghost'} onClick={() => setScanMode('cover')} className="flex-1 h-16 font-headline italic text-xl"><Camera className="h-6 w-6 mr-3" /> Couverture</Button>
+              <Button variant={scanMode === 'cover' ? 'default' : 'ghost'} onClick={() => setMode('cover')} className="flex-1 h-16 font-headline italic text-xl"><Camera className="h-6 w-6 mr-3" /> Couverture</Button>
             </div>
             {scanMode === "cover" && <Button onClick={captureCover} disabled={isProcessingScan} className="w-full h-20 rounded-[2rem] bg-primary text-2xl font-headline italic">Identifier la couverture</Button>}
           </div>

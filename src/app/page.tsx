@@ -67,7 +67,6 @@ export default function Home() {
 
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     
-    // Monthly stats
     const monthlyRead = readBooks.filter(b => {
       if (!b.endDate) return false;
       const d = new Date(b.endDate);
@@ -80,7 +79,7 @@ export default function Home() {
     const goals = {
       annual: profile?.annualGoal || 24,
       monthly: profile?.monthlyGoal || 2,
-      pages: profile?.annualPageGoal || 10000,
+      pages: profile?.annualGoalPages || 10000,
       audio: profile?.annualAudioGoal || 100
     };
 
@@ -139,7 +138,7 @@ export default function Home() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Annuel</p>
                 <h3 className="text-3xl font-headline italic">{stats.annualCount} / {stats.goals.annual}</h3>
@@ -153,7 +152,7 @@ export default function Home() {
           </Card>
 
           <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Mensuel</p>
                 <h3 className="text-3xl font-headline italic">{stats.monthlyCount} / {stats.goals.monthly}</h3>
@@ -167,7 +166,7 @@ export default function Home() {
           </Card>
 
           <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Pages</p>
                 <h3 className="text-3xl font-headline italic">{stats.pagesCount.toLocaleString()}</h3>
@@ -181,7 +180,7 @@ export default function Home() {
           </Card>
 
           <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Audio</p>
                 <h3 className="text-3xl font-headline italic">{stats.audioCount}h</h3>

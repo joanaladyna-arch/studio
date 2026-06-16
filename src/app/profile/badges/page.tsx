@@ -30,7 +30,6 @@ export default function BadgesMedalsPage() {
   const { data: allBooks = [] } = useCollection(booksQuery);
 
   const readBooks = useMemo(() => {
-    // Only count books with status 'read' or 'reread'
     return (allBooks as unknown as Book[]).filter(b => b.status === 'read' || b.status === 'reread');
   }, [allBooks]);
 
@@ -58,8 +57,8 @@ export default function BadgesMedalsPage() {
 
   const getLevel = (count: number) => {
     if (count >= 50) return LEVELS[3];
-    if (count >= 15) return LEVELS[1];
     if (count >= 30) return LEVELS[2];
+    if (count >= 15) return LEVELS[1];
     if (count >= 5) return LEVELS[0];
     return null;
   };
@@ -74,19 +73,17 @@ export default function BadgesMedalsPage() {
 
   return (
     <div className="space-y-12 animate-paper pb-20">
-      <Navigation />
-      
       <header className="text-center space-y-4 pt-8">
         <h1 className="text-5xl font-headline italic tracking-tight">Badges & Médailles</h1>
-        <p className="text-primary/60 italic font-medium">Célébrez vos lectures terminées. La PAL ne compte pas ici !</p>
+        <p className="text-primary/60 italic font-medium text-sm">Célébrez vos lectures terminées.</p>
       </header>
 
-      <section className="space-y-8">
+      <section className="space-y-6">
         <div className="flex items-center gap-3">
-          <Award className="h-8 w-8 text-primary" />
-          <h2 className="text-3xl font-headline italic">Badges de Genres</h2>
+          <Award className="h-6 w-6 text-primary" />
+          <h2 className="text-2xl font-headline italic">Badges de Genres</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {GENRES_LIST.map(genre => {
             const count = genreStats[genre];
             const level = getLevel(count);
@@ -96,36 +93,20 @@ export default function BadgesMedalsPage() {
 
             return (
               <Card key={genre} className={cn(
-                "glass-card border-none transition-all duration-500 overflow-hidden",
-                isUnlocked ? "shadow-md scale-[1.02]" : "opacity-40 grayscale"
+                "glass-card border-none transition-all duration-500 overflow-hidden bg-white/40",
+                isUnlocked ? "shadow-sm border-primary/10" : "opacity-30 grayscale"
               )}>
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className={cn(
-                      "p-3 rounded-2xl",
-                      level ? level.bg : "bg-muted"
-                    )}>
-                      {isUnlocked ? <Shield className={cn("h-6 w-6", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-6 w-6 text-muted-foreground/40" />}
+                    <div className={cn("p-2 rounded-xl", level ? level.bg : "bg-muted")}>
+                      {isUnlocked ? <Shield className={cn("h-4 w-4", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-4 w-4 text-muted-foreground/40" />}
                     </div>
-                    {level && (
-                      <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level.color)}>
-                        {level.label}
-                      </span>
-                    )}
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-xl font-headline italic">{genre}</h3>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                      {count} livres lus
-                    </p>
+                    <h3 className="text-sm font-headline italic line-clamp-1">{genre}</h3>
+                    <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest">{count} lus</p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
-                      <span>{isUnlocked ? `Vers ${LEVELS.find(l => l.min === nextGoal)?.label || 'Diamond'}` : 'Vers Bronze'} ({nextGoal})</span>
-                      <span>{Math.round(progress)}%</span>
-                    </div>
-                    <Progress value={progress} className="h-1.5 bg-primary/5" />
-                  </div>
+                  <Progress value={progress} className="h-1 bg-primary/5" />
                 </CardContent>
               </Card>
             );
@@ -133,12 +114,12 @@ export default function BadgesMedalsPage() {
         </div>
       </section>
 
-      <section className="space-y-8">
+      <section className="space-y-6">
         <div className="flex items-center gap-3">
-          <Medal className="h-8 w-8 text-secondary" />
-          <h2 className="text-3xl font-headline italic">Médailles de Tropes</h2>
+          <Medal className="h-6 w-6 text-secondary" />
+          <h2 className="text-2xl font-headline italic">Médailles de Tropes</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {TROPES_LIST.map(trope => {
             const count = tropeStats[trope];
             const level = getLevel(count);
@@ -148,36 +129,20 @@ export default function BadgesMedalsPage() {
 
             return (
               <Card key={trope} className={cn(
-                "glass-card border-none transition-all duration-500 overflow-hidden",
-                isUnlocked ? "shadow-md scale-[1.02] border-secondary/20" : "opacity-40 grayscale"
+                "glass-card border-none transition-all duration-500 overflow-hidden bg-white/40",
+                isUnlocked ? "shadow-sm border-secondary/10" : "opacity-30 grayscale"
               )}>
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className={cn(
-                      "p-3 rounded-2xl",
-                      level ? level.bg : "bg-muted"
-                    )}>
-                      {isUnlocked ? <Medal className={cn("h-6 w-6", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-6 w-6 text-muted-foreground/40" />}
+                    <div className={cn("p-2 rounded-xl", level ? level.bg : "bg-muted")}>
+                      {isUnlocked ? <Medal className={cn("h-4 w-4", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-4 w-4 text-muted-foreground/40" />}
                     </div>
-                    {level && (
-                      <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level.color)}>
-                        {level.label}
-                      </span>
-                    )}
                   </div>
                   <div className="space-y-1">
-                    <h3 className="text-xl font-headline italic">{trope}</h3>
-                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                      {count} livres lus
-                    </p>
+                    <h3 className="text-sm font-headline italic line-clamp-1">{trope}</h3>
+                    <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest">{count} lus</p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
-                      <span>{isUnlocked ? `Vers ${LEVELS.find(l => l.min === nextGoal)?.label || 'Diamond'}` : 'Vers Bronze'} ({nextGoal})</span>
-                      <span>{Math.round(progress)}%</span>
-                    </div>
-                    <Progress value={progress} className="h-1.5 bg-secondary/5" />
-                  </div>
+                  <Progress value={progress} className="h-1 bg-secondary/5" />
                 </CardContent>
               </Card>
             );
