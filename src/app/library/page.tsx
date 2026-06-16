@@ -64,11 +64,32 @@ export interface UserBook {
   review?: string;
   plumeRank?: RankType;
   dateAdded: any;
-  // Fallback data for faster listing
   title?: string; 
   author?: string;
   cover?: string;
+  genres?: string[];
+  tropes?: string[];
 }
+
+export type Book = UserBook;
+
+export const GENRES_LIST = [
+  "Romance contemporaine", "Dark romance", "Fantasy", "Romantasy", "New romance", 
+  "Young adult", "New adult", "Thriller", "Suspense", "Policier", "Mystère", 
+  "Science-fiction", "Dystopie", "Historique", "Drame", "Développement personnel", 
+  "Témoignage", "Biographie", "Manga", "BD", "Poésie"
+];
+
+export const TROPES_LIST = [
+  "Enemies to lovers", "Friends to lovers", "Slow burn", "Fake dating", 
+  "Forced proximity", "Grumpy x sunshine", "Second chance", "Found family", 
+  "Age gap", "Brother’s best friend", "Best friend’s brother", "Marriage of convenience", 
+  "Forbidden love", "Workplace romance", "Sports romance", "Small town", 
+  "Billionaire", "Mafia", "Royal romance", "Single parent", "Roommates", 
+  "Academic rivals", "Love triangle", "Soulmates", "Protector", "Revenge", 
+  "Secret identity", "Childhood friends", "Opposites attract", "He falls first", 
+  "She falls first", "Touch her and you die"
+];
 
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {
   papier: { label: "Papier", icon: BookIcon, color: "text-amber-800", badgeClass: "bg-orange-50 text-orange-700 border-orange-100" },
