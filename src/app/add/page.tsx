@@ -19,7 +19,8 @@ import {
   Barcode,
   X,
   RefreshCw,
-  Heart
+  Heart,
+  Edit3
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,6 +72,10 @@ export default function AddBookPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [isDePlume, setIsDePlume] = useState(false);
 
+  // Manual entry states
+  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
+  const [manualBook, setManualBook] = useState({ title: "", author: "" });
+
   const libraryQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, "users", user.uid, "books");
@@ -88,34 +93,46 @@ export default function AddBookPage() {
   }, [currentLibrary]);
 
   const fetchUniversalMetadata = async (search: string) => {
+    if (!search.trim()) return;
     setIsSearching(true);
     setErrorDetails(null);
     setResults([]);
 
+    console.log(`[PLUME API] Lancement de la recherche multi-sources pour: "${search}"`);
+
     let finalResults: any[] = [];
 
+    // 1. Google Books (Primary)
     try {
-      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=20`;
+      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=20&printType=books`;
+      console.log(`[PLUME API] Appel Google Books: ${gUrl}`);
       const gRes = await fetch(gUrl);
 
       if (gRes.ok) {
         const gData = await gRes.json();
         const items = gData.items || [];
+        console.log(`[PLUME API] Google Books: ${items.length} résultats trouvés.`);
         
         if (items.length > 0) {
           finalResults = items.map((item: any) => {
             const info = item.volumeInfo;
             const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
-                         info.industryIdentifiers?.[0]?.identifier || "N/A";
+                         info.industryIdentifiers?.find((id: any) => id.type === "ISBN_10")?.identifier || "N/A";
+            
+            // Validation pages premium
+            let pages = info.pageCount;
+            if (pages <= 0 || pages > 5000) pages = null;
+
             return {
               id: item.id,
+              source: "google",
               title: info.title || "Titre inconnu",
               subtitle: info.subtitle,
               author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
               publisher: info.publisher,
-              cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
-              pages: info.pageCount || 0,
-              description: info.description || "",
+              cover: info.imageLinks?.thumbnail?.replace("http://", "https://") || info.imageLinks?.smallThumbnail?.replace("http://", "https://"),
+              pages: pages,
+              description: info.description?.replace(/<[^>]*>?/gm, '') || "",
               publicationDate: info.publishedDate,
               genres: info.categories || [],
               language: LANGUAGE_MAP[info.language?.toLowerCase()] || info.language?.toUpperCase() || "Français",
@@ -125,40 +142,49 @@ export default function AddBookPage() {
         }
       }
     } catch (e) {
-      // Slient fail for fallback
+      console.error("[PLUME API] Erreur Google Books:", e);
     }
 
+    // 2. Open Library (Secondary Fallback)
     if (finalResults.length === 0) {
       try {
         const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=20`;
+        console.log(`[PLUME API] Appel Open Library (Fallback): ${olUrl}`);
         const olRes = await fetch(olUrl);
 
         if (olRes.ok) {
           const olData = await olRes.json();
           const docs = olData.docs || [];
+          console.log(`[PLUME API] Open Library: ${docs.length} résultats trouvés.`);
           
           if (docs.length > 0) {
-            finalResults = docs.map((doc: any) => ({
-              id: doc.key,
-              title: doc.title || "Titre inconnu",
-              author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
-              publisher: doc.publisher?.[0],
-              cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-              pages: doc.number_of_pages_median || 0,
-              publicationDate: doc.first_publish_year?.toString(),
-              genres: doc.subject?.slice(0, 5) || [],
-              language: "Français",
-              isbn: doc.isbn?.[0] || "N/A"
-            }));
+            finalResults = docs.map((doc: any) => {
+              let pages = doc.number_of_pages_median || doc.number_of_pages;
+              if (pages <= 0 || pages > 5000) pages = null;
+
+              return {
+                id: doc.key,
+                source: "openlibrary",
+                title: doc.title || "Titre inconnu",
+                author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
+                publisher: doc.publisher?.[0],
+                cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
+                pages: pages,
+                publicationDate: doc.first_publish_year?.toString(),
+                genres: doc.subject?.slice(0, 5) || [],
+                language: "Français",
+                isbn: doc.isbn?.[0] || "N/A"
+              };
+            });
           }
         }
       } catch (e) {
-        // Search error
+        console.error("[PLUME API] Erreur Open Library:", e);
       }
     }
 
     if (finalResults.length === 0) {
-      setErrorDetails("Aucun livre trouvé. Essayez avec l'ISBN ou un titre plus précis.");
+      setErrorDetails("Aucun livre trouvé automatiquement. Essayez avec l'ISBN ou une saisie manuelle.");
     } else {
       setResults(finalResults);
     }
@@ -167,7 +193,6 @@ export default function AddBookPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!queryStr.trim()) return;
     fetchUniversalMetadata(queryStr);
   };
 
@@ -290,6 +315,22 @@ export default function AddBookPage() {
       .finally(() => setIsAdding(false));
   };
 
+  const handleManualAdd = () => {
+    if (!manualBook.title || !manualBook.author) {
+      toast({ variant: "destructive", title: "Champs requis", description: "Titre et auteur sont obligatoires." });
+      return;
+    }
+    handleOpenAddDialog({
+      ...manualBook,
+      id: `manual-${Date.now()}`,
+      source: "manual",
+      cover: null,
+      pages: null,
+      isbn: "N/A"
+    });
+    setIsManualDialogOpen(false);
+  };
+
   return (
     <div className="space-y-12 animate-paper pb-32">
       <header className="text-center space-y-4 pt-8">
@@ -322,19 +363,29 @@ export default function AddBookPage() {
           </Button>
         </form>
         
-        <Button 
-          variant="outline"
-          onClick={() => setIsScannerOpen(true)}
-          className="h-16 w-full rounded-2xl border-primary/20 bg-white/40 font-headline italic text-xl gap-4 hover:bg-white transition-all shadow-sm"
-        >
-          <Scan className="h-6 w-6 text-primary" />
-          Scanner un livre (ISBN ou Couverture)
-        </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Button 
+            variant="outline"
+            onClick={() => setIsScannerOpen(true)}
+            className="h-16 rounded-2xl border-primary/20 bg-white/40 font-headline italic text-xl gap-4 hover:bg-white transition-all shadow-sm"
+          >
+            <Scan className="h-6 w-6 text-primary" />
+            Scanner
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setIsManualDialogOpen(true)}
+            className="h-16 rounded-2xl border-primary/20 bg-white/40 font-headline italic text-xl gap-4 hover:bg-white transition-all shadow-sm"
+          >
+            <Edit3 className="h-6 w-6 text-secondary" />
+            Saisie manuelle
+          </Button>
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto space-y-8 px-4">
         {errorDetails && (
-          <Alert className="bg-destructive/5 border-destructive/20 text-destructive rounded-[2rem] p-8 animate-in zoom-in duration-300">
+          <Alert className="glass-card border-none text-destructive rounded-[2rem] p-8 animate-in zoom-in duration-300 bg-white/60">
             <AlertCircle className="h-6 w-6" />
             <AlertTitle className="font-headline italic text-2xl mb-2">Information</AlertTitle>
             <AlertDescription className="text-lg italic">{errorDetails}</AlertDescription>
@@ -369,7 +420,10 @@ export default function AddBookPage() {
                   <div className="p-8 flex flex-col flex-1 gap-6">
                     <div className="space-y-2">
                       <div className="flex justify-between items-start gap-4">
-                        <h3 className="text-3xl font-headline italic leading-tight group-hover:text-primary transition-colors">{book.title}</h3>
+                        <div className="space-y-1">
+                          <h3 className="text-3xl font-headline italic leading-tight group-hover:text-primary transition-colors">{book.title}</h3>
+                          {book.subtitle && <p className="text-sm italic text-muted-foreground opacity-60">{book.subtitle}</p>}
+                        </div>
                         <Badge variant="outline" className="rounded-full border-primary/20 text-primary italic shrink-0">{book.language}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground font-bold uppercase tracking-[0.2em]">{book.author}</p>
@@ -377,11 +431,11 @@ export default function AddBookPage() {
 
                     <div className="grid grid-cols-2 gap-4 text-[10px] font-bold uppercase tracking-widest opacity-60">
                       <div className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {book.publicationDate || "Date inconnue"}</div>
-                      <div className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {book.pages} pages</div>
+                      <div className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {book.pages || "???"} pages</div>
                       <div className="flex items-center gap-2 col-span-2"><Hash className="h-4 w-4" /> ISBN: {book.isbn}</div>
                     </div>
 
-                    <p className="text-sm text-muted-foreground italic line-clamp-2 opacity-80">{book.description?.replace(/<[^>]*>?/gm, '')}</p>
+                    <p className="text-sm text-muted-foreground italic line-clamp-2 opacity-80">{book.description}</p>
 
                     <div className="pt-2 flex justify-end">
                       {existingBook ? (
@@ -406,6 +460,39 @@ export default function AddBookPage() {
           })}
         </div>
       </div>
+
+      {/* Manual Entry Dialog */}
+      <Dialog open={isManualDialogOpen} onOpenChange={setIsManualDialogOpen}>
+        <DialogContent className="glass-card border-none max-w-md bg-white/95">
+          <DialogHeader className="p-6">
+            <DialogTitle className="font-headline text-3xl italic">Saisie manuelle</DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+             <div className="space-y-2">
+               <label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Titre de l'oeuvre</label>
+               <Input 
+                 placeholder="ex: L'écume des jours" 
+                 value={manualBook.title} 
+                 onChange={(e) => setManualBook({...manualBook, title: e.target.value})}
+                 className="h-12 bg-white/40 border-none italic"
+               />
+             </div>
+             <div className="space-y-2">
+               <label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Auteur</label>
+               <Input 
+                 placeholder="ex: Boris Vian" 
+                 value={manualBook.author} 
+                 onChange={(e) => setManualBook({...manualBook, author: e.target.value})}
+                 className="h-12 bg-white/40 border-none italic"
+               />
+             </div>
+          </div>
+          <DialogFooter className="p-6">
+             <Button variant="ghost" onClick={() => setIsManualDialogOpen(false)}>Annuler</Button>
+             <Button onClick={handleManualAdd} className="bg-primary text-white rounded-xl">Continuer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isScannerOpen} onOpenChange={(o) => { if (!o) stopScanner(); setIsScannerOpen(o); }}>
         <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl">
