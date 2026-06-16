@@ -133,7 +133,7 @@ export default function ProfilePage() {
       toast({ title: 'Déconnexion', description: 'À bientôt sur Plume !' });
       router.push('/login');
     } catch (error) {
-      console.error('PLUME Auth: Erreur de déconnexion', error);
+      console.error('PLUME Auth Error', error);
     }
   };
 
@@ -165,7 +165,7 @@ export default function ProfilePage() {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
-        <p className="font-headline italic text-primary/60">Chargement de votre sanctuaire...</p>
+        <p className="font-headline italic text-primary/60">Ouverture de votre sanctuaire...</p>
       </div>
     );
   }
@@ -422,30 +422,34 @@ export default function ProfilePage() {
 function EditProfileDialog({ profile }: { profile: any }) {
   const { user } = useUser();
   const db = useFirestore();
+  const storage = useStorage();
   const { toast } = useToast();
   
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Fields state
+  // States pour les champs
   const [name, setName] = useState('');
   const [pseudo, setPseudo] = useState('');
   const [bio, setBio] = useState('');
   const [favoriteQuote, setFavoriteQuote] = useState('');
   const [favoriteAuthor, setFavoriteAuthor] = useState('');
   const [preferredFormat, setPreferredFormat] = useState<string>('papier');
+  const [avatarUrl, setAvatarUrl] = useState('');
   
-  // Goals state
+  // Objectifs
   const [annualGoal, setAnnualGoal] = useState(24);
   const [monthlyGoal, setMonthlyGoal] = useState(2);
   const [annualGoalPages, setAnnualGoalPages] = useState(10000);
   const [annualAudioGoal, setAnnualAudioGoal] = useState(100);
   
-  // Collections state
+  // Thématiques
   const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
   const [favoriteTropes, setFavoriteTropes] = useState<string[]>([]);
 
-  // Initialize state when profile is loaded or dialog opens
+  // Initialisation à l'ouverture
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
@@ -460,8 +464,25 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setAnnualAudioGoal(profile.annualAudioGoal || 100);
       setFavoriteGenres(profile.favoriteGenres || []);
       setFavoriteTropes(profile.favoriteTropes || []);
+      setAvatarUrl(profile.avatarUrl || '');
     }
   }, [profile, open]);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !user) return;
+    setUploading(true);
+    const storageRef = ref(storage, `avatars/${user.uid}/modal-${Date.now()}`);
+    try {
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      setAvatarUrl(url);
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Erreur Image', description: "Impossible d'importer la photo." });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!db || !user) return;
@@ -474,6 +495,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       favoriteQuote: favoriteQuote.trim(),
       favoriteAuthor: favoriteAuthor.trim(),
       preferredFormat,
+      avatarUrl,
       annualGoal: Number(annualGoal),
       monthlyGoal: Number(monthlyGoal),
       annualGoalPages: Number(annualGoalPages),
@@ -511,44 +533,62 @@ function EditProfileDialog({ profile }: { profile: any }) {
           <DialogTitle className="font-headline text-4xl italic">Mon Identité Plume</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 overflow-y-auto">
           <div className="p-10 space-y-16 pb-20">
-            {/* Identity Section */}
+            {/* Identity & Photo Section */}
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Informations Personnelles</h3>
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Prénom / Nom</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner" />
+              <div className="flex flex-col md:flex-row gap-10 items-center md:items-start">
+                <div className="relative group shrink-0">
+                  <Avatar className="h-32 w-32 border-4 border-white shadow-xl">
+                    <AvatarImage src={avatarUrl || `https://picsum.photos/seed/${user?.uid}/200/200`} className="object-cover" />
+                    <AvatarFallback className="font-headline italic text-2xl">PL</AvatarFallback>
+                  </Avatar>
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+                    disabled={uploading}
+                  >
+                    {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Camera className="h-5 w-5 text-white" />}
+                  </button>
+                  <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Pseudo</Label>
-                  <Input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="plume_voyageuse" className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Prénom / Nom</Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Pseudo</Label>
+                    <Input value={pseudo} onChange={(e) => setPseudo(e.target.value)} placeholder="plume_voyageuse" className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner" />
+                  </div>
+                  <div className="space-y-3 md:col-span-2">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Email (Lecture seule)</Label>
+                    <Input value={user?.email || ''} readOnly className="h-14 rounded-2xl bg-primary/5 border-none italic text-lg opacity-60" />
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Email (Lecture seule)</Label>
-                <Input value={user?.email || ''} readOnly className="h-14 rounded-2xl bg-primary/5 border-none italic text-lg opacity-60" />
               </div>
               <div className="space-y-3">
                 <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Ma Bio de Lectrice</Label>
-                <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Quelques mots sur votre univers..." className="min-h-[120px] rounded-[2rem] bg-white/40 border-none italic p-6 text-lg shadow-inner resize-none" />
+                <Textarea value={bio} onChange={(e) => setBio(e.target.value)} placeholder="Décrivez votre univers de lecture en quelques mots..." className="min-h-[120px] rounded-[2rem] bg-white/40 border-none italic p-6 text-lg shadow-inner resize-none" />
               </div>
             </div>
 
-            {/* Favorites Section */}
+            {/* University & Preferences Section */}
             <div className="space-y-10">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Mon Univers</h3>
-              <div className="grid md:grid-cols-2 gap-8">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Mon Univers Littéraire</h3>
+              <div className="grid md:grid-cols-2 gap-10">
                 <div className="space-y-3">
                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Citation Favorite</Label>
-                  <Textarea value={favoriteQuote} onChange={(e) => setFavoriteQuote(e.target.value)} placeholder="Une phrase qui vous a marquée..." className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4 text-sm shadow-inner resize-none" />
+                  <Textarea value={favoriteQuote} onChange={(e) => setFavoriteQuote(e.target.value)} placeholder="Une phrase gravée dans votre mémoire..." className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4 text-sm shadow-inner resize-none" />
                 </div>
-                <div className="space-y-3">
-                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Auteur Préféré</Label>
-                  <Input value={favoriteAuthor} onChange={(e) => setFavoriteAuthor(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner" />
-                  <div className="pt-4 space-y-3">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Format de Prédilection</Label>
+                <div className="space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Auteur de Prédilection</Label>
+                    <Input value={favoriteAuthor} onChange={(e) => setFavoriteAuthor(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 ml-1">Format de Lecture Favori</Label>
                     <Select value={preferredFormat} onValueChange={setPreferredFormat}>
                       <SelectTrigger className="h-14 rounded-2xl bg-white/40 border-none italic text-lg shadow-inner">
                         <SelectValue placeholder="Choisir un format" />
@@ -566,41 +606,33 @@ function EditProfileDialog({ profile }: { profile: any }) {
 
             {/* Goals Section */}
             <div className="space-y-10">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Mes Défis Littéraires</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60 border-b border-primary/5 pb-4">Mes Défis</h3>
               <div className="grid md:grid-cols-2 gap-12">
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center px-1">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Livre / An : <span className="text-primary italic text-lg ml-2">{annualGoal}</span></Label>
-                  </div>
-                  <Slider value={[annualGoal]} min={1} max={500} step={1} onValueChange={(v) => setAnnualGoal(v[0])} className="py-4" />
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Livres / An : <span className="text-primary italic text-lg ml-2">{annualGoal}</span></Label>
+                  <Slider value={[annualGoal]} min={1} max={500} step={1} onValueChange={(v) => setAnnualGoal(v[0])} />
                 </div>
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center px-1">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Livre / Mois : <span className="text-primary italic text-lg ml-2">{monthlyGoal}</span></Label>
-                  </div>
-                  <Slider value={[monthlyGoal]} min={1} max={100} step={1} onValueChange={(v) => setMonthlyGoal(v[0])} className="py-4" />
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Livres / Mois : <span className="text-primary italic text-lg ml-2">{monthlyGoal}</span></Label>
+                  <Slider value={[monthlyGoal]} min={1} max={100} step={1} onValueChange={(v) => setMonthlyGoal(v[0])} />
                 </div>
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center px-1">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Pages / An : <span className="text-primary italic text-lg ml-2">{annualGoalPages.toLocaleString()}</span></Label>
-                  </div>
-                  <Slider value={[annualGoalPages]} min={100} max={100000} step={100} onValueChange={(v) => setAnnualGoalPages(v[0])} className="py-4" />
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Pages / An : <span className="text-primary italic text-lg ml-2">{annualGoalPages.toLocaleString()}</span></Label>
+                  <Slider value={[annualGoalPages]} min={100} max={100000} step={100} onValueChange={(v) => setAnnualGoalPages(v[0])} />
                 </div>
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center px-1">
-                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Heures Audio / An : <span className="text-primary italic text-lg ml-2">{annualAudioGoal}h</span></Label>
-                  </div>
-                  <Slider value={[annualAudioGoal]} min={1} max={1000} step={1} onValueChange={(v) => setAnnualAudioGoal(v[0])} className="py-4" />
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Heures Audio / An : <span className="text-primary italic text-lg ml-2">{annualAudioGoal}h</span></Label>
+                  <Slider value={[annualAudioGoal]} min={1} max={1000} step={1} onValueChange={(v) => setAnnualAudioGoal(v[0])} />
                 </div>
               </div>
             </div>
 
-            {/* Collections Section */}
+            {/* Thematics Section */}
             <div className="space-y-12">
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                    <Tags className="h-5 w-5 text-primary" />
-                   <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60">Mes Genres Préférés</h3>
+                   <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-primary/60">Genres de Prédilection</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {GENRES_LIST.map(g => (
@@ -617,7 +649,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                    <Sparkles className="h-5 w-5 text-secondary" />
-                   <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-secondary-foreground/60">Mes Tropes Fétiches</h3>
+                   <h3 className="text-[10px] font-bold uppercase tracking-[0.4em] text-secondary-foreground/60">Tropes Fétiches</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   {TROPES_LIST.map(t => (
