@@ -99,6 +99,7 @@ export default function ProfilePage() {
 
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     const palBooks = allBooks.filter(b => b.status === 'pal');
+    
     const monthlyRead = readBooks.filter(b => {
       if (!b.endDate) return false;
       const d = new Date(b.endDate);
@@ -279,7 +280,7 @@ export default function ProfilePage() {
             </p>
           </div>
           <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg hover:bg-primary/5">
-            <Link href="/library?tab=pal" className="flex items-center">
+            <Link href="/library" className="flex items-center">
               Voir toute ma PAL <ChevronRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
@@ -400,7 +401,7 @@ export default function ProfilePage() {
       <section className="space-y-16 pt-8">
         <div className="space-y-8">
           <h2 className="text-4xl font-headline flex items-center gap-4 italic">
-            <Award className="h-8 w-8 text-primary/40" /> Badges de Genres
+            <Award className="h-8 w-8 text-primary/40" /> Badges de Genres gagnés
           </h2>
           {earnedBadges.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -448,7 +449,7 @@ export default function ProfilePage() {
 
         <div className="space-y-8">
           <h2 className="text-4xl font-headline flex items-center gap-4 italic">
-            <MedalIcon className="h-8 w-8 text-secondary/40" /> Médailles de Tropes
+            <MedalIcon className="h-8 w-8 text-secondary/40" /> Médailles de Tropes gagnées
           </h2>
           {earnedMedals.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -763,4 +764,3 @@ function EditProfileDialog({ profile }: { profile: any }) {
     </Dialog>
   );
 }
-
