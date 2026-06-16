@@ -36,7 +36,7 @@ import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } fro
 import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
-import { signOut, updateProfile } from 'firebase/auth';
+import { signOut, updateProfile as updateFirebaseProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -150,7 +150,7 @@ export default function ProfilePage() {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, 'users', user.uid), { avatarUrl: url });
-      if (auth?.currentUser) await updateProfile(auth.currentUser, { photoURL: url });
+      if (auth?.currentUser) await updateFirebaseProfile(auth.currentUser, { photoURL: url });
       toast({ title: 'Photo mise à jour', description: 'Votre nouvelle identité est gravée.' });
     } catch (error) {
       console.error("Profile Upload Error:", error);
@@ -340,30 +340,30 @@ function EditProfileDialog({ profile }: { profile: any }) {
 
   useEffect(() => {
     if (profile && open) {
-      setName(profile.name || '');
-      setBio(profile.bio || '');
-      setFavoriteQuote(profile.favoriteQuote || '');
-      setFavoriteAuthor(profile.favoriteAuthor || '');
-      setAnnualGoal(Number(profile.annualGoal) || 24);
-      setMonthlyGoal(Number(profile.monthlyGoal) || 2);
-      setAnnualGoalPages(Number(profile.annualGoalPages) || 10000);
-      setAnnualAudioGoal(Number(profile.annualAudioGoal) || 100);
-      setFavoriteFormat(profile.favoriteFormat || 'papier');
-      setFavoriteGenres(profile.favoriteGenres || []);
-      setFavoriteTropes(profile.favoriteTropes || []);
+      setName(profile?.name || '');
+      setBio(profile?.bio || '');
+      setFavoriteQuote(profile?.favoriteQuote || '');
+      setFavoriteAuthor(profile?.favoriteAuthor || '');
+      setAnnualGoal(Number(profile?.annualGoal) || 24);
+      setMonthlyGoal(Number(profile?.monthlyGoal) || 2);
+      setAnnualGoalPages(Number(profile?.annualGoalPages) || 10000);
+      setAnnualAudioGoal(Number(profile?.annualAudioGoal) || 100);
+      setFavoriteFormat(profile?.favoriteFormat || 'papier');
+      setFavoriteGenres(profile?.favoriteGenres || []);
+      setFavoriteTropes(profile?.favoriteTropes || []);
     }
   }, [profile, open]);
 
   const handleSave = async () => {
     if (!db || !user) return;
     setLoading(true);
-    const data = {
-      name, bio, favoriteQuote, favoriteAuthor,
-      annualGoal, monthlyGoal, annualGoalPages, annualAudioGoal,
-      favoriteFormat, favoriteGenres, favoriteTropes,
-      lastUpdated: serverTimestamp()
-    };
     try {
+      const data = {
+        name, bio, favoriteQuote, favoriteAuthor,
+        annualGoal, monthlyGoal, annualGoalPages, annualAudioGoal,
+        favoriteFormat, favoriteGenres, favoriteTropes,
+        lastUpdated: serverTimestamp()
+      };
       await setDoc(doc(db, 'users', user.uid), data, { merge: true });
       toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées avec succès.' });
       setOpen(false);
@@ -387,7 +387,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
           <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
+      <DialogContent className="max-w-4xl glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl h-[90vh]">
         <DialogHeader className="p-8 border-b bg-white/40 shrink-0">
           <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
         </DialogHeader>
