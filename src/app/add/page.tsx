@@ -101,68 +101,74 @@ export default function AddBookPage() {
     setErrorDetails(null);
     setResults([]);
 
+    console.log(`[PLUME] Recherche de : "${search}"`);
+
     try {
-      // Logic multi-sources : Google Books + Open Library
-      const [googleRes, openLibRes] = await Promise.all([
-        fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=10`),
-        fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=10`)
-      ]);
+      let finalResults: any[] = [];
 
-      const googleData = await googleRes.json();
-      const openLibData = await openLibRes.json();
+      // 1. Essai Google Books
+      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=20`;
+      console.log(`[PLUME] Appel Google Books: ${gUrl}`);
+      
+      const gRes = await fetch(gUrl);
+      console.log(`[PLUME] Google Books Status: ${gRes.status}`);
 
-      const merged = new Map<string, any>();
-
-      // Traiter Google Books
-      googleData.items?.forEach((item: any) => {
-        const info = item.volumeInfo;
-        const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
-                     info.industryIdentifiers?.[0]?.identifier || item.id;
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        console.log(`[PLUME] Google Books résultats: ${gData.totalItems || 0}`);
         
-        merged.set(isbn, {
-          id: item.id,
-          title: info.title,
-          subtitle: info.subtitle,
-          author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
-          publisher: info.publisher,
-          cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
-          pages: info.pageCount || 0,
-          description: info.description || "",
-          publicationDate: info.publishedDate,
-          genres: info.categories || [],
-          language: LANGUAGE_MAP[info.language?.toLowerCase()] || info.language?.toUpperCase() || "Français",
-          isbn: isbn === item.id ? "N/A" : isbn
-        });
-      });
-
-      // Traiter Open Library (Fusion intelligente)
-      openLibData.docs?.forEach((doc: any) => {
-        const isbn = doc.isbn?.[0];
-        if (!isbn) return;
-
-        if (merged.has(isbn)) {
-          // Enrichissement si déjà présent
-          const current = merged.get(isbn);
-          if (!current.pages && doc.number_of_pages_median) current.pages = doc.number_of_pages_median;
-          if (!current.publisher && doc.publisher) current.publisher = doc.publisher[0];
-          if (!current.description && doc.first_sentence) current.description = doc.first_sentence[0];
-        } else {
-          merged.set(isbn, {
-            id: doc.key,
-            title: doc.title,
-            author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
-            publisher: doc.publisher?.[0],
-            cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-            pages: doc.number_of_pages_median || 0,
-            publicationDate: doc.first_publish_year?.toString(),
-            genres: doc.subject?.slice(0, 5) || [],
-            language: "Français", // Par défaut si Open Lib
-            isbn: isbn
+        if (gData.items && gData.items.length > 0) {
+          finalResults = gData.items.map((item: any) => {
+            const info = item.volumeInfo;
+            const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
+                         info.industryIdentifiers?.[0]?.identifier || "N/A";
+            return {
+              id: item.id,
+              title: info.title,
+              subtitle: info.subtitle,
+              author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
+              publisher: info.publisher,
+              cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
+              pages: info.pageCount || 0,
+              description: info.description || "",
+              publicationDate: info.publishedDate,
+              genres: info.categories || [],
+              language: LANGUAGE_MAP[info.language?.toLowerCase()] || info.language?.toUpperCase() || "Français",
+              isbn: isbn
+            };
           });
         }
-      });
+      }
 
-      const finalResults = Array.from(merged.values());
+      // 2. Si aucun résultat Google Books ou erreur, essai Open Library
+      if (finalResults.length === 0) {
+        const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=20`;
+        console.log(`[PLUME] Fallback Open Library: ${olUrl}`);
+        
+        const olRes = await fetch(olUrl);
+        console.log(`[PLUME] Open Library Status: ${olRes.status}`);
+
+        if (olRes.ok) {
+          const olData = await olRes.json();
+          console.log(`[PLUME] Open Library résultats: ${olData.numFound || 0}`);
+          
+          if (olData.docs && olData.docs.length > 0) {
+            finalResults = olData.docs.map((doc: any) => ({
+              id: doc.key,
+              title: doc.title,
+              author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
+              publisher: doc.publisher?.[0],
+              cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
+              pages: doc.number_of_pages_median || 0,
+              publicationDate: doc.first_publish_year?.toString(),
+              genres: doc.subject?.slice(0, 5) || [],
+              language: "Français", // Par défaut pour OL si non spécifié
+              isbn: doc.isbn?.[0] || "N/A"
+            }));
+          }
+        }
+      }
+
       if (finalResults.length === 0) {
         setErrorDetails("Aucun livre trouvé. Essayez avec l'ISBN ou un titre plus précis.");
       } else {
@@ -170,7 +176,8 @@ export default function AddBookPage() {
       }
 
     } catch (e) {
-      setErrorDetails("Erreur lors de la recherche multi-sources.");
+      console.error("[PLUME] Erreur lors de la recherche:", e);
+      setErrorDetails("Erreur de connexion aux services de recherche.");
     } finally {
       setIsSearching(false);
     }
