@@ -79,6 +79,19 @@ export interface Book {
   dateAdded?: any;
 }
 
+export const GENRES_LIST = [
+  "Romance", "Dark Romance", "Fantasy", "Romantasy", "Thriller", 
+  "Young Adult", "New Adult", "Sci-Fi", "Historique", "Contemporain", 
+  "Horreur", "Classiques", "Manga", "Non Fiction"
+];
+
+export const TROPES_LIST = [
+  "Enemies to Lovers", "Friends to Lovers", "Slow Burn", "Forced Proximity", 
+  "Found Family", "Grumpy x Sunshine", "Fake Dating", "One Bed", 
+  "Sports Romance", "Touch Her And You Die", "Age Gap", "Soulmates", 
+  "Forbidden Love", "Morally Grey"
+];
+
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {
   papier: { label: "Papier", icon: BookIcon, color: "text-amber-800", badgeClass: "bg-orange-50 text-orange-700 border-orange-100" },
   ebook: { label: "Ebook", icon: Tablet, color: "text-blue-500", badgeClass: "bg-blue-50 text-blue-700 border-blue-100" },
@@ -147,9 +160,9 @@ export default function LibraryPage() {
   const filteredBooks = useMemo(() => {
     return books.filter(book => {
       const b = book as Book;
-      const matchesSearch = String(b.title).toLowerCase().includes(searchQuery.toLowerCase()) || 
-                           String(b.author).toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           String(b.isbn).includes(searchQuery);
+      const matchesSearch = String(b.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           String(b.author || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           String(b.isbn || "").includes(searchQuery);
       if (!matchesSearch) return false;
       
       const matchesFormat = selectedFormat === "all" || b.format === selectedFormat;

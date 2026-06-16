@@ -56,21 +56,23 @@ import {
   RANKS, 
   BookStatus, 
   BookFormat, 
-  RankType 
+  RankType,
+  GENRES_LIST,
+  TROPES_LIST
 } from "@/app/library/page";
 
-const TROPES_SUGGESTIONS = [
-  "Enemies to Lovers", "Friends to Lovers", "Slow Burn", "Forced Proximity", 
-  "Found Family", "Grumpy x Sunshine", "Fake Dating", "One Bed", 
-  "Sports Romance", "Touch Her And You Die", "Age Gap", "Soulmates", 
-  "Forbidden Love", "Morally Grey"
-];
-
-const GENRES_SUGGESTIONS = [
-  "Romance", "Dark Romance", "Fantasy", "Romantasy", "Thriller", 
-  "Young Adult", "New Adult", "Sci-Fi", "Historique", "Contemporain", 
-  "Horreur", "Classiques", "Manga", "Non Fiction"
-];
+const LANGUAGE_MAP: Record<string, string> = {
+  fr: "Français",
+  en: "Anglais",
+  es: "Español",
+  de: "Allemand",
+  it: "Italien",
+  pt: "Portugais",
+  nl: "Néerlandais",
+  ja: "Japonais",
+  ko: "Coréen",
+  zh: "Chinois",
+};
 
 export default function BookDetailPage() {
   const params = useParams();
@@ -107,6 +109,7 @@ export default function BookDetailPage() {
       });
       toast({ title: "Sanctuaire mis à jour", description: "Vos modifications ont été gravées." });
     } catch (e) {
+      console.error("PLUME Firestore Error:", e);
       toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder." });
     } finally {
       setIsSaving(false);
@@ -139,11 +142,12 @@ export default function BookDetailPage() {
         const updates: Partial<Book> = {};
         
         if (!editedData.publisher) updates.publisher = info.publisher;
-        if (!editedData.pages) updates.pages = info.pageCount;
+        if (!editedData.pages && info.pageCount > 0 && info.pageCount < 3000) updates.pages = info.pageCount;
         if (!editedData.description) updates.description = info.description;
         if (!editedData.publicationDate) updates.publicationDate = info.publishedDate;
         if (!editedData.cover) updates.cover = info.imageLinks?.thumbnail?.replace("http://", "https://");
         if (!editedData.genres || editedData.genres.length === 0) updates.genres = info.categories;
+        if (!editedData.language && info.language) updates.language = LANGUAGE_MAP[info.language.toLowerCase()] || info.language.toUpperCase();
         if (!editedData.isbn || editedData.isbn === "N/A") {
           updates.isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
                          info.industryIdentifiers?.[0]?.identifier;
@@ -214,7 +218,7 @@ export default function BookDetailPage() {
       <div className="grid lg:grid-cols-[400px_1fr] gap-16 items-start">
         {/* Sidebar: Media & Quick Status */}
         <div className="space-y-10 flex flex-col items-center lg:items-start">
-          <div className="relative w-full max-w-[320px] aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
+          <div className="relative w-full max-w-[240px] aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
              <Image 
                src={editedData.cover || "https://picsum.photos/seed/placeholder/600/900"} 
                alt={editedData.title || ""} 
@@ -516,9 +520,9 @@ export default function BookDetailPage() {
                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Série</Label>
                            <Input value={editedData.series || ""} onChange={(e) => setEditedData({ ...editedData, series: e.target.value })} className="bg-white/40 border-none h-14 rounded-xl italic text-lg" />
                          </div>
-                         <div className="space-y-3">
-                           <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Tome n°</Label>
-                           <Input value={editedData.volume || ""} onChange={(e) => setEditedData({ ...editedData, volume: e.target.value })} className="bg-white/40 border-none h-14 rounded-xl italic text-lg" />
+                         <div className="space-y-2">
+                            <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Tome n°</Label>
+                            <Input value={editedData.volume || ""} onChange={(e) => setEditedData({ ...editedData, volume: e.target.value })} className="bg-white/40 border-none h-12 rounded-xl italic" />
                          </div>
                        </div>
                        <div className="space-y-3">
@@ -534,6 +538,22 @@ export default function BookDetailPage() {
                             ))}
                          </select>
                        </div>
+                       <div className="space-y-3">
+                         <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Pages (0-3000)</Label>
+                         <Input 
+                           type="number" 
+                           min="0" 
+                           max="3000" 
+                           value={editedData.pages || 0} 
+                           onChange={(e) => {
+                             const val = parseInt(e.target.value);
+                             if (!isNaN(val) && val >= 0 && val <= 3000) {
+                               setEditedData({ ...editedData, pages: val });
+                             }
+                           }} 
+                           className="bg-white/40 border-none h-14 rounded-xl italic text-lg" 
+                         />
+                       </div>
                     </div>
                   </div>
                </div>
@@ -543,7 +563,7 @@ export default function BookDetailPage() {
                  <div className="space-y-8">
                     <p className="text-lg italic text-primary/60 font-headline">Genres suggérés</p>
                     <div className="flex flex-wrap gap-3">
-                      {GENRES_SUGGESTIONS.map(g => (
+                      {GENRES_LIST.map(g => (
                         <button 
                           key={g} 
                           onClick={() => toggleTag("genres", g)}
@@ -560,7 +580,7 @@ export default function BookDetailPage() {
                  <div className="space-y-8">
                     <p className="text-lg italic text-secondary-foreground/60 font-headline">Tropes fétiches</p>
                     <div className="flex flex-wrap gap-3">
-                      {TROPES_SUGGESTIONS.map(t => (
+                      {TROPES_LIST.map(t => (
                         <button 
                           key={t} 
                           onClick={() => toggleTag("tropes", t)}
