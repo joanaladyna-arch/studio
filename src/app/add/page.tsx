@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -16,8 +16,11 @@ import {
   BookOpen,
   CheckCircle2,
   Book as BookIcon,
-  ChevronRight,
-  Info
+  Scan,
+  Camera,
+  Barcode,
+  X,
+  RefreshCw
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +35,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn } from "@/lib/utils";
+import { Html5Qrcode } from "html5-qrcode";
+import { aiCoverScanner } from "@/ai/flows/ai-cover-scanner-flow";
 
 const searchCache: Record<string, any[]> = {};
 
@@ -52,6 +57,13 @@ export default function AddBookPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const lastSearchTime = useRef<number>(0);
+
+  // States for Scanning
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scanMode, setScanMode] = useState<"barcode" | "cover">("barcode");
+  const [isProcessingScan, setIsProcessingScan] = useState(false);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // States for the Add Confirmation Dialog
   const [pendingBook, setPendingBook] = useState<any | null>(null);
@@ -75,59 +87,16 @@ export default function AddBookPage() {
     });
   }, [currentLibrary]);
 
-  const searchOpenLibrary = async (q: string) => {
-    const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=15`;
-    try {
-      const response = await fetch(olUrl);
-      if (!response.ok) throw new Error(`Erreur Source: ${response.status}`);
-      const data = await response.json();
-      return data.docs?.map((doc: any) => ({
-        id: doc.key,
-        title: doc.title || "Titre inconnu",
-        author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
-        publisher: doc.publisher ? doc.publisher[0] : "Éditeur inconnu",
-        cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-        pages: validatePages(doc.number_of_pages_median),
-        description: doc.first_sentence ? doc.first_sentence[0] : "Résumé non disponible.",
-        publicationDate: doc.first_publish_year ? doc.first_publish_year.toString() : "Date inconnue",
-        genres: doc.subject ? doc.subject.slice(0, 5) : [],
-        isbn: doc.isbn ? doc.isbn[0] : "N/A",
-        language: doc.language ? doc.language[0]?.toUpperCase() : "FR",
-      })) || [];
-    } catch (error) {
-      return [];
-    }
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanQuery = queryStr.trim();
-    if (!cleanQuery) return;
-
-    const now = Date.now();
-    if (now - lastSearchTime.current < 1000) return;
-    lastSearchTime.current = now;
-
-    if (searchCache[cleanQuery.toLowerCase()]) {
-      setResults(searchCache[cleanQuery.toLowerCase()]);
-      setErrorDetails(null);
-      return;
-    }
-
-    setIsSearching(true);
-    setResults([]);
-    setErrorDetails(null);
+  const fetchBookDetails = async (query: string, type: "isbn" | "text" = "text") => {
+    const q = type === "isbn" ? `isbn:${query}` : query;
+    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5`;
     
-    const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(cleanQuery)}&maxResults=15`;
-
     try {
       const response = await fetch(googleUrl);
       const data = await response.json();
 
-      let finalResults = [];
-
       if (data.items && data.items.length > 0) {
-        finalResults = data.items.map((item: any) => {
+        return data.items.map((item: any) => {
           const info = item.volumeInfo;
           return {
             id: item.id,
@@ -145,27 +114,135 @@ export default function AddBookPage() {
                   "N/A",
           };
         });
-      } else {
-        finalResults = await searchOpenLibrary(cleanQuery);
       }
-
-      if (finalResults.length === 0) {
-        setErrorDetails("Aucun livre trouvé pour cette recherche.");
-      } else {
-        setResults(finalResults);
-        searchCache[cleanQuery.toLowerCase()] = finalResults;
-      }
-    } catch (error) {
-      const fallbackResults = await searchOpenLibrary(cleanQuery);
-      if (fallbackResults.length > 0) {
-        setResults(fallbackResults);
-      } else {
-        setErrorDetails("Services de recherche momentanément indisponibles.");
-      }
-    } finally {
-      setIsSearching(false);
+      return [];
+    } catch (e) {
+      console.error("Fetch error", e);
+      return [];
     }
   };
+
+  const handleSearch = async (e?: React.FormEvent, customQuery?: string) => {
+    e?.preventDefault();
+    const cleanQuery = (customQuery || queryStr).trim();
+    if (!cleanQuery) return;
+
+    setIsSearching(true);
+    setResults([]);
+    setErrorDetails(null);
+
+    const finalResults = await fetchBookDetails(cleanQuery);
+
+    if (finalResults.length === 0) {
+      setErrorDetails("Aucun livre trouvé pour cette recherche.");
+    } else {
+      setResults(finalResults);
+    }
+    setIsSearching(false);
+  };
+
+  // --- Scanning Logic ---
+
+  useEffect(() => {
+    if (isScannerOpen && scanMode === "barcode") {
+      const html5QrCode = new Html5Qrcode("reader");
+      scannerRef.current = html5QrCode;
+      
+      const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+      
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+          handleBarcodeScanned(decodedText);
+        },
+        () => {}
+      ).catch(err => {
+        console.error("Scanner start error", err);
+        toast({ variant: "destructive", title: "Erreur Caméra", description: "Impossible d'accéder à la caméra." });
+      });
+    }
+
+    if (isScannerOpen && scanMode === "cover") {
+      startCamera();
+    }
+
+    return () => {
+      stopScanner();
+    };
+  }, [isScannerOpen, scanMode]);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+    } catch (err) {
+      console.error("Camera access error", err);
+    }
+  };
+
+  const stopScanner = () => {
+    if (scannerRef.current) {
+      scannerRef.current.stop().catch(e => console.error(e));
+      scannerRef.current = null;
+    }
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach(track => track.stop());
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  const handleBarcodeScanned = async (isbn: string) => {
+    stopScanner();
+    setIsScannerOpen(false);
+    setIsProcessingScan(true);
+    
+    toast({ title: "ISBN Detecté", description: `Recherche de l'ISBN : ${isbn}` });
+    
+    const results = await fetchBookDetails(isbn, "isbn");
+    if (results.length > 0) {
+      handleOpenAddDialog(results[0]);
+    } else {
+      toast({ variant: "destructive", title: "Introuvable", description: "Ce code-barres n'a pas pu être identifié." });
+    }
+    setIsProcessingScan(false);
+  };
+
+  const captureCover = async () => {
+    if (!videoRef.current) return;
+    
+    setIsProcessingScan(true);
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx?.drawImage(videoRef.current, 0, 0);
+    
+    const dataUri = canvas.toDataURL("image/jpeg");
+    
+    try {
+      const analysis = await aiCoverScanner({ photoDataUri: dataUri });
+      toast({ title: "Couverture Identifiée", description: `${analysis.title} par ${analysis.author}` });
+      
+      const searchResults = await fetchBookDetails(`${analysis.title} ${analysis.author}`);
+      if (searchResults.length > 0) {
+        setIsScannerOpen(false);
+        stopScanner();
+        handleOpenAddDialog(searchResults[0]);
+      } else {
+        toast({ variant: "destructive", title: "Recherche infructueuse", description: "L'IA a identifié le titre mais aucune fiche n'a été trouvée." });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Erreur Scan", description: "L'IA n'a pas pu lire la couverture." });
+    } finally {
+      setIsProcessingScan(false);
+    }
+  };
+
+  // --- Add Logic ---
 
   const handleOpenAddDialog = (book: any) => {
     setPendingBook(book);
@@ -193,7 +270,6 @@ export default function AddBookPage() {
       progress: selectedStatus === 'read' ? 100 : 0,
       pagesRead: 0,
       duration: 0,
-      narrator: "",
       createdAt: serverTimestamp(),
     };
 
@@ -228,28 +304,41 @@ export default function AddBookPage() {
         </div>
         <h1 className="text-5xl font-headline italic tracking-tight">Nouvelle Pépite</h1>
         <p className="text-primary/60 italic font-medium max-w-md mx-auto">
-          Recherchez votre prochaine lecture par titre, auteur ou ISBN.
+          Recherchez ou scannez votre prochaine lecture.
         </p>
       </header>
 
-      <form onSubmit={handleSearch} className="max-w-2xl mx-auto flex gap-3 px-4">
-        <div className="relative flex-1 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40 group-focus-within:text-primary transition-colors" />
-          <Input 
-            placeholder="Titre, auteur ou ISBN..." 
-            value={queryStr}
-            onChange={(e) => setQueryStr(e.target.value)}
-            className="pl-12 h-14 bg-white/60 border-white shadow-sm rounded-2xl text-lg italic focus-visible:ring-primary/20"
-          />
+      <div className="max-w-2xl mx-auto space-y-4 px-4">
+        <form onSubmit={(e) => handleSearch(e)} className="flex gap-3">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40 group-focus-within:text-primary transition-colors" />
+            <Input 
+              placeholder="Titre, auteur ou ISBN..." 
+              value={queryStr}
+              onChange={(e) => setQueryStr(e.target.value)}
+              className="pl-12 h-14 bg-white/60 border-white shadow-sm rounded-2xl text-lg italic focus-visible:ring-primary/20"
+            />
+          </div>
+          <Button 
+            type="submit" 
+            className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 font-headline italic text-lg min-w-[140px]" 
+            disabled={isSearching}
+          >
+            {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Chercher"}
+          </Button>
+        </form>
+        
+        <div className="flex justify-center">
+          <Button 
+            variant="outline"
+            onClick={() => setIsScannerOpen(true)}
+            className="h-14 w-full rounded-2xl border-primary/20 bg-white/40 font-headline italic text-lg gap-3 hover:bg-primary/5 transition-colors"
+          >
+            <Scan className="h-5 w-5 text-primary" />
+            Scanner un livre
+          </Button>
         </div>
-        <Button 
-          type="submit" 
-          className="h-14 px-8 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/10 font-headline italic text-lg min-w-[140px]" 
-          disabled={isSearching}
-        >
-          {isSearching ? <Loader2 className="h-5 w-5 animate-spin" /> : "Chercher"}
-        </Button>
-      </form>
+      </div>
 
       <div className="max-w-4xl mx-auto space-y-6 px-4">
         {errorDetails && (
@@ -258,6 +347,13 @@ export default function AddBookPage() {
             <AlertTitle className="font-headline italic">Information</AlertTitle>
             <AlertDescription className="text-xs italic">{errorDetails}</AlertDescription>
           </Alert>
+        )}
+
+        {isProcessingScan && (
+          <div className="py-12 text-center space-y-4">
+            <RefreshCw className="h-12 w-12 mx-auto text-primary animate-spin" />
+            <p className="font-headline italic text-primary/60">Analyse en cours par Plume...</p>
+          </div>
         )}
 
         {results.length > 0 ? (
@@ -281,14 +377,6 @@ export default function AddBookPage() {
                   
                   <div className="p-6 flex flex-col flex-1 gap-4">
                     <div className="space-y-2">
-                      <div className="flex justify-between items-start">
-                        {existingBook && (
-                          <Badge className={cn("text-[8px] font-bold px-2 py-0.5 rounded-full uppercase border", FORMATS[existingBook.format || 'papier'].badgeClass)}>
-                             {existingBook.format === 'audio' ? <BookIcon className="h-2 w-2 mr-1" /> : <BookIcon className="h-2 w-2 mr-1" />}
-                             {FORMATS[existingBook.format || 'papier'].label}
-                          </Badge>
-                        )}
-                      </div>
                       <h3 className="text-2xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
                       <div className="space-y-0.5">
                         <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{book.author}</p>
@@ -307,14 +395,6 @@ export default function AddBookPage() {
                         {book.description?.replace(/<[^>]*>?/gm, '')}
                       </p>
                     </ScrollArea>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {book.genres?.slice(0, 3).map((g: string) => (
-                        <Badge key={g} variant="secondary" className="bg-primary/5 text-primary border-none text-[8px] font-bold uppercase">
-                          {g}
-                        </Badge>
-                      ))}
-                    </div>
 
                     <div className="pt-2 flex justify-end">
                       {existingBook ? (
@@ -337,7 +417,7 @@ export default function AddBookPage() {
               </Card>
             );
           })
-        ) : !isSearching && !errorDetails && (
+        ) : !isSearching && !errorDetails && !isProcessingScan && (
           <div className="py-24 text-center space-y-6">
             <BookPlus className="h-20 w-20 mx-auto text-primary/10 animate-pulse" />
             <div className="space-y-2">
@@ -347,6 +427,70 @@ export default function AddBookPage() {
           </div>
         )}
       </div>
+
+      {/* Scanner Dialog */}
+      <Dialog open={isScannerOpen} onOpenChange={(o) => { if (!o) stopScanner(); setIsScannerOpen(o); }}>
+        <DialogContent className="glass-card border-none max-w-lg p-0 overflow-hidden">
+          <DialogHeader className="p-8 border-b border-primary/5 bg-white/40 flex flex-row items-center justify-between">
+            <DialogTitle className="font-headline text-3xl italic">Scanner une pépite</DialogTitle>
+            <Button variant="ghost" size="icon" onClick={() => setIsScannerOpen(false)}><X className="h-6 w-6" /></Button>
+          </DialogHeader>
+
+          <div className="p-0">
+            <div className="bg-slate-900 aspect-video relative flex items-center justify-center overflow-hidden">
+               {scanMode === "barcode" ? (
+                 <div id="reader" className="w-full h-full"></div>
+               ) : (
+                 <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+               )}
+               
+               <div className="absolute inset-0 pointer-events-none border-[40px] border-black/40">
+                  <div className="w-full h-full border-2 border-white/60 border-dashed rounded-xl" />
+               </div>
+
+               {isProcessingScan && (
+                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-4 text-white p-8 text-center">
+                    <Loader2 className="h-10 w-10 animate-spin" />
+                    <p className="font-headline italic">Plume analyse la couverture...</p>
+                  </div>
+               )}
+            </div>
+
+            <div className="p-8 space-y-6">
+               <div className="flex p-1 bg-primary/5 rounded-2xl gap-2">
+                  <Button 
+                    variant={scanMode === 'barcode' ? 'default' : 'ghost'} 
+                    onClick={() => setScanMode('barcode')}
+                    className="flex-1 rounded-xl h-12 italic font-headline gap-2"
+                  >
+                    <Barcode className="h-4 w-4" /> Code-Barres
+                  </Button>
+                  <Button 
+                    variant={scanMode === 'cover' ? 'default' : 'ghost'} 
+                    onClick={() => setScanMode('cover')}
+                    className="flex-1 rounded-xl h-12 italic font-headline gap-2"
+                  >
+                    <Camera className="h-4 w-4" /> Couverture
+                  </Button>
+               </div>
+
+               {scanMode === "cover" && (
+                 <Button 
+                   onClick={captureCover} 
+                   disabled={isProcessingScan}
+                   className="w-full h-16 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 font-headline italic text-xl"
+                 >
+                   Identifier la couverture
+                 </Button>
+               )}
+               
+               <p className="text-center text-[10px] uppercase font-bold tracking-widest opacity-40 italic">
+                 {scanMode === 'barcode' ? "Placez le code-barres ISBN dans le cadre." : "Prenez une photo nette de la couverture."}
+               </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Confirmation Dialog */}
       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
@@ -432,3 +576,4 @@ export default function AddBookPage() {
     </div>
   );
 }
+
