@@ -24,7 +24,11 @@ import {
   BookMarked,
   Target,
   FileText,
-  ChevronRight
+  ChevronRight,
+  Shield,
+  Medal,
+  Award,
+  Heart
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -46,6 +50,13 @@ const SPINE_COLORS = [
   'bg-purple-100 text-purple-700 border-purple-200',
   'bg-cyan-100 text-cyan-700 border-cyan-200',
   'bg-orange-100 text-orange-700 border-orange-200',
+];
+
+const BADGE_LEVELS = [
+  { label: "Bronze", min: 5, color: "text-amber-600", bg: "bg-amber-100" },
+  { label: "Silver", min: 15, color: "text-slate-400", bg: "bg-slate-100" },
+  { label: "Gold", min: 30, color: "text-yellow-500", bg: "bg-yellow-100" },
+  { label: "Diamond", min: 50, color: "text-cyan-400", bg: "bg-cyan-100" },
 ];
 
 export default function ProfilePage() {
@@ -79,8 +90,17 @@ export default function ProfilePage() {
     const palBooks = allBooks.filter(b => b.status === 'pal');
     
     const pagesRead = readBooks.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
-    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? 10 : 0), 0);
+    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (b.pagesRead || 0) / 50 : 0), 0);
     
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const monthlyRead = readBooks.filter(b => {
+      if (!b.dateAdded) return false;
+      const d = b.dateAdded.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
     const goals = {
       annual: profile?.annualGoal || 24,
       monthly: profile?.monthlyGoal || 2,
@@ -88,15 +108,30 @@ export default function ProfilePage() {
       audio: profile?.annualAudioGoal || 100
     };
 
+    // Badges calculation
+    const genreCounts: Record<string, number> = {};
+    const tropeCounts: Record<string, number> = {};
+    readBooks.forEach(b => {
+      b.genres?.forEach(g => genreCounts[g] = (genreCounts[g] || 0) + 1);
+      b.tropes?.forEach(t => tropeCounts[t] = (tropeCounts[t] || 0) + 1);
+    });
+
+    const unlockedGenres = Object.entries(genreCounts).filter(([_, count]) => count >= 5);
+    const unlockedTropes = Object.entries(tropeCounts).filter(([_, count]) => count >= 5);
+
     return {
       readCount: readBooks.length,
+      monthlyReadCount: monthlyRead.length,
       palBooks,
       pagesRead,
-      audioHours,
+      audioHours: Math.round(audioHours),
       goals,
       annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
-      pagesProgress: Math.min(100, Math.round((pagesRead / goals.pages) * 100)),
-      audioProgress: Math.min(100, Math.round((audioHours / goals.audio) * 100))
+      monthlyProgress: Math.min(100, Math.round((monthlyRead.length / goals.monthly) * 100)),
+      pagesProgress: Math.min(100, Math.round((pagesRead / (goals.pages || 1)) * 100)),
+      audioProgress: Math.min(100, Math.round((audioHours / (goals.audio || 1)) * 100)),
+      unlockedGenres,
+      unlockedTropes
     };
   }, [booksRaw, profile]);
 
@@ -120,9 +155,9 @@ export default function ProfilePage() {
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, 'users', user.uid), { avatarUrl: url });
       if (auth?.currentUser) await updateProfile(auth.currentUser, { photoURL: url });
-      toast({ title: 'Photo mise à jour' });
+      toast({ title: 'Photo mise à jour', description: 'Votre nouvelle identité est gravée.' });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Erreur upload' });
+      toast({ variant: 'destructive', title: 'Erreur d\'importation' });
     } finally {
       setUploading(false);
     }
@@ -139,43 +174,43 @@ export default function ProfilePage() {
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid}/200/200`;
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-700 pb-20">
+    <div className="space-y-16 animate-paper pb-20">
       <header className="flex flex-col md:flex-row justify-between items-center pt-8 gap-10">
         <div className="flex flex-col md:flex-row items-center gap-8">
           <div className="relative group">
-            <Avatar className="h-40 w-40 border-4 border-white shadow-2xl overflow-hidden">
+            <Avatar className="h-44 w-44 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
               <AvatarImage src={userPhoto} className="object-cover" />
               <AvatarFallback className="font-headline italic text-3xl">PL</AvatarFallback>
             </Avatar>
             <button 
               onClick={() => fileInputRef.current?.click()} 
-              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
+              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-10"
               disabled={uploading}
             >
-              {uploading ? <Loader2 className="h-6 w-6 text-white animate-spin" /> : <Camera className="h-6 w-6 text-white" />}
+              {uploading ? <Loader2 className="h-8 w-8 text-white animate-spin" /> : <Camera className="h-8 w-8 text-white" />}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-            <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white rounded-full p-2.5 border-4 border-white">
-              <Crown className="h-6 w-6" />
+            <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white rounded-full p-3 border-4 border-white shadow-xl z-20">
+              <Crown className="h-7 w-7" />
             </div>
           </div>
           <div className="space-y-3 text-center md:text-left">
-            <h1 className="text-5xl font-headline italic tracking-tight">{userName}</h1>
-            {profile?.bio && <p className="text-muted-foreground italic text-lg max-w-xl">{profile.bio}</p>}
+            <h1 className="text-6xl font-headline italic tracking-tight">{userName}</h1>
+            {profile?.bio && <p className="text-muted-foreground italic text-xl max-w-xl leading-relaxed">{profile.bio}</p>}
           </div>
         </div>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 w-full md:w-auto">
             <EditProfileDialog profile={profile} />
-            <Button variant="ghost" onClick={handleLogout} className="rounded-full h-14 px-8 text-destructive font-headline italic">
+            <Button variant="ghost" onClick={handleLogout} className="rounded-full h-14 px-8 text-destructive hover:bg-rose-50 font-headline italic text-lg transition-colors">
                 <LogOut className="h-5 w-5 mr-3" /> Déconnexion
             </Button>
         </div>
       </header>
 
       {profile?.favoriteQuote && (
-        <Card className="glass-card border-none bg-white/40 p-10 text-center space-y-4">
-          <p className="text-2xl font-headline italic text-primary leading-relaxed">"{profile.favoriteQuote}"</p>
-          {profile.favoriteAuthor && <p className="text-[10px] uppercase font-bold tracking-widest opacity-40">— {profile.favoriteAuthor}</p>}
+        <Card className="glass-card border-none bg-white/40 p-12 text-center space-y-6 shadow-sm">
+          <p className="text-3xl font-headline italic text-primary leading-relaxed">"{profile.favoriteQuote}"</p>
+          {profile.favoriteAuthor && <p className="text-[10px] uppercase font-bold tracking-[0.5em] opacity-40">— {profile.favoriteAuthor}</p>}
         </Card>
       )}
 
@@ -183,24 +218,74 @@ export default function ProfilePage() {
         <h2 className="text-4xl font-headline flex items-center gap-4 italic">
           <Target className="h-8 w-8 text-primary/40" /> Mes Défis
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {[
-            { label: "Annuel", icon: Trophy, value: `${stats.readCount} / ${stats.goals.annual}`, progress: stats.annualProgress, color: "text-amber-500" },
-            { label: "Pages", icon: FileText, value: `${stats.pagesRead.toLocaleString()} / ${stats.goals.pages.toLocaleString()}`, progress: stats.pagesProgress, color: "text-emerald-500" },
-            { label: "Audio", icon: Headphones, value: `${stats.audioHours}h / ${stats.goals.audio}h`, progress: stats.audioProgress, color: "text-purple-400" }
+            { label: "Annuel", icon: Trophy, value: `${stats.readCount} / ${stats.goals.annual}`, progress: stats.annualProgress, color: "text-amber-500", bg: "bg-amber-50" },
+            { label: "Mensuel", icon: Target, value: `${stats.monthlyReadCount} / ${stats.goals.monthly}`, progress: stats.monthlyProgress, color: "text-blue-500", bg: "bg-blue-50" },
+            { label: "Pages", icon: FileText, value: `${stats.pagesRead.toLocaleString()}`, progress: stats.pagesProgress, color: "text-emerald-500", bg: "bg-emerald-50" },
+            { label: "Audio", icon: Headphones, value: `${stats.audioHours}h`, progress: stats.audioProgress, color: "text-purple-400", bg: "bg-purple-50" }
           ].map((item, i) => (
-            <Card key={i} className="glass-card p-8 border-none bg-white/60 space-y-6">
+            <Card key={i} className="glass-card p-8 border-none bg-white/60 space-y-6 hover:shadow-lg transition-all duration-500">
               <div className="flex justify-between items-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">{item.label}</p>
-                <item.icon className={cn("h-6 w-6", item.color)} />
+                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 italic">{item.label}</p>
+                <item.icon className={cn("h-7 w-7", item.color)} />
               </div>
               <p className="text-3xl font-headline italic">{item.value}</p>
               <div className="space-y-3">
-                <Progress value={item.progress} className="h-2 bg-primary/5" />
-                <p className={cn("text-[10px] font-bold", item.color)}>{item.progress}% atteint</p>
+                <Progress value={item.progress} className={cn("h-2", item.bg)} />
+                <p className={cn("text-[10px] font-bold uppercase", item.color)}>{item.progress}% atteint</p>
               </div>
             </Card>
           ))}
+        </div>
+      </section>
+
+      <section className="space-y-10">
+        <div className="flex items-center justify-between">
+          <h2 className="text-4xl font-headline italic flex items-center gap-4">
+            <Award className="h-8 w-8 text-primary/40" /> Badges & Médailles
+          </h2>
+          <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
+            <Link href="/profile/badges">Voir tous mes exploits <ChevronRight className="ml-2 h-5 w-5" /></Link>
+          </Button>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <Card className="glass-card border-none bg-white/40 p-8 space-y-6">
+            <h3 className="font-headline italic text-2xl flex items-center gap-3">
+              <Shield className="h-6 w-6 text-primary/40" /> Genres de Prédilection
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {stats.unlockedGenres.length > 0 ? (
+                stats.unlockedGenres.slice(0, 6).map(([genre, count]) => (
+                  <div key={genre} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-primary/5">
+                    <Shield className="h-8 w-8 text-amber-500" />
+                    <span className="text-[10px] font-bold uppercase text-center truncate w-full">{genre}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="italic text-muted-foreground text-sm">Continuez à lire pour débloquer vos premiers badges de genre.</p>
+              )}
+            </div>
+          </Card>
+
+          <Card className="glass-card border-none bg-white/40 p-8 space-y-6">
+            <h3 className="font-headline italic text-2xl flex items-center gap-3">
+              <Medal className="h-6 w-6 text-secondary/60" /> Tropes Favoris
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {stats.unlockedTropes.length > 0 ? (
+                stats.unlockedTropes.slice(0, 6).map(([trope, count]) => (
+                  <div key={trope} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-secondary/5">
+                    <Medal className="h-8 w-8 text-secondary" />
+                    <span className="text-[10px] font-bold uppercase text-center truncate w-full">{trope}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="italic text-muted-foreground text-sm">Vos thématiques récurrentes apparaîtront ici sous forme de médailles.</p>
+              )}
+            </div>
+          </Card>
         </div>
       </section>
 
@@ -283,7 +368,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
     };
     try {
       await setDoc(doc(db, 'users', user.uid), data, { merge: true });
-      toast({ title: 'Préférences gravées' });
+      toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées avec succès.' });
       setOpen(false);
     } catch (e) {
       toast({ variant: 'destructive', title: 'Erreur de sauvegarde' });
@@ -299,65 +384,119 @@ function EditProfileDialog({ profile }: { profile: any }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-16 px-12 rounded-[2rem] bg-primary text-white font-headline italic text-2xl shadow-xl">
+        <Button className="h-16 px-12 rounded-[2rem] bg-primary text-white font-headline italic text-2xl shadow-xl transition-transform active:scale-95">
           <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95">
+      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl">
         <DialogHeader className="p-10 border-b bg-white/40 shrink-0">
           <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1">
           <div className="p-10 space-y-16 pb-20">
             <div className="space-y-10">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary/60 border-b pb-4">Informations Personnelles</h3>
-              <div className="grid gap-6">
-                <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Prénom / Nom</Label><Input value={name} onChange={(e) => setName(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg" /></div>
-                <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bio de Lectrice</Label><Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4" /></div>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Citation Favorite</Label><Input value={favoriteQuote} onChange={(e) => setFavoriteQuote(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic" /></div>
-                  <div className="space-y-3"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Auteur Préféré</Label><Input value={favoriteAuthor} onChange={(e) => setFavoriteAuthor(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic" /></div>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Informations Personnelles</h3>
+              <div className="grid gap-8">
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Prénom ou Pseudo</Label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg focus-visible:ring-1 focus-visible:ring-primary/20" />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bio de Lectrice</Label>
+                  <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[120px] rounded-2xl bg-white/40 border-none italic p-6 text-lg focus-visible:ring-1 focus-visible:ring-primary/20 resize-none" />
+                </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Citation Favorite</Label>
+                    <Input value={favoriteQuote} onChange={(e) => setFavoriteQuote(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Auteur de Référence</Label>
+                    <Input value={favoriteAuthor} onChange={(e) => setFavoriteAuthor(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-10">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary/60 border-b pb-4">Mes Défis</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Mes Défis de Lecture</h3>
               <div className="grid md:grid-cols-2 gap-12">
-                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Livres / An : <span className="text-primary italic ml-2">{annualGoal}</span></Label><Slider value={[annualGoal]} min={1} max={500} onValueChange={(v) => setAnnualGoal(v[0])} /></div>
-                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Livres / Mois : <span className="text-primary italic ml-2">{monthlyGoal}</span></Label><Slider value={[monthlyGoal]} min={1} max={100} onValueChange={(v) => setMonthlyGoal(v[0])} /></div>
-                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Pages / An : <span className="text-primary italic ml-2">{annualGoalPages.toLocaleString()}</span></Label><Slider value={[annualGoalPages]} min={100} max={100000} step={100} onValueChange={(v) => setAnnualGoalPages(v[0])} /></div>
-                <div className="space-y-6"><Label className="text-[10px] uppercase font-bold opacity-60">Heures Audio / An : <span className="text-primary italic ml-2">{annualAudioGoal}h</span></Label><Slider value={[annualAudioGoal]} min={1} max={1000} onValueChange={(v) => setAnnualAudioGoal(v[0])} /></div>
+                <div className="space-y-6">
+                  <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
+                    Livres / An <span className="text-primary italic font-headline text-lg">{annualGoal}</span>
+                  </Label>
+                  <Slider value={[annualGoal]} min={1} max={500} onValueChange={(v) => setAnnualGoal(v[0])} />
+                </div>
+                <div className="space-y-6">
+                  <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
+                    Livres / Mois <span className="text-primary italic font-headline text-lg">{monthlyGoal}</span>
+                  </Label>
+                  <Slider value={[monthlyGoal]} min={1} max={50} onValueChange={(v) => setMonthlyGoal(v[0])} />
+                </div>
+                <div className="space-y-6">
+                  <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
+                    Pages / An <span className="text-primary italic font-headline text-lg">{annualGoalPages.toLocaleString()}</span>
+                  </Label>
+                  <Slider value={[annualGoalPages]} min={1000} max={100000} step={1000} onValueChange={(v) => setAnnualGoalPages(v[0])} />
+                </div>
+                <div className="space-y-6">
+                  <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
+                    Audio / An (heures) <span className="text-primary italic font-headline text-lg">{annualAudioGoal}h</span>
+                  </Label>
+                  <Slider value={[annualAudioGoal]} min={1} max={1000} onValueChange={(v) => setAnnualAudioGoal(v[0])} />
+                </div>
               </div>
             </div>
 
             <div className="space-y-10">
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-primary/60 border-b pb-4">Préférences Littéraires</h3>
-              <div className="space-y-8">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Mon Univers Littéraire</h3>
+              <div className="space-y-10">
                 <div className="space-y-4">
                   <Label className="text-[10px] uppercase font-bold opacity-60">Format Préféré</Label>
                   <Select value={favoriteFormat} onValueChange={(v) => setFavoriteFormat(v as BookFormat)}>
-                    <SelectTrigger className="h-14 rounded-2xl bg-white/40 border-none italic text-lg"><SelectValue placeholder="Choisir un format" /></SelectTrigger>
-                    <SelectContent>{Object.entries(FORMATS).map(([k,v]) => (<SelectItem key={k} value={k} className="italic font-headline">{v.label}</SelectItem>))}</SelectContent>
+                    <SelectTrigger className="h-14 rounded-2xl bg-white/40 border-none italic text-lg focus:ring-1 focus:ring-primary/20">
+                      <SelectValue placeholder="Choisir un format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(FORMATS).map(([k,v]) => (
+                        <SelectItem key={k} value={k} className="italic font-headline text-lg">{v.label}</SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-bold opacity-60">Genres Préférés</Label>
+                
+                <div className="space-y-6">
+                  <Label className="text-[10px] uppercase font-bold opacity-60">Genres de Cœur</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {GENRES_LIST.map(g => (
-                      <div key={g} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteGenres, setFavoriteGenres, g)}>
-                        <Checkbox checked={favoriteGenres.includes(g)} onCheckedChange={() => toggle(favoriteGenres, setFavoriteGenres, g)} /> 
+                      <div 
+                        key={g} 
+                        className={cn(
+                          "flex items-center space-x-3 p-4 rounded-2xl cursor-pointer transition-all border",
+                          favoriteGenres.includes(g) ? "bg-primary/10 border-primary/20 shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60"
+                        )} 
+                        onClick={() => toggle(favoriteGenres, setFavoriteGenres, g)}
+                      >
+                        <Checkbox checked={favoriteGenres.includes(g)} className="border-primary/20 data-[state=checked]:bg-primary" /> 
                         <span className="italic font-headline text-sm">{g}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="space-y-4">
-                  <Label className="text-[10px] uppercase font-bold opacity-60">Tropes Préférés</Label>
+
+                <div className="space-y-6">
+                  <Label className="text-[10px] uppercase font-bold opacity-60">Tropes de Cœur</Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {TROPES_LIST.map(t => (
-                      <div key={t} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl cursor-pointer hover:bg-white/60 transition-colors" onClick={() => toggle(favoriteTropes, setFavoriteTropes, t)}>
-                        <Checkbox checked={favoriteTropes.includes(t)} onCheckedChange={() => toggle(favoriteTropes, setFavoriteTropes, t)} /> 
+                      <div 
+                        key={t} 
+                        className={cn(
+                          "flex items-center space-x-3 p-4 rounded-2xl cursor-pointer transition-all border",
+                          favoriteTropes.includes(t) ? "bg-secondary/10 border-secondary/20 shadow-sm" : "bg-white/40 border-transparent hover:bg-white/60"
+                        )} 
+                        onClick={() => toggle(favoriteTropes, setFavoriteTropes, t)}
+                      >
+                        <Checkbox checked={favoriteTropes.includes(t)} className="border-secondary/20 data-[state=checked]:bg-secondary" /> 
                         <span className="italic font-headline text-sm">{t}</span>
                       </div>
                     ))}
@@ -368,9 +507,9 @@ function EditProfileDialog({ profile }: { profile: any }) {
           </div>
         </ScrollArea>
         <DialogFooter className="p-10 border-t bg-white/60 shrink-0">
-          <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl">Annuler</Button>
-          <Button onClick={handleSave} disabled={loading} className="h-16 px-16 rounded-[2rem] bg-primary text-2xl font-headline italic">
-            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Graver mes préférences"}
+          <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl px-8">Annuler</Button>
+          <Button onClick={handleSave} disabled={loading} className="h-16 px-16 rounded-[2rem] bg-primary text-2xl font-headline italic shadow-xl shadow-primary/20">
+            {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : "Graver mon identité"}
           </Button>
         </DialogFooter>
       </DialogContent>
