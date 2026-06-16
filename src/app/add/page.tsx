@@ -15,7 +15,9 @@ import {
   Hash,
   BookOpen,
   CheckCircle2,
-  Book as BookIcon
+  Book as BookIcon,
+  ChevronRight,
+  Info
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,18 +29,28 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
+import { cn } from "@/lib/utils";
 
 const searchCache: Record<string, any[]> = {};
 
 export default function AddBookPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
+  
   const [queryStr, setQueryStr] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
   const lastSearchTime = useRef<number>(0);
-  const { toast } = useToast();
+
+  // States for the Add Confirmation Dialog
+  const [pendingBook, setPendingBook] = useState<any | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
+  const [selectedFormat, setSelectedFormat] = useState<BookFormat>("papier");
+  const [isAdding, setIsAdding] = useState(false);
 
   const libraryQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -47,11 +59,13 @@ export default function AddBookPage() {
 
   const { data: currentLibrary = [] } = useCollection(libraryQuery);
 
-  const isAlreadyInLibrary = useCallback((book: any) => {
-    return currentLibrary.find(b => 
-      (b.isbn && b.isbn === book.isbn) || 
-      (b.title?.toLowerCase() === book.title?.toLowerCase() && b.author?.toLowerCase() === book.author?.toLowerCase())
-    );
+  const findExistingBook = useCallback((book: any) => {
+    return currentLibrary.find(b => {
+      const sameIsbn = book.isbn !== "N/A" && b.isbn === book.isbn;
+      const sameTitleAuthor = b.title?.toLowerCase() === book.title?.toLowerCase() && 
+                              b.author?.toLowerCase() === book.author?.toLowerCase();
+      return sameIsbn || sameTitleAuthor;
+    });
   }, [currentLibrary]);
 
   const searchOpenLibrary = async (q: string) => {
@@ -146,31 +160,30 @@ export default function AddBookPage() {
     }
   };
 
-  const addBook = async (book: any) => {
-    if (!db || !user) {
-      toast({ variant: "destructive", title: "Action impossible", description: "Veuillez vous reconnecter." });
-      return;
-    }
+  const handleOpenAddDialog = (book: any) => {
+    setPendingBook(book);
+    setSelectedStatus("pal");
+    setSelectedFormat("papier");
+  };
 
-    if (isAlreadyInLibrary(book)) {
-      toast({ title: "Déjà présent", description: "Ce livre est déjà dans votre bibliothèque." });
-      return;
-    }
+  const confirmAdd = async () => {
+    if (!db || !user || !pendingBook) return;
 
+    setIsAdding(true);
     const bookData = {
-      title: book.title,
-      author: book.author,
-      publisher: book.publisher,
-      isbn: book.isbn,
-      publicationDate: book.publicationDate,
-      cover: book.cover || "https://picsum.photos/seed/placeholder/200/300",
-      description: book.description,
-      genres: book.genres,
-      pages: book.pages,
-      status: "pal",
-      format: "papier",
+      title: pendingBook.title,
+      author: pendingBook.author,
+      publisher: pendingBook.publisher,
+      isbn: pendingBook.isbn,
+      publicationDate: pendingBook.publicationDate,
+      cover: pendingBook.cover || "https://picsum.photos/seed/placeholder/200/300",
+      description: pendingBook.description,
+      genres: pendingBook.genres,
+      pages: pendingBook.pages,
+      status: selectedStatus,
+      format: selectedFormat,
       favorite: false,
-      progress: 0,
+      progress: selectedStatus === 'read' ? 100 : 0,
       pagesRead: 0,
       duration: 0,
       narrator: "",
@@ -183,8 +196,9 @@ export default function AddBookPage() {
       .then(() => {
         toast({
           title: "Livre ajouté !",
-          description: `${book.title} est maintenant dans votre bibliothèque.`,
+          description: `${pendingBook.title} est maintenant dans votre bibliothèque.`,
         });
+        setPendingBook(null);
       })
       .catch(async () => {
         const permissionError = new FirestorePermissionError({
@@ -193,6 +207,9 @@ export default function AddBookPage() {
           requestResourceData: bookData,
         });
         errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => {
+        setIsAdding(false);
       });
   };
 
@@ -238,7 +255,7 @@ export default function AddBookPage() {
 
         {results.length > 0 ? (
           results.map((book) => {
-            const existingBook = isAlreadyInLibrary(book);
+            const existingBook = findExistingBook(book);
             return (
               <Card key={book.id} className="glass-card overflow-hidden hover:bg-white/80 transition-all duration-500 group border-none">
                 <CardContent className="p-0 flex flex-col sm:flex-row">
@@ -258,9 +275,12 @@ export default function AddBookPage() {
                   <div className="p-6 flex flex-col flex-1 gap-4">
                     <div className="space-y-2">
                       <div className="flex justify-between items-start">
-                        <Badge className="bg-orange-50 text-orange-700 border-orange-100 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase">
-                           <BookIcon className="h-2 w-2 mr-1" /> Papier
-                        </Badge>
+                        {existingBook && (
+                          <Badge className={cn("text-[8px] font-bold px-2 py-0.5 rounded-full uppercase border", FORMATS[existingBook.format || 'papier'].badgeClass)}>
+                             {existingBook.format === 'audio' ? <BookIcon className="h-2 w-2 mr-1" /> : <BookIcon className="h-2 w-2 mr-1" />}
+                             {FORMATS[existingBook.format || 'papier'].label}
+                          </Badge>
+                        )}
                       </div>
                       <h3 className="text-2xl font-headline italic leading-tight line-clamp-2">{book.title}</h3>
                       <div className="space-y-0.5">
@@ -293,11 +313,11 @@ export default function AddBookPage() {
                       {existingBook ? (
                         <div className="flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 italic font-medium text-sm">
                           <CheckCircle2 className="h-4 w-4" />
-                          Déjà en bibliothèque
+                          Déjà en bibliothèque ({STATUSES[existingBook.status]?.label})
                         </div>
                       ) : (
                         <Button 
-                          onClick={() => addBook(book)} 
+                          onClick={() => handleOpenAddDialog(book)} 
                           className="rounded-xl bg-primary hover:bg-primary/90 shadow-md h-12 px-8 font-headline italic text-sm flex gap-2 group-hover:scale-105 transition-transform"
                         >
                           <Plus className="h-4 w-4" />
@@ -320,6 +340,89 @@ export default function AddBookPage() {
           </div>
         )}
       </div>
+
+      {/* Add Confirmation Dialog */}
+      <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
+        <DialogContent className="glass-card border-none max-w-lg p-0 overflow-hidden">
+          <DialogHeader className="p-8 border-b border-primary/5 bg-white/40">
+            <DialogTitle className="font-headline text-3xl italic">Ajouter à ma bibliothèque</DialogTitle>
+          </DialogHeader>
+          
+          <div className="p-8 space-y-8">
+            <div className="flex gap-6 items-start">
+               <div className="relative h-32 w-24 shrink-0 rounded-xl overflow-hidden shadow-lg">
+                  <Image src={pendingBook?.cover || "https://picsum.photos/seed/placeholder/200/300"} alt={pendingBook?.title || ""} fill className="object-cover" sizes="100px" />
+               </div>
+               <div className="space-y-2">
+                 <h3 className="font-headline italic text-xl leading-tight">{pendingBook?.title}</h3>
+                 <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{pendingBook?.author}</p>
+                 <div className="pt-2">
+                   <Badge variant="outline" className="border-primary/20 text-primary/60 italic">{pendingBook?.publisher}</Badge>
+                 </div>
+               </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Statut de lecture</label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(STATUSES).map(([key, val]) => (
+                    <Button 
+                      key={key} 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setSelectedStatus(key as BookStatus)}
+                      className={cn(
+                        "rounded-full border-primary/10 text-[10px] h-9 px-4", 
+                        selectedStatus === key ? "bg-primary text-white border-primary" : "bg-white/60"
+                      )}
+                    >
+                      {val.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Format</label>
+                <div className="flex gap-2">
+                  {Object.entries(FORMATS).map(([key, val]) => {
+                    const Icon = val.icon;
+                    return (
+                      <Button 
+                        key={key} 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setSelectedFormat(key as BookFormat)}
+                        className={cn(
+                          "rounded-xl border-primary/10 h-11 flex-1", 
+                          selectedFormat === key ? "bg-primary text-white border-primary" : "bg-white/60"
+                        )}
+                      >
+                        <Icon className="h-4 w-4 mr-2" /> {val.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="p-8 border-t border-primary/5 bg-white/60">
+            <div className="flex w-full justify-end gap-4">
+              <Button variant="ghost" onClick={() => setPendingBook(null)} className="rounded-xl h-12 px-6">Annuler</Button>
+              <Button 
+                onClick={confirmAdd} 
+                disabled={isAdding}
+                className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20"
+              >
+                {isAdding ? <Loader2 className="h-6 w-6 animate-spin" /> : "Ajouter à ma bibliothèque"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+

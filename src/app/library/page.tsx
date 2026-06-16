@@ -165,13 +165,25 @@ export default function LibraryPage() {
 
   const handleUpdateBook = async (updatedData: Partial<Book>) => {
     if (!db || !user || !editingBook) return;
+    
+    // Clean the update data to avoid sending fields that shouldn't be updated like 'id'
+    const { id, ...dataToSave } = updatedData as any;
+
     try {
       const bookRef = doc(db, "users", user.uid, "books", editingBook.id);
-      await updateDoc(bookRef, updatedData);
+      await updateDoc(bookRef, dataToSave);
       setEditingBook(null);
-      toast({ title: "Livre mis à jour", description: "Vos modifications ont été enregistrées." });
+      toast({ 
+        title: "Livre mis à jour", 
+        description: "Vos modifications ont été enregistrées avec succès." 
+      });
     } catch (e) {
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de mettre à jour." });
+      console.error("PLUME update error:", e);
+      toast({ 
+        variant: "destructive", 
+        title: "Erreur", 
+        description: "Impossible d'enregistrer les modifications." 
+      });
     }
   };
 
@@ -182,7 +194,7 @@ export default function LibraryPage() {
       setEditingBook(null);
       toast({ title: "Livre supprimé", description: "Le livre a été retiré de votre bibliothèque." });
     } catch (e) {
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer." });
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de supprimer le livre." });
     }
   };
 
@@ -726,3 +738,4 @@ function EditBookDialog({ book, onClose, onSave, onDelete }: { book: Book, onClo
     </Dialog>
   );
 }
+
