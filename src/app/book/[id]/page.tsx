@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
@@ -13,7 +13,6 @@ import {
   Heart, 
   Trash2, 
   Save, 
-  Search, 
   Star, 
   Quote, 
   MessageSquare, 
@@ -22,12 +21,8 @@ import {
   Loader2,
   CheckCircle2,
   Globe,
-  Mic,
   Tag,
   Hash,
-  Library,
-  ChevronRight,
-  Info,
   Layers
 } from "lucide-react";
 import Image from "next/image";
@@ -51,13 +46,31 @@ import {
   STATUSES, 
   FORMATS, 
   RANKS, 
-  EMOTIONS, 
   GENRES_LIST, 
   TROPES_LIST, 
   BookStatus, 
   BookFormat, 
   RankType 
 } from "@/app/library/page";
+
+const LANGUAGE_MAP: Record<string, string> = {
+  fr: "Français",
+  en: "Anglais",
+  es: "Espagnol",
+  de: "Allemand",
+  it: "Italien",
+  pt: "Portugais",
+  nl: "Néerlandais",
+  ja: "Japonais",
+  ko: "Coréen",
+  zh: "Chinois",
+};
+
+const getLanguageName = (code: string | undefined) => {
+  if (!code) return "Inconnue";
+  const cleanCode = code.toLowerCase().trim();
+  return LANGUAGE_MAP[cleanCode] || code.toUpperCase();
+};
 
 export default function BookDetailPage() {
   const params = useParams();
@@ -148,7 +161,7 @@ export default function BookDetailPage() {
         if (!editedData.publicationDate) updates.publicationDate = info.publishedDate;
         if (!editedData.cover) updates.cover = info.imageLinks?.thumbnail?.replace("http://", "https://");
         if (!editedData.genres || editedData.genres.length === 0) updates.genres = info.categories;
-        if (!editedData.language) updates.language = info.language?.toUpperCase();
+        if (!editedData.language) updates.language = getLanguageName(info.language);
         if (!editedData.isbn || editedData.isbn === "N/A") {
           updates.isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
                          info.industryIdentifiers?.[0]?.identifier;
@@ -168,7 +181,7 @@ export default function BookDetailPage() {
         if (!editedData.publisher && doc.publisher) updates.publisher = doc.publisher?.[0];
         if (!editedData.publicationDate && doc.first_publish_year) updates.publicationDate = doc.first_publish_year?.toString();
         if (!editedData.cover && doc.cover_i) updates.cover = `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`;
-        if (!editedData.language && doc.language) updates.language = doc.language?.[0]?.toUpperCase();
+        if (!editedData.language && doc.language) updates.language = getLanguageName(doc.language?.[0]);
         
         setEditedData(prev => ({ ...prev, ...updates }));
         found = true;
@@ -244,21 +257,21 @@ export default function BookDetailPage() {
 
       <div className="grid lg:grid-cols-[340px_1fr] gap-12 items-start">
         {/* Sidebar: Visuals & Fast Status */}
-        <div className="space-y-8">
-          <div className="relative aspect-[2/3] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 flex items-center justify-center p-4">
+        <div className="space-y-8 flex flex-col items-center lg:items-start">
+          <div className="relative w-full max-w-[180px] sm:max-w-[240px] max-h-[360px] aspect-[2/3] rounded-[2.5rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 flex items-center justify-center p-4">
              <div className="relative w-full h-full">
                 <Image 
                   src={editedData.cover || "https://picsum.photos/seed/placeholder/400/600"} 
                   alt={editedData.title || ""} 
                   fill 
                   className="object-contain"
-                  sizes="400px"
+                  sizes="(max-width: 640px) 180px, 240px"
                   priority
                 />
              </div>
           </div>
           
-          <Card className="glass-card p-6 border-none bg-white/40 space-y-6">
+          <Card className="glass-card p-6 border-none bg-white/40 space-y-6 w-full max-w-[340px]">
             <div className="space-y-3">
               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-50">Statut actuel</Label>
               <div className="flex flex-wrap gap-2">
@@ -318,7 +331,7 @@ export default function BookDetailPage() {
           <Button 
             variant="ghost" 
             onClick={handleDelete} 
-            className="w-full text-destructive hover:bg-destructive/5 rounded-2xl h-12 italic"
+            className="w-full max-w-[340px] text-destructive hover:bg-destructive/5 rounded-2xl h-12 italic"
           >
             <Trash2 className="h-4 w-4 mr-2" /> Retirer de ma bibliothèque
           </Button>
@@ -328,12 +341,12 @@ export default function BookDetailPage() {
         <div className="space-y-12">
           <section className="space-y-6">
             <div className="space-y-2">
-              <h1 className="text-5xl sm:text-6xl font-headline italic tracking-tight leading-tight">{editedData.title}</h1>
+              <h1 className="text-5xl sm:text-6xl font-headline italic tracking-tight leading-tight">{editedData.title || ""}</h1>
               <Link 
                 href={`/author/${encodeURIComponent(editedData.author || "")}`}
                 className="inline-block text-2xl text-primary font-bold uppercase tracking-[0.2em] hover:opacity-70 transition-opacity"
               >
-                {editedData.author}
+                {editedData.author || ""}
               </Link>
             </div>
             
@@ -361,10 +374,10 @@ export default function BookDetailPage() {
 
             <TabsContent value="overview" className="m-0 space-y-12 animate-paper">
                <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 text-[11px] font-bold uppercase tracking-widest opacity-60">
-                 <div className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> {editedData.pages || 0} pages</div>
+                 <div className="flex items-center gap-3"><BookOpen className="h-4 w-4" /> {editedData.pages ? `${editedData.pages} pages` : "Nombre de pages inconnu"}</div>
                  <div className="flex items-center gap-3"><CalendarIcon className="h-4 w-4" /> {editedData.publicationDate || "Date inconnue"}</div>
                  <div className="flex items-center gap-3"><Hash className="h-4 w-4" /> {editedData.isbn || "ISBN N/A"}</div>
-                 <div className="flex items-center gap-3"><Globe className="h-4 w-4" /> {editedData.language || "Langue N/A"}</div>
+                 <div className="flex items-center gap-3"><Globe className="h-4 w-4" /> {editedData.language ? getLanguageName(editedData.language) : "Langue N/A"}</div>
                </div>
 
                <div className="space-y-6">
@@ -600,15 +613,6 @@ export default function BookDetailPage() {
                             ))}
                          </select>
                        </div>
-                       {editedData.format === 'audio' && (
-                         <div className="space-y-2">
-                           <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Narrateur</Label>
-                           <div className="relative">
-                              <Mic className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/40" />
-                              <Input value={editedData.narrator || ""} onChange={(e) => setEditedData({ ...editedData, narrator: e.target.value })} className="pl-12 bg-white/40 border-none h-12 rounded-xl italic shadow-sm" />
-                           </div>
-                         </div>
-                       )}
                     </div>
                   </div>
                </div>
