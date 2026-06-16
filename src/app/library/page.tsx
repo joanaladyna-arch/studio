@@ -124,11 +124,13 @@ export const STATUSES: Record<BookStatus, { label: string, icon: any, color: str
 };
 
 const CATEGORIES = [
-  { id: "all", label: "Tous" },
+  { id: "all", label: "TOUS" },
   { id: "pal", label: "PAL" },
-  { id: "progress", label: "En cours" },
-  { id: "read", label: "Lu" },
-  { id: "dePlume", label: "De Plume" },
+  { id: "progress", label: "EN COURS" },
+  { id: "lu", label: "LU" },
+  { id: "termine", label: "TERMINÉ" },
+  { id: "dnf", label: "DNF" },
+  { id: "pause", label: "PAUSE" },
 ];
 
 export default function LibraryPage() {
@@ -155,12 +157,25 @@ export default function LibraryPage() {
   }, [booksRaw]);
 
   const counts = useMemo(() => {
-    const res: Record<string, number> = { all: books.length, pal: 0, progress: 0, read: 0, dePlume: 0 };
+    const res: Record<string, number> = { 
+      all: books.length, 
+      pal: 0, 
+      progress: 0, 
+      lu: 0, 
+      termine: 0,
+      dnf: 0,
+      pause: 0
+    };
     books.forEach(b => {
       if (b.status === 'pal') res.pal++;
       if (b.status === 'progress') res.progress++;
-      if (b.status === 'read') res.read++;
-      if (b.dePlume) res.dePlume++;
+      if (b.status === 'read') {
+        res.termine++;
+        res.lu++;
+      }
+      if (b.status === 'reread') res.lu++;
+      if (b.status === 'dnf') res.dnf++;
+      if (b.status === 'pause') res.pause++;
     });
     return res;
   }, [books]);
@@ -177,7 +192,8 @@ export default function LibraryPage() {
       if (!matchesFormat) return false;
 
       if (activeTab === "all") return true;
-      if (activeTab === "dePlume") return b.dePlume;
+      if (activeTab === "lu") return b.status === "read" || b.status === "reread";
+      if (activeTab === "termine") return b.status === "read";
       return b.status === activeTab;
     });
   }, [activeTab, searchQuery, selectedFormat, books]);
@@ -301,7 +317,7 @@ export default function LibraryPage() {
             <div className="py-40 text-center space-y-8 glass-card border-dashed bg-white/20">
                <Bookmark className="h-20 w-20 mx-auto text-primary/10 animate-float" />
                <div className="space-y-3">
-                 <p className="text-primary/60 italic font-headline text-3xl">Étagères vides.</p>
+                 <p className="text-primary/60 italic font-headline text-3xl mb-2">Sanctuaire paisible.</p>
                  <p className="text-muted-foreground italic text-lg">Cette section attend sa première pépite.</p>
                  <Button asChild variant="link" className="text-primary italic text-lg mt-4">
                    <Link href="/add">Commencer une nouvelle collection ?</Link>
