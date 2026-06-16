@@ -11,22 +11,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
 import { 
   Settings, 
-  Share2, 
   Crown, 
-  BadgeCheck, 
-  FileArchive, 
   Sparkles, 
   Award, 
   Medal, 
-  TrendingUp, 
   BookOpen, 
   Clock, 
-  DoorOpen, 
   Star, 
-  Book as BookIcon, 
-  Tablet, 
   Headphones, 
   Timer, 
   Plus, 
@@ -36,22 +30,22 @@ import {
   Mail,
   Camera,
   Loader2,
-  User as UserIcon,
   Pencil,
   BookMarked,
   Tags,
   Target,
   Shield,
-  Lock
+  Lock,
+  Calendar,
+  FileText
 } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
-import { doc, collection, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
 import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -91,19 +85,20 @@ export default function ProfilePage() {
 
   const stats = useMemo(() => {
     const allBooks = (books as unknown as Book[]);
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
-    const palBooks = allBooks.filter(b => b.status === 'pal');
-    const progressBooks = allBooks.filter(b => b.status === 'progress');
-    const dnfBooks = allBooks.filter(b => b.status === 'dnf');
-    
-    const paperCount = allBooks.filter(b => b.format === 'papier' || !b.format).length;
-    const ebookCount = allBooks.filter(b => b.format === 'ebook').length;
-    const audioCount = allBooks.filter(b => b.format === 'audio').length;
+    const monthlyRead = readBooks.filter(b => {
+      if (!b.endDate) return false;
+      const d = new Date(b.endDate);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
 
     const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
-    const listeningHours = readBooks.reduce((acc, b) => acc + (b.format === 'audio' ? (b.duration || 0) : 0), 0);
+    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (b.pages || 0) / 50 : 0), 0);
     
-    // Genre & Trope stats for earned badges/medals
     const genreCounts: Record<string, number> = {};
     const tropeCounts: Record<string, number> = {};
     
@@ -112,47 +107,27 @@ export default function ProfilePage() {
       b.tropes?.forEach(t => { tropeCounts[t] = (tropeCounts[t] || 0) + 1; });
     });
 
+    const goals = {
+      annual: profile?.annualGoal || 24,
+      monthly: profile?.monthlyGoal || 2,
+      pages: profile?.annualPageGoal || 10000,
+      audio: profile?.annualAudioGoal || 100
+    };
+
     return {
       readCount: readBooks.length,
-      palCount: palBooks.length,
-      progressCount: progressBooks.length,
-      dnfCount: dnfBooks.length,
-      paperCount,
-      ebookCount,
-      audioCount,
+      monthlyCount: monthlyRead.length,
       pagesRead,
-      listeningHours,
+      audioHours: Math.round(audioHours),
       genreCounts,
-      tropeCounts
+      tropeCounts,
+      goals,
+      annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
+      monthlyProgress: Math.min(100, Math.round((monthlyRead.length / goals.monthly) * 100)),
+      pagesProgress: Math.min(100, Math.round((pagesRead / goals.pages) * 100)),
+      audioProgress: Math.min(100, Math.round((audioHours / goals.audio) * 100))
     };
-  }, [books]);
-
-  const getLevel = (count: number) => {
-    if (count >= 50) return LEVELS[3];
-    if (count >= 30) return LEVELS[2];
-    if (count >= 15) return LEVELS[1];
-    if (count >= 5) return LEVELS[0];
-    return null;
-  };
-
-  const getNextGoal = (count: number) => {
-    if (count < 5) return 5;
-    if (count < 15) return 15;
-    if (count < 30) return 30;
-    return 50;
-  };
-
-  const earnedGenreBadges = useMemo(() => {
-    return Object.entries(stats.genreCounts)
-      .filter(([_, count]) => count >= 5)
-      .sort((a, b) => b[1] - a[1]);
-  }, [stats.genreCounts]);
-
-  const earnedTropeMedals = useMemo(() => {
-    return Object.entries(stats.tropeCounts)
-      .filter(([_, count]) => count >= 5)
-      .sort((a, b) => b[1] - a[1]);
-  }, [stats.tropeCounts]);
+  }, [books, profile]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -188,14 +163,6 @@ export default function ProfilePage() {
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Plume';
   const userSeed = user?.uid || user?.email || "plume-user";
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`;
-  
-  const annualGoal = profile?.annualGoal || 24;
-  const annualPageGoal = profile?.annualPageGoal || 10000;
-  const annualHourGoal = profile?.annualHourGoal || 100;
-
-  const bookProgressPercent = Math.min(100, Math.round((stats.readCount / annualGoal) * 100));
-  const pageProgressPercent = Math.min(100, Math.round((stats.pagesRead / annualPageGoal) * 100));
-  const hourProgressPercent = Math.min(100, Math.round((stats.listeningHours / annualHourGoal) * 100));
 
   if (profileLoading) {
     return (
@@ -233,11 +200,6 @@ export default function ProfilePage() {
               <div className="flex items-center justify-center md:justify-start gap-2 text-muted-foreground italic text-sm">
                 <Mail className="h-3 w-3" /> {user?.email}
               </div>
-              {profile?.pseudo && (
-                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                   @{profile.pseudo}
-                </div>
-              )}
             </div>
             <p className="text-muted-foreground italic text-sm mt-3 max-w-md">
               {profile?.bio || "“Perdue entre deux chapitres.”"}
@@ -264,61 +226,80 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-1">
                 <h3 className="font-headline italic text-xl">Plume sur votre écran</h3>
-                <p className="text-xs text-muted-foreground italic">Installez l'application pour une expérience optimale.</p>
               </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="p-4 bg-white/40 rounded-2xl space-y-2">
                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
-                  <Apple className="h-3 w-3" /> Sur iPhone / iPad
+                  <Apple className="h-3 w-3" /> iOS
                 </div>
-                <p className="text-[11px] font-medium leading-relaxed italic text-muted-foreground">Appuyez sur "Partager" puis sur <b>"Sur l'écran d'accueil"</b>.</p>
+                <p className="text-[11px] font-medium italic text-muted-foreground">"Partager" > "Sur l'écran d'accueil".</p>
               </div>
               <div className="p-4 bg-white/40 rounded-2xl space-y-2">
                 <div className="flex items-center gap-2 text-primary font-bold text-[10px] uppercase tracking-widest">
-                  <Smartphone className="h-3 w-3" /> Sur Android
+                  <Smartphone className="h-3 w-3" /> Android
                 </div>
-                <p className="text-[11px] font-medium leading-relaxed italic text-muted-foreground">Appuyez sur les <b>trois points ⋮</b> puis sur <b>"Installer l'application"</b>.</p>
+                <p className="text-[11px] font-medium italic text-muted-foreground">Menu ⋮ > "Installer l'application".</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="w-full rounded-xl text-primary/40" onClick={() => setShowPwaInfo(false)}>Masquer</Button>
           </CardContent>
         </Card>
       )}
 
-      <div className="space-y-8">
+      <section className="space-y-8">
         <h2 className="text-3xl font-headline flex items-center gap-3 italic">
-          <Target className="h-8 w-8 text-primary/40" /> Objectifs de l'année
+          <Target className="h-8 w-8 text-primary/40" /> Mes Objectifs de Lecture
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="glass-card p-6 border-none bg-white/40 space-y-4">
             <div className="flex justify-between items-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Livres</p>
-              <Badge className="bg-primary/10 text-primary border-none text-[10px]">{bookProgressPercent}%</Badge>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Annuel</p>
+              <Trophy className="h-4 w-4 text-amber-500" />
             </div>
-            <p className="text-2xl font-headline italic">{stats.readCount} / {annualGoal}</p>
-            <Progress value={bookProgressPercent} className="h-1.5 bg-primary/5" />
+            <p className="text-2xl font-headline italic">{stats.readCount} / {stats.goals.annual}</p>
+            <div className="space-y-2">
+              <Progress value={stats.annualProgress} className="h-1.5 bg-primary/5" />
+              <p className="text-[9px] font-bold text-primary/60">{stats.annualProgress}% complété</p>
+            </div>
           </Card>
           
           <Card className="glass-card p-6 border-none bg-white/40 space-y-4">
             <div className="flex justify-between items-center">
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages</p>
-              <Badge className="bg-emerald-50 text-emerald-600 border-none text-[10px]">{pageProgressPercent}%</Badge>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Mensuel</p>
+              <Calendar className="h-4 w-4 text-blue-400" />
             </div>
-            <p className="text-2xl font-headline italic">{stats.pagesRead.toLocaleString()} / {annualPageGoal.toLocaleString()}</p>
-            <Progress value={pageProgressPercent} className="h-1.5 bg-emerald-50" />
+            <p className="text-2xl font-headline italic">{stats.monthlyCount} / {stats.goals.monthly}</p>
+            <div className="space-y-2">
+              <Progress value={stats.monthlyProgress} className="h-1.5 bg-blue-50" />
+              <p className="text-[9px] font-bold text-blue-400/60">{stats.monthlyProgress}% ce mois</p>
+            </div>
+          </Card>
+
+          <Card className="glass-card p-6 border-none bg-white/40 space-y-4">
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages</p>
+              <FileText className="h-4 w-4 text-emerald-500" />
+            </div>
+            <p className="text-2xl font-headline italic">{stats.pagesRead.toLocaleString()} / {stats.goals.pages.toLocaleString()}</p>
+            <div className="space-y-2">
+              <Progress value={stats.pagesProgress} className="h-1.5 bg-emerald-50" />
+              <p className="text-[9px] font-bold text-emerald-600/60">{stats.pagesProgress}% atteint</p>
+            </div>
           </Card>
 
           <Card className="glass-card p-6 border-none bg-white/40 space-y-4">
             <div className="flex justify-between items-center">
               <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Heures Audio</p>
-              <Badge className="bg-amber-50 text-amber-600 border-none text-[10px]">{hourProgressPercent}%</Badge>
+              <Headphones className="h-4 w-4 text-purple-400" />
             </div>
-            <p className="text-2xl font-headline italic">{Math.round(stats.listeningHours)} / {annualHourGoal}</p>
-            <Progress value={hourProgressPercent} className="h-1.5 bg-amber-50" />
+            <p className="text-2xl font-headline italic">{stats.audioHours} / {stats.goals.audio}</p>
+            <div className="space-y-2">
+              <Progress value={stats.audioProgress} className="h-1.5 bg-purple-50" />
+              <p className="text-[9px] font-bold text-purple-400/60">{stats.audioProgress}% d'écoute</p>
+            </div>
           </Card>
         </div>
-      </div>
+      </section>
 
       <section className="space-y-8">
         <h2 className="text-3xl font-headline flex items-center gap-3 italic">
@@ -335,7 +316,7 @@ export default function ProfilePage() {
                 <Badge key={g} className="bg-primary/10 text-primary border-none text-[10px] uppercase font-bold tracking-widest px-3 py-1">
                   {g}
                 </Badge>
-              )) : <p className="italic text-muted-foreground text-sm">Sélectionnez vos genres préférés dans votre profil.</p>}
+              )) : <p className="italic text-muted-foreground text-sm">Non défini.</p>}
             </div>
           </Card>
           <Card className="glass-card p-8 border-none bg-white/40">
@@ -348,131 +329,17 @@ export default function ProfilePage() {
                 <Badge key={t} className="bg-secondary/20 text-secondary-foreground border-none text-[10px] uppercase font-bold tracking-widest px-3 py-1">
                   {t}
                 </Badge>
-              )) : <p className="italic text-muted-foreground text-sm">Sélectionnez vos tropes fétiches dans votre profil.</p>}
+              )) : <p className="italic text-muted-foreground text-sm">Non défini.</p>}
             </div>
           </Card>
         </div>
       </section>
 
-      {/* Earned Rewards Sections */}
-      <section className="space-y-12">
-        <div className="space-y-8">
-          <h2 className="text-3xl font-headline flex items-center gap-3 italic">
-            <Award className="h-8 w-8 text-primary" /> Badges de genres gagnés
-          </h2>
-          {earnedGenreBadges.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {earnedGenreBadges.map(([genre, count]) => {
-                const level = getLevel(count);
-                const nextGoal = getNextGoal(count);
-                const progress = (count / nextGoal) * 100;
-                return (
-                  <Card key={genre} className="glass-card border-none shadow-md overflow-hidden bg-white/60">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className={cn("p-3 rounded-2xl", level?.bg)}>
-                          <Shield className={cn("h-6 w-6", level?.color)} />
-                        </div>
-                        <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level?.color)}>
-                          {level?.label}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-xl font-headline italic">{genre}</h3>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                          {count} livres lus
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
-                          <span>Objectif {nextGoal}</span>
-                          <span>{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-1.5 bg-primary/5" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="italic text-muted-foreground text-center py-10 glass-card bg-white/20">
-              Continuez vos lectures pour débloquer vos premières récompenses.
-            </p>
-          )}
-        </div>
-
-        <div className="space-y-8">
-          <h2 className="text-3xl font-headline flex items-center gap-3 italic">
-            <Medal className="h-8 w-8 text-secondary" /> Médailles de tropes gagnées
-          </h2>
-          {earnedTropeMedals.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {earnedTropeMedals.map(([trope, count]) => {
-                const level = getLevel(count);
-                const nextGoal = getNextGoal(count);
-                const progress = (count / nextGoal) * 100;
-                return (
-                  <Card key={trope} className="glass-card border-none shadow-md overflow-hidden bg-white/60 border-secondary/20">
-                    <CardContent className="p-6 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className={cn("p-3 rounded-2xl", level?.bg)}>
-                          <Medal className={cn("h-6 w-6", level?.color)} />
-                        </div>
-                        <span className={cn("text-[10px] font-bold uppercase tracking-[0.2em]", level?.color)}>
-                          {level?.label}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <h3 className="text-xl font-headline italic">{trope}</h3>
-                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-                          {count} livres lus
-                        </p>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-[8px] font-bold uppercase tracking-tighter opacity-60">
-                          <span>Objectif {nextGoal}</span>
-                          <span>{Math.round(progress)}%</span>
-                        </div>
-                        <Progress value={progress} className="h-1.5 bg-secondary/5" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            earnedGenreBadges.length === 0 && (
-              <p className="italic text-muted-foreground text-center py-10 glass-card bg-white/20">
-                Lisez plus de livres avec vos tropes favoris pour gagner des médailles.
-              </p>
-            )
-          )}
-        </div>
-      </section>
-
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <Card className="glass-card p-6 border-none text-center space-y-2 hover:scale-105 transition-transform bg-white/60">
-          <BookOpen className="h-8 w-8 mx-auto text-primary" />
-          <p className="text-3xl font-headline italic">{stats.readCount}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Livres lus</p>
-        </Card>
-        <Card className="glass-card p-6 border-none text-center space-y-2 hover:scale-105 transition-transform bg-white/60">
-          <Clock className="h-8 w-8 mx-auto text-blue-400" />
-          <p className="text-3xl font-headline italic">{stats.progressCount}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">En cours</p>
-        </Card>
-        <Card className="glass-card p-6 border-none text-center space-y-2 hover:scale-105 transition-transform bg-white/60">
-          <FileArchive className="h-8 w-8 mx-auto text-emerald-400" />
-          <p className="text-3xl font-headline italic">{stats.pagesRead.toLocaleString()}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages parcourues</p>
-        </Card>
-        <Card className="glass-card p-6 border-none text-center space-y-2 hover:scale-105 transition-transform bg-white/60">
-          <Timer className="h-8 w-8 mx-auto text-amber-500" />
-          <p className="text-3xl font-headline italic">{Math.round(stats.listeningHours)}</p>
-          <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">Heures audio</p>
-        </Card>
-      </section>
+      <div className="flex justify-center">
+        <Button asChild variant="ghost" className="rounded-full h-14 px-10 italic font-headline text-xl text-primary/60 hover:text-primary">
+          <Link href="/library">Accéder à ma bibliothèque complète <BookOpen className="ml-3 h-5 w-5" /></Link>
+        </Button>
+      </div>
     </div>
   );
 }
@@ -484,43 +351,37 @@ function EditProfileDialog({ profile }: { profile: any }) {
   
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(profile?.name || '');
-  const [pseudo, setPseudo] = useState(profile?.pseudo || '');
   const [bio, setBio] = useState(profile?.bio || '');
   const [annualGoal, setAnnualGoal] = useState(profile?.annualGoal || 24);
+  const [monthlyGoal, setMonthlyGoal] = useState(profile?.monthlyGoal || 2);
   const [annualPageGoal, setAnnualPageGoal] = useState(profile?.annualPageGoal || 10000);
-  const [annualHourGoal, setAnnualHourGoal] = useState(profile?.annualHourGoal || 100);
-  const [format, setFormat] = useState<BookFormat>(profile?.preferredFormat || 'papier');
+  const [annualAudioGoal, setAnnualAudioGoal] = useState(profile?.annualAudioGoal || 100);
   const [favoriteGenres, setFavoriteGenres] = useState<string[]>(profile?.favoriteGenres || []);
   const [favoriteTropes, setFavoriteTropes] = useState<string[]>(profile?.favoriteTropes || []);
 
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
-      setPseudo(profile.pseudo || '');
       setBio(profile.bio || '');
       setAnnualGoal(profile.annualGoal || 24);
+      setMonthlyGoal(profile.monthlyGoal || 2);
       setAnnualPageGoal(profile.annualPageGoal || 10000);
-      setAnnualHourGoal(profile.annualHourGoal || 100);
-      setFormat(profile.preferredFormat || 'papier');
+      setAnnualAudioGoal(profile.annualAudioGoal || 100);
       setFavoriteGenres(profile.favoriteGenres || []);
       setFavoriteTropes(profile.favoriteTropes || []);
     }
   }, [profile]);
 
   const handleSave = async () => {
-    if (!db || !user) {
-      toast({ variant: 'destructive', title: 'Erreur', description: 'Vous devez être connectée pour enregistrer votre profil.' });
-      return;
-    }
+    if (!db || !user) return;
     
     const updatedData = {
       name: name.trim(),
-      pseudo: pseudo.trim(),
       bio: bio.trim(),
       annualGoal: Number(annualGoal),
+      monthlyGoal: Number(monthlyGoal),
       annualPageGoal: Number(annualPageGoal),
-      annualHourGoal: Number(annualHourGoal),
-      preferredFormat: format,
+      annualAudioGoal: Number(annualAudioGoal),
       favoriteGenres: favoriteGenres,
       favoriteTropes: favoriteTropes,
       updatedAt: serverTimestamp()
@@ -531,7 +392,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées.' });
       setOpen(false);
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder votre profil.' });
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Sauvegarde impossible.' });
     }
   };
 
@@ -554,70 +415,87 @@ function EditProfileDialog({ profile }: { profile: any }) {
         
         <ScrollArea className="flex-1">
           <div className="p-8 space-y-12">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Prénom / Nom</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} className="h-12 rounded-xl bg-white/40 border-none italic" placeholder="Votre nom d'affichage" />
-              </div>
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Pseudo Unique</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary/40 font-bold">@</span>
-                  <Input value={pseudo} onChange={(e) => setPseudo(e.target.value)} className="h-12 pl-8 rounded-xl bg-white/40 border-none italic" placeholder="lectrice_passionnee" />
-                </div>
-              </div>
+            <div className="space-y-4">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Prénom / Nom</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="h-12 rounded-xl bg-white/40 border-none italic" />
             </div>
 
             <div className="space-y-4">
               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bio de Lectrice</Label>
-              <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4" placeholder="Décrivez votre univers littéraire..." />
+              <Textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[100px] rounded-2xl bg-white/40 border-none italic p-4" />
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Livres</Label>
-                <Input type="number" value={annualGoal} onChange={(e) => setAnnualGoal(Number(e.target.value))} className="h-12 rounded-xl bg-white/40 border-none italic" />
-              </div>
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Pages</Label>
-                <Input type="number" value={annualPageGoal} onChange={(e) => setAnnualPageGoal(Number(e.target.value))} className="h-12 rounded-xl bg-white/40 border-none italic" />
-              </div>
-              <div className="space-y-4">
-                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Heures Audio</Label>
-                <Input type="number" value={annualHourGoal} onChange={(e) => setAnnualHourGoal(Number(e.target.value))} className="h-12 rounded-xl bg-white/40 border-none italic" />
+            <div className="space-y-10 border-t border-primary/5 pt-8">
+              <h3 className="font-headline italic text-2xl flex items-center gap-3">
+                <Target className="h-5 w-5 text-primary" /> Mes Objectifs
+              </h3>
+              
+              <div className="grid md:grid-cols-2 gap-12">
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Annuel : {annualGoal} livres</Label>
+                  </div>
+                  <Slider 
+                    value={[annualGoal]} 
+                    min={1} 
+                    max={500} 
+                    step={1} 
+                    onValueChange={(v) => setAnnualGoal(v[0])}
+                    className="py-4"
+                  />
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Mensuel : {monthlyGoal} livres</Label>
+                  </div>
+                  <Slider 
+                    value={[monthlyGoal]} 
+                    min={1} 
+                    max={100} 
+                    step={1} 
+                    onValueChange={(v) => setMonthlyGoal(v[0])}
+                    className="py-4"
+                  />
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Pages : {annualPageGoal.toLocaleString()}</Label>
+                  </div>
+                  <Slider 
+                    value={[annualPageGoal]} 
+                    min={100} 
+                    max={100000} 
+                    step={100} 
+                    onValueChange={(v) => setAnnualPageGoal(v[0])}
+                    className="py-4"
+                  />
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Objectif Audio : {annualAudioGoal} heures</Label>
+                  </div>
+                  <Slider 
+                    value={[annualAudioGoal]} 
+                    min={1} 
+                    max={1000} 
+                    step={1} 
+                    onValueChange={(v) => setAnnualAudioGoal(v[0])}
+                    className="py-4"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Format Préféré</Label>
-              <div className="flex gap-2">
-                {Object.entries(FORMATS).map(([key, val]) => {
-                  const Icon = val.icon;
-                  return (
-                    <Button 
-                      key={key} 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setFormat(key as BookFormat)}
-                      className={cn(
-                        "rounded-xl border-primary/10 h-12 flex-1", 
-                        format === key ? "bg-primary text-white border-primary" : "bg-white/40"
-                      )}
-                    >
-                      <Icon className="h-4 w-4 mr-2" /> {val.label}
-                    </Button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 italic">Genres favoris (Sélectionnez vos coups de cœur)</Label>
+            <div className="space-y-6 border-t border-primary/5 pt-8">
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 italic">Genres favoris</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {GENRES_LIST.map(g => (
                   <div key={g} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl hover:bg-white transition-colors cursor-pointer" onClick={() => toggleItem(favoriteGenres, setFavoriteGenres, g)}>
                     <Checkbox id={`genre-${g}`} checked={favoriteGenres.includes(g)} onCheckedChange={() => toggleItem(favoriteGenres, setFavoriteGenres, g)} />
-                    <label htmlFor={`genre-${g}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                    <label htmlFor={`genre-${g}`} className="text-sm font-medium leading-none cursor-pointer">
                       {g}
                     </label>
                   </div>
@@ -626,12 +504,12 @@ function EditProfileDialog({ profile }: { profile: any }) {
             </div>
 
             <div className="space-y-6">
-              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 italic">Tropes fétiches (Sélectionnez vos thèmes favoris)</Label>
+              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 italic">Tropes fétiches</Label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 {TROPES_LIST.map(t => (
                   <div key={t} className="flex items-center space-x-3 bg-white/40 p-3 rounded-xl hover:bg-white transition-colors cursor-pointer" onClick={() => toggleItem(favoriteTropes, setFavoriteTropes, t)}>
                     <Checkbox id={`trope-${t}`} checked={favoriteTropes.includes(t)} onCheckedChange={() => toggleItem(favoriteTropes, setFavoriteTropes, t)} />
-                    <label htmlFor={`trope-${t}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
+                    <label htmlFor={`trope-${t}`} className="text-sm font-medium leading-none cursor-pointer">
                       {t}
                     </label>
                   </div>
@@ -645,7 +523,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
           <div className="flex w-full justify-end gap-4">
             <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl h-12 px-8">Annuler</Button>
             <Button onClick={handleSave} className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20">
-              Enregistrer mon Profil
+              Enregistrer
             </Button>
           </div>
         </DialogFooter>

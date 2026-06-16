@@ -7,30 +7,25 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { 
   BookOpen, 
-  Clock, 
   Trophy, 
   PenTool, 
-  Heart, 
-  Bookmark, 
-  Feather, 
   Sparkles,
-  Library,
-  User as UserIcon,
   Plus,
   Loader2,
   ChevronRight,
   Target,
-  Award,
   History,
-  TrendingUp,
-  FileText
+  FileText,
+  Calendar,
+  Headphones,
+  TrendingUp
 } from "lucide-react";
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, limit, doc, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
   const { user, loading: authLoading } = useUser();
@@ -56,33 +51,49 @@ export default function Home() {
   }, [db, user]);
 
   const { data: currentReads = [], loading: readingLoading } = useCollection(currentReadQuery);
-  // Tri en mémoire pour le livre actuel
-  const currentRead = useMemo(() => {
-    return [...currentReads].sort((a, b) => {
-      const dateA = a.dateAdded?.seconds || 0;
-      const dateB = b.dateAdded?.seconds || 0;
-      return dateB - dateA;
-    })[0];
-  }, [currentReads]);
+  const currentRead = currentReads[0];
 
   const allBooksQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, 'users', user.uid, 'books');
   }, [db, user]);
 
-  const { data: allBooks = [], loading: booksLoading } = useCollection(allBooksQuery);
+  const { data: allBooks = [] } = useCollection(allBooksQuery);
 
   const stats = useMemo(() => {
-    const readCount = allBooks.filter(b => b.status === 'read' || b.status === 'reread').length;
-    const progressCount = allBooks.filter(b => b.status === 'progress').length;
-    const pagesRead = allBooks.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
-    const annualGoal = profile?.annualGoal || 24;
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
+    
+    // Monthly stats
+    const monthlyRead = readBooks.filter(b => {
+      if (!b.endDate) return false;
+      const d = new Date(b.endDate);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
+    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (b.pages || 0) / 50 : 0), 0);
+
+    const goals = {
+      annual: profile?.annualGoal || 24,
+      monthly: profile?.monthlyGoal || 2,
+      pages: profile?.annualPageGoal || 10000,
+      audio: profile?.annualAudioGoal || 100
+    };
+
     return {
-      readCount,
-      progressCount,
-      pagesRead,
-      annualGoal,
-      progressPercent: Math.min(100, Math.round((readCount / annualGoal) * 100))
+      annualCount: readBooks.length,
+      monthlyCount: monthlyRead.length,
+      pagesCount: pagesRead,
+      audioCount: Math.round(audioHours),
+      goals,
+      annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
+      monthlyProgress: Math.min(100, Math.round((monthlyRead.length / goals.monthly) * 100)),
+      pagesProgress: Math.min(100, Math.round((pagesRead / goals.pages) * 100)),
+      audioProgress: Math.min(100, Math.round((audioHours / goals.audio) * 100))
     };
   }, [allBooks, profile]);
 
@@ -122,38 +133,66 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        <div className="col-span-1 md:col-span-2 p-10 rounded-[3rem] bg-white/60 border border-white shadow-sm flex flex-col justify-between group hover:shadow-2xl transition-all duration-700">
-           <div className="flex justify-between items-start">
-             <div className="space-y-2">
-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Objectif Annuel</p>
-                <h3 className="text-5xl font-headline italic">{stats.readCount} / {stats.annualGoal}</h3>
-             </div>
-             <Trophy className="h-10 w-10 text-amber-500 animate-float" />
-           </div>
-           <div className="space-y-4 pt-8">
-             <div className="flex justify-between text-xs font-bold uppercase tracking-widest opacity-60 italic">
-               <span>Progression</span>
-               <span>{stats.progressPercent}%</span>
-             </div>
-             <Progress value={stats.progressPercent} className="h-3 bg-primary/5" />
-           </div>
-        </div>
+      <section className="space-y-8">
+        <h2 className="text-4xl font-headline flex items-center gap-4 italic px-2">
+          <Target className="h-8 w-8 text-primary/40" /> Mes Objectifs
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Annuel</p>
+                <h3 className="text-3xl font-headline italic">{stats.annualCount} / {stats.goals.annual}</h3>
+              </div>
+              <Trophy className="h-8 w-8 text-amber-500 animate-float" />
+            </div>
+            <div className="space-y-3">
+              <Progress value={stats.annualProgress} className="h-2 bg-primary/5" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{stats.annualProgress}% complété</p>
+            </div>
+          </Card>
 
-        <div className="p-10 rounded-[3rem] bg-white/60 border border-white shadow-sm text-center space-y-4 group hover:shadow-2xl transition-all duration-700">
-           <div className="h-14 w-14 rounded-2xl bg-primary/5 flex items-center justify-center mx-auto text-primary group-hover:scale-110 transition-transform">
-             <FileText className="h-7 w-7" />
-           </div>
-           <p className="text-4xl font-headline italic">{stats.pagesRead.toLocaleString()}</p>
-           <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-bold">Pages lues</p>
-        </div>
+          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Mensuel</p>
+                <h3 className="text-3xl font-headline italic">{stats.monthlyCount} / {stats.goals.monthly}</h3>
+              </div>
+              <Calendar className="h-8 w-8 text-blue-400" />
+            </div>
+            <div className="space-y-3">
+              <Progress value={stats.monthlyProgress} className="h-2 bg-blue-50" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400/60">{stats.monthlyProgress}% ce mois</p>
+            </div>
+          </Card>
 
-        <div className="p-10 rounded-[3rem] bg-white/60 border border-white shadow-sm text-center space-y-4 group hover:shadow-2xl transition-all duration-700">
-           <div className="h-14 w-14 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto text-blue-400 group-hover:scale-110 transition-transform">
-             <History className="h-7 w-7" />
-           </div>
-           <p className="text-4xl font-headline italic">{stats.progressCount}</p>
-           <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-bold">En cours</p>
+          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Pages</p>
+                <h3 className="text-3xl font-headline italic">{stats.pagesCount.toLocaleString()}</h3>
+              </div>
+              <FileText className="h-8 w-8 text-emerald-500" />
+            </div>
+            <div className="space-y-3">
+              <Progress value={stats.pagesProgress} className="h-2 bg-emerald-50" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/60">Objectif {stats.goals.pages.toLocaleString()}</p>
+            </div>
+          </Card>
+
+          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Audio</p>
+                <h3 className="text-3xl font-headline italic">{stats.audioCount}h</h3>
+              </div>
+              <Headphones className="h-8 w-8 text-purple-400" />
+            </div>
+            <div className="space-y-3">
+              <Progress value={stats.audioProgress} className="h-2 bg-purple-50" />
+              <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400/60">Objectif {stats.goals.audio}h</p>
+            </div>
+          </Card>
         </div>
       </section>
 
@@ -220,24 +259,24 @@ export default function Home() {
         <section className="space-y-12">
           <div className="space-y-8">
             <h2 className="text-4xl font-headline flex items-center gap-4 italic">
-              <Bookmark className="h-8 w-8 text-primary/40" /> Raccourcis
+              <TrendingUp className="h-8 w-8 text-primary/40" /> Raccourcis
             </h2>
             <div className="grid gap-6">
               <Link href="/library" className="flex items-center gap-8 p-8 rounded-[3rem] bg-secondary/10 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
                 <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Library className="h-8 w-8 text-secondary" />
+                  <BookOpen className="h-8 w-8 text-secondary" />
                 </div>
-                <span className="font-headline text-3xl italic">Ma Bibliothèque</span>
+                <span className="font-headline text-3xl italic">Bibliothèque</span>
               </Link>
               <Link href="/profile/badges" className="flex items-center gap-8 p-8 rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
                 <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Award className="h-8 w-8 text-primary" />
+                  <Trophy className="h-8 w-8 text-primary" />
                 </div>
                 <span className="font-headline text-3xl italic">Mes Badges</span>
               </Link>
               <Link href="/coeur-de-plume" className="flex items-center gap-8 p-8 rounded-[3rem] bg-amber-50 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
                 <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Heart className="h-8 w-8 text-amber-500 fill-amber-500/20" />
+                  <Sparkles className="h-8 w-8 text-amber-500" />
                 </div>
                 <span className="font-headline text-3xl italic">De Plume</span>
               </Link>
