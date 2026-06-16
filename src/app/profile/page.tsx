@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,7 +60,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { toast } = useToast();
   
-  const [isEditing, setIsEditing] = useState(false);
   const [showPwaInfo, setShowPwaInfo] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,7 +139,8 @@ export default function ProfilePage() {
   };
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Plume';
-  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'plume'}/200/200`;
+  const userSeed = user?.uid || user?.email || "plume-user";
+  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`;
   const annualGoal = profile?.annualGoal || 24;
   const progressPercent = Math.min(100, Math.round((stats.readCount / annualGoal) * 100));
 
@@ -192,7 +192,7 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="flex gap-3">
-            <EditProfileDialog profile={profile} onSave={() => setIsEditing(false)} />
+            <EditProfileDialog profile={profile} />
             <Button variant="outline" size="icon" className="rounded-full h-12 w-12 border-primary/10 hover:bg-primary/5" onClick={() => setShowPwaInfo(!showPwaInfo)}>
                 <Smartphone className="h-5 w-5 text-primary" />
             </Button>
@@ -346,11 +346,12 @@ export default function ProfilePage() {
   );
 }
 
-function EditProfileDialog({ profile, onSave }: { profile: any, onSave: () => void }) {
+function EditProfileDialog({ profile }: { profile: any }) {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
   
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState(profile?.name || '');
   const [pseudo, setPseudo] = useState(profile?.pseudo || '');
   const [bio, setBio] = useState(profile?.bio || '');
@@ -359,13 +360,28 @@ function EditProfileDialog({ profile, onSave }: { profile: any, onSave: () => vo
   const [genres, setGenres] = useState<string[]>(profile?.preferredGenres || []);
   const [tropes, setTropes] = useState<string[]>(profile?.preferredTropes || []);
 
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setPseudo(profile.pseudo || '');
+      setBio(profile.bio || '');
+      setAnnualGoal(profile.annualGoal || 24);
+      setFormat(profile.preferredFormat || 'papier');
+      setGenres(profile.preferredGenres || []);
+      setTropes(profile.preferredTropes || []);
+    }
+  }, [profile]);
+
   const handleSave = async () => {
-    if (!db || !user) return;
+    if (!db || !user) {
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Vous devez être connectée pour enregistrer votre profil.' });
+      return;
+    }
     
     const updatedData = {
-      name,
-      pseudo,
-      bio,
+      name: name.trim(),
+      pseudo: pseudo.trim(),
+      bio: bio.trim(),
       annualGoal: Number(annualGoal),
       preferredFormat: format,
       preferredGenres: genres,
@@ -376,9 +392,10 @@ function EditProfileDialog({ profile, onSave }: { profile: any, onSave: () => vo
     try {
       await setDoc(doc(db, 'users', user.uid), updatedData, { merge: true });
       toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées.' });
-      onSave();
+      setOpen(false);
     } catch (e) {
-      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder.' });
+      console.error("PLUME Firestore Error (Profile Save):", e);
+      toast({ variant: 'destructive', title: 'Erreur', description: 'Impossible de sauvegarder votre profil.' });
     }
   };
 
@@ -388,7 +405,7 @@ function EditProfileDialog({ profile, onSave }: { profile: any, onSave: () => vo
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" className="h-12 rounded-full border-primary/10 hover:bg-primary/5 px-6 font-headline italic">
           <Pencil className="h-4 w-4 mr-2" /> Modifier le Profil
@@ -489,7 +506,7 @@ function EditProfileDialog({ profile, onSave }: { profile: any, onSave: () => vo
 
         <DialogFooter className="p-8 border-t border-primary/5 bg-white/60">
           <div className="flex w-full justify-end gap-4">
-            <Button variant="ghost" onClick={onSave} className="rounded-xl h-12 px-8">Annuler</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl h-12 px-8">Annuler</Button>
             <Button onClick={handleSave} className="rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-xl px-12 h-14 shadow-xl shadow-primary/20">
               Enregistrer mon Profil
             </Button>
@@ -499,3 +516,4 @@ function EditProfileDialog({ profile, onSave }: { profile: any, onSave: () => vo
     </Dialog>
   );
 }
+
