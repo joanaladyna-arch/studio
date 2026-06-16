@@ -337,8 +337,8 @@ export default function LibraryPage() {
 }
 
 export function BookCard({ book }: { book: Book }) {
-  const rank = book.rank ? RANKS[book.rank] : null;
-  const format = book.format ? FORMATS[book.format] : null;
+  const rank = useMemo(() => book.rank ? RANKS[book.rank] : null, [book.rank]);
+  const format = useMemo(() => book.format ? FORMATS[book.format] : null, [book.format]);
   const RankIcon = rank?.icon;
   const FormatIcon = format?.icon;
 
@@ -351,7 +351,8 @@ export function BookCard({ book }: { book: Book }) {
             alt={book.title} 
             fill 
             className="object-contain transition-transform duration-1000 group-hover:scale-105" 
-            sizes="200px"
+            sizes="(max-width: 768px) 50vw, 200px"
+            loading="lazy"
           />
         </div>
         
@@ -396,7 +397,7 @@ export function BookCard({ book }: { book: Book }) {
 }
 
 function BookListItem({ book }: { book: Book }) {
-  const format = book.format ? FORMATS[book.format] : null;
+  const format = useMemo(() => book.format ? FORMATS[book.format] : null, [book.format]);
   const FormatIcon = format?.icon;
 
   return (

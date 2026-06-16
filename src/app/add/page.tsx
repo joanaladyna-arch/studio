@@ -9,10 +9,6 @@ import {
   Plus, 
   Loader2, 
   Sparkles, 
-  Calendar, 
-  AlertCircle,
-  Hash,
-  BookOpen,
   CheckCircle2,
   Scan,
   Camera,
@@ -39,16 +35,8 @@ import { Html5Qrcode } from "html5-qrcode";
 import { aiCoverScanner } from "@/ai/flows/ai-cover-scanner-flow";
 
 const LANGUAGE_MAP: Record<string, string> = {
-  fr: "Français",
-  en: "English",
-  es: "Español",
-  de: "Deutsch",
-  it: "Italiano",
-  pt: "Português",
-  nl: "Nederlands",
-  ja: "Japonais",
-  ko: "Coréen",
-  zh: "Chinois",
+  fr: "Français", en: "English", es: "Español", de: "Deutsch", it: "Italiano",
+  pt: "Português", nl: "Nederlands", ja: "Japonais", ko: "Coréen", zh: "Chinois",
 };
 
 export default function AddBookPage() {
@@ -66,6 +54,7 @@ export default function AddBookPage() {
   const [isProcessingScan, setIsProcessingScan] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const [pendingBook, setPendingBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus | null>(null);
@@ -91,13 +80,18 @@ export default function AddBookPage() {
 
   const fetchUniversalMetadata = async (search: string) => {
     if (!search.trim()) return;
+    
+    // Cancel previous search
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
     setIsSearching(true);
     setErrorDetails(null);
     setResults([]);
 
     try {
-      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=20&printType=books`;
-      const gRes = await fetch(gUrl);
+      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=10&printType=books`;
+      const gRes = await fetch(gUrl, { signal: abortControllerRef.current.signal });
 
       if (gRes.ok) {
         const gData = await gRes.json();
@@ -126,33 +120,13 @@ export default function AddBookPage() {
           });
           setResults(finalResults);
         } else {
-          const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=20`;
-          const olRes = await fetch(olUrl);
-          if (olRes.ok) {
-            const olData = await olRes.json();
-            const docs = olData.docs || [];
-            if (docs.length > 0) {
-              const finalResults = docs.map((doc: any) => ({
-                id: doc.key,
-                title: doc.title || "Titre inconnu",
-                author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
-                publisher: doc.publisher?.[0],
-                cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
-                pages: doc.number_of_pages_median || doc.number_of_pages || null,
-                publicationDate: doc.first_publish_year?.toString(),
-                genres: doc.subject?.slice(0, 5) || [],
-                language: "Français",
-                isbn: doc.isbn?.[0] || "N/A"
-              }));
-              setResults(finalResults);
-            } else {
-              setErrorDetails("Aucun livre trouvé automatiquement.");
-            }
-          }
+          setErrorDetails("Aucun livre trouvé.");
         }
       }
-    } catch (e) {
-      setErrorDetails("Erreur de connexion aux serveurs littéraires.");
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        setErrorDetails("Erreur lors de la recherche littéraire.");
+      }
     } finally {
       setIsSearching(false);
     }
@@ -204,12 +178,12 @@ export default function AddBookPage() {
   const captureCover = async () => {
     if (!videoRef.current) return;
     setIsProcessingScan(true);
-    const canvas = document.createElement("canvas");
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-    canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
-    const dataUri = canvas.toDataURL("image/jpeg");
     try {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
+      const dataUri = canvas.toDataURL("image/jpeg");
       const analysis = await aiCoverScanner({ photoDataUri: dataUri });
       setIsScannerOpen(false);
       stopScanner();
@@ -241,21 +215,21 @@ export default function AddBookPage() {
 
     const booksRef = collection(db, "users", user.uid, "books");
 
-    addDoc(booksRef, bookData)
-      .then(() => {
-        toast({ title: "Pépite enregistrée", description: `${pendingBook.title} est dans votre écrin.` });
-        setPendingBook(null);
-        setSelectedStatus(null);
-        setSelectedFormat(null);
-      })
-      .catch(async (err) => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: booksRef.path,
-          operation: 'create',
-          requestResourceData: bookData,
-        }));
-      })
-      .finally(() => setIsAdding(false));
+    try {
+      await addDoc(booksRef, bookData);
+      toast({ title: "Pépite enregistrée", description: `${pendingBook.title} est dans votre écrin.` });
+      setPendingBook(null);
+      setSelectedStatus(null);
+      setSelectedFormat(null);
+    } catch (err) {
+      errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: booksRef.path,
+        operation: 'create',
+        requestResourceData: bookData,
+      }));
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   return (
@@ -298,7 +272,15 @@ export default function AddBookPage() {
             return (
               <Card key={book.id} className="glass-card overflow-hidden group">
                 <CardContent className="p-0 flex flex-col sm:flex-row">
-                  <div className="relative w-48 aspect-[2/3] shrink-0 bg-secondary/5"><Image src={book.cover || "https://picsum.photos/seed/p/200/300"} alt={book.title} fill className="object-contain" /></div>
+                  <div className="relative w-48 aspect-[2/3] shrink-0 bg-secondary/5">
+                    <Image 
+                      src={book.cover || "https://picsum.photos/seed/p/200/300"} 
+                      alt={book.title} 
+                      fill 
+                      sizes="200px"
+                      className="object-contain" 
+                    />
+                  </div>
                   <div className="p-8 flex flex-col flex-1 gap-6">
                     <div className="space-y-1">
                       <h3 className="text-3xl font-headline italic leading-tight">{book.title}</h3>
@@ -327,7 +309,15 @@ export default function AddBookPage() {
           <ScrollArea className="flex-1">
             <div className="p-10 space-y-10">
               <div className="flex gap-8 items-start">
-                 <div className="relative h-44 w-32 shrink-0 rounded-2xl overflow-hidden shadow-2xl"><Image src={pendingBook?.cover || "https://picsum.photos/seed/p/200/300"} alt="" fill className="object-cover" /></div>
+                 <div className="relative h-44 w-32 shrink-0 rounded-2xl overflow-hidden shadow-2xl">
+                   <Image 
+                    src={pendingBook?.cover || "https://picsum.photos/seed/p/200/300"} 
+                    alt="" 
+                    fill 
+                    sizes="150px"
+                    className="object-cover" 
+                   />
+                 </div>
                  <div className="space-y-3">
                    <h3 className="font-headline italic text-3xl">{pendingBook?.title}</h3>
                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{pendingBook?.author}</p>

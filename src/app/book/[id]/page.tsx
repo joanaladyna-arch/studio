@@ -15,28 +15,14 @@ import {
   Trash2, 
   Save, 
   Star, 
-  Quote, 
-  MessageSquare, 
-  PersonStanding, 
-  MapPin, 
-  Loader2,
-  CheckCircle2,
-  Globe,
-  Tag,
-  Hash,
-  Layers,
-  Clock,
-  User as UserIcon,
-  ChevronRight,
   Bookmark,
-  Book as BookIcon,
-  Smartphone,
-  Tablet,
-  Headphones,
+  Globe,
+  Hash,
+  Loader2,
+  ChevronRight,
   Camera,
-  Link as LinkIcon,
-  X,
-  UserCircle
+  UserCircle,
+  RefreshCw
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -47,23 +33,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { 
   Book, 
-  STATUSES, 
-  FORMATS, 
-  RANKS, 
-  BookStatus, 
-  BookFormat, 
-  RankType,
-  GENRES_LIST,
-  TROPES_LIST
+  STATUSES
 } from "@/app/library/page";
 
 export default function BookDetailPage() {
@@ -170,6 +147,36 @@ export default function BookDetailPage() {
     }
   };
 
+  const enrichBookData = async () => {
+    if (!editedData.title || !bookRef) return;
+    setIsSaving(true);
+    try {
+      const search = `${editedData.title} ${editedData.author}`;
+      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=1`;
+      const res = await fetch(gUrl);
+      if (res.ok) {
+        const data = await res.json();
+        const item = data.items?.[0]?.volumeInfo;
+        if (item) {
+          const updates = {
+            description: item.description?.replace(/<[^>]*>?/gm, '') || editedData.description,
+            pages: item.pageCount || editedData.pages,
+            publisher: item.publisher || editedData.publisher,
+            publicationDate: item.publishedDate || editedData.publicationDate,
+            lastUpdated: serverTimestamp()
+          };
+          await updateDoc(bookRef, updates);
+          setEditedData(prev => ({ ...prev, ...updates }));
+          toast({ title: "Métadonnées enrichies" });
+        }
+      }
+    } catch (e) {
+      toast({ variant: "destructive", title: "Erreur d'enrichissement" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (bookLoading) return <div className="h-[80vh] flex flex-col items-center justify-center gap-6"><Loader2 className="h-12 w-12 animate-spin text-primary/40" /><p className="font-headline italic text-primary/60 text-2xl">Ouverture de votre écrin...</p></div>;
   if (!book) return <div className="h-[80vh] flex flex-col items-center justify-center gap-6 text-center"><p className="font-headline italic text-primary/60 text-3xl">Cette pépite n'existe plus.</p><Button asChild variant="outline" className="rounded-2xl h-14 px-10"><Link href="/library">Retourner au sanctuaire</Link></Button></div>;
 
@@ -177,23 +184,35 @@ export default function BookDetailPage() {
     <div className="space-y-12 animate-paper pb-32 max-w-7xl mx-auto px-4">
       <header className="flex flex-col sm:flex-row justify-between items-center pt-4 gap-6">
         <Button asChild variant="ghost" className="rounded-full text-lg font-headline italic"><Link href="/library"><ArrowLeft className="h-5 w-5 mr-3" /> Ma Bibliothèque</Link></Button>
-        <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-14 px-10 shadow-xl font-headline italic text-xl">
-          {isSaving ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : <Save className="h-5 w-5 mr-3" />} Graver les modifications
-        </Button>
+        <div className="flex gap-4">
+          <Button variant="outline" onClick={enrichBookData} disabled={isSaving} className="rounded-2xl h-14 px-6 italic font-headline gap-2">
+            <RefreshCw className={cn("h-4 w-4", isSaving && "animate-spin")} /> Compléter les infos
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-14 px-10 shadow-xl font-headline italic text-xl">
+            {isSaving ? <Loader2 className="h-5 w-5 animate-spin mr-3" /> : <Save className="h-5 w-5 mr-3" />} Graver les modifications
+          </Button>
+        </div>
       </header>
 
       <div className="grid lg:grid-cols-[400px_1fr] gap-16 items-start">
         <div className="space-y-10 flex flex-col items-center lg:items-start">
           <div className="relative w-full max-w-[280px] space-y-4">
             <div className="relative aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
-              <Image src={editedData.cover || "https://picsum.photos/seed/p/600/900"} alt="" fill className="object-contain" />
+              <Image 
+                src={editedData.cover || "https://picsum.photos/seed/p/600/900"} 
+                alt="" 
+                fill 
+                sizes="280px"
+                className="object-contain" 
+                loading="eager"
+              />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Button variant="secondary" onClick={() => setIsEditingCover(true)} className="rounded-full font-headline italic"><Camera className="h-4 w-4 mr-2" /> Modifier</Button></div>
             </div>
           </div>
           
           <Card className="glass-card p-10 border-none bg-white/60 space-y-10 w-full">
             <div className="space-y-5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-50">Statut</Label>
-              <div className="flex flex-wrap gap-2">{Object.entries(STATUSES).map(([k,v]) => (<Button key={k} variant="outline" onClick={() => setEditedData({...editedData, status: k as BookStatus})} className={cn("rounded-full text-[9px] h-9 px-4 uppercase font-bold tracking-widest", editedData.status === k ? "bg-primary text-white" : "bg-white/40")}>{v.label}</Button>))}</div>
+              <div className="flex flex-wrap gap-2">{Object.entries(STATUSES).map(([k,v]) => (<Button key={k} variant="outline" onClick={() => setEditedData({...editedData, status: k as any})} className={cn("rounded-full text-[9px] h-9 px-4 uppercase font-bold tracking-widest", editedData.status === k ? "bg-primary text-white" : "bg-white/40")}>{v.label}</Button>))}</div>
             </div>
             <div className="pt-6 border-t flex items-center justify-between">
               <span className="text-sm font-headline italic">De Plume</span>
@@ -214,7 +233,7 @@ export default function BookDetailPage() {
                 </Link>
                 <div className="h-16 w-16 relative rounded-full overflow-hidden border-2 border-white shadow-md bg-secondary/10 flex items-center justify-center">
                   {authorPhoto ? (
-                    <Image src={authorPhoto} alt="" fill className="object-cover" />
+                    <Image src={authorPhoto} alt="" fill sizes="64px" className="object-cover" />
                   ) : (
                     <UserCircle className="h-10 w-10 text-primary/20" />
                   )}

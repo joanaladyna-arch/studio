@@ -14,7 +14,6 @@ import {
   Loader2,
   ChevronRight,
   Target,
-  History,
   FileText,
   Calendar,
   Headphones,
@@ -25,7 +24,6 @@ import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
   const { user, loading: authLoading } = useUser();
@@ -69,8 +67,10 @@ export default function Home() {
     
     const monthlyRead = readBooks.filter(b => {
       if (!b.endDate) return false;
-      const d = new Date(b.endDate);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      try {
+        const d = new Date(b.endDate);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      } catch (e) { return false; }
     });
 
     const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
@@ -91,8 +91,8 @@ export default function Home() {
       goals,
       annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
       monthlyProgress: Math.min(100, Math.round((monthlyRead.length / goals.monthly) * 100)),
-      pagesProgress: Math.min(100, Math.round((pagesRead / goals.pages) * 100)),
-      audioProgress: Math.min(100, Math.round((audioHours / goals.audio) * 100))
+      pagesProgress: Math.min(100, Math.round((pagesRead / (goals.pages || 1)) * 100)),
+      audioProgress: Math.min(100, Math.round((audioHours / (goals.audio || 1)) * 100))
     };
   }, [allBooks, profile]);
 
@@ -217,7 +217,9 @@ export default function Home() {
                     src={currentRead.cover || 'https://picsum.photos/seed/placeholder/600/900'} 
                     alt={currentRead.title}
                     fill
+                    sizes="(max-width: 768px) 100vw, 280px"
                     className="object-cover group-hover:scale-110 transition-transform duration-1000"
+                    loading="eager"
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent mix-blend-overlay" />
                 </div>
