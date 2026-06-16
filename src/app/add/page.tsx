@@ -18,7 +18,7 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF } from "@/lib/utils";
 
 export default function AddBookPage() {
   const { user } = useUser();
@@ -61,10 +61,15 @@ export default function AddBookPage() {
         : searchVal;
 
     try {
-      // 1 & 2. Recherche Master Database (Plume) et Google Books en parallèle :
-      // ces deux sources sont indépendantes, les attendre en série n'apporte
-      // rien et double la latence perçue par l'utilisatrice.
-      const [masterSettled, googleSettled] = await Promise.allSettled([
+      // 1, 2 & 3. Recherche Master Database (Plume), Google Books et BnF
+      // (Bibliothèque nationale de France) en parallèle : ces trois
+      // sources sont indépendantes, les attendre en série n'apporte
+      // rien et double/triple la latence perçue par l'utilisatrice.
+      // La BnF référence par dépôt légal tout livre publié en France,
+      // y compris les petites maisons (BMR, Nox, Chatterley...) que
+      // Google Books manque souvent.
+      const bnfType = isIsbnQuery ? "isbn" : searchMode === "publisher" ? "publisher" : "general";
+      const [masterSettled, googleSettled, bnfSettled] = await Promise.allSettled([
         (async () => {
           const masterRef = collection(db, "masterBooks");
           // Recherche par préfixe sur le champ pertinent selon le mode
@@ -106,6 +111,25 @@ export default function AddBookPage() {
             };
           });
         })(),
+        (async () => {
+          const bnfResults = await searchBnF(searchVal, bnfType);
+          return bnfResults.map((b: any) => ({
+            id: b.id,
+            title: b.title || "Titre inconnu",
+            subtitle: "",
+            author: b.author || "Auteur inconnu",
+            cover: b.cover || undefined,
+            isbn: b.isbn || "N/A",
+            isbn10: "",
+            description: "",
+            publisher: b.publisher || "",
+            pages: 0,
+            language: b.language || "",
+            publishedDate: b.publishedDate || "",
+            genres: toArray<string>(b.genres),
+            source: "api"
+          }));
+        })(),
       ]);
 
       if (masterSettled.status === "fulfilled") {
@@ -122,6 +146,22 @@ export default function AddBookPage() {
       } else {
         console.error("Google Books Error:", googleSettled.reason);
         // On continue même si Google Books échoue ou expire
+      }
+
+      if (bnfSettled.status === "fulfilled") {
+        // Doublons exclus par ISBN, mais aussi par titre+auteur : la BnF
+        // ne renvoie pas toujours d'ISBN propre, l'ISBN seul ne suffit
+        // donc pas ici à éviter les répétitions avec Google Books.
+        const newBnfResults = bnfSettled.value.filter((b: any) =>
+          !allResults.find(m =>
+            (m.isbn13 === b.isbn || m.isbn === b.isbn) ||
+            ((m.title || "").toLowerCase() === (b.title || "").toLowerCase() && (m.author || "").toLowerCase() === (b.author || "").toLowerCase())
+          )
+        );
+        allResults = [...allResults, ...newBnfResults];
+      } else {
+        console.error("BnF Error:", bnfSettled.reason);
+        // On continue même si la BnF échoue ou expire : source bonus, pas bloquante
       }
 
       // 3. Fallback Open Library (si toujours peu de résultats, timeout 8s également)

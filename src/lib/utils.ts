@@ -39,6 +39,33 @@ export async function fetchWithTimeout(
 }
 
 /**
+ * Interroge notre propre route API /api/bnf-search (voir
+ * src/app/api/bnf-search/route.ts), qui relaie une recherche vers le
+ * Catalogue général de la BnF côté serveur. Le dépôt légal rend ce
+ * catalogue exhaustif pour les éditeurs français, contrairement à
+ * Google Books / Open Library qui manquent beaucoup de petites maisons
+ * (BMR, Nox, Chatterley...). Échoue toujours silencieusement (tableau
+ * vide) : cette source est un bonus, jamais un blocage pour les autres.
+ */
+export async function searchBnF(
+  q: string,
+  type: "author" | "isbn" | "publisher" | "general" = "general"
+): Promise<any[]> {
+  try {
+    const res = await fetchWithTimeout(
+      `/api/bnf-search?q=${encodeURIComponent(q)}&type=${type}`,
+      {},
+      8000
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.results) ? data.results : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Liste des emails autorisés à accéder à /admin. Centralisé ici pour que
  * la page admin et la navigation (qui doit savoir si elle affiche le lien
  * vers /admin) restent toujours synchronisées.

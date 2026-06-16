@@ -27,7 +27,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF } from "@/lib/utils";
 
 export default function AuthorPage() {
   const params = useParams();
@@ -82,11 +82,14 @@ export default function AuthorPage() {
            }
         }
 
-        // On interroge en parallèle Google Books (univers large) et la
-        // base Plume (masterBooks) : sans ça, les livres importés via
-        // Excel/admin mais peu présents sur Google Books n'apparaissent
-        // jamais sur la fiche de leur auteur.
-        const [googleSettled, masterSettled] = await Promise.allSettled([
+        // On interroge en parallèle Google Books (univers large), la
+        // base Plume (masterBooks) et la BnF (Bibliothèque nationale de
+        // France) : sans ça, les livres importés via Excel/admin ou
+        // publiés chez de petites maisons françaises (BMR, Nox,
+        // Chatterley...) que Google Books référence mal n'apparaissent
+        // jamais sur la fiche de leur auteur. Le dépôt légal rend le
+        // catalogue de la BnF exhaustif pour tout livre publié en France.
+        const [googleSettled, masterSettled, bnfSettled] = await Promise.allSettled([
           (async () => {
             const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
             const response = await fetchWithTimeout(url, {}, 8000);
@@ -137,16 +140,42 @@ export default function AuthorPage() {
               };
             });
           })(),
+          (async () => {
+            const bnfResults = await searchBnF(authorName, "author");
+            return bnfResults.map((b: any) => ({
+              id: b.id,
+              title: b.title,
+              subtitle: "",
+              author: b.author || authorName,
+              publisher: b.publisher,
+              cover: b.cover || undefined,
+              pages: 0,
+              description: "",
+              publicationDate: b.publicationDate,
+              genres: toArray<string>(b.genres),
+              language: b.language || "Français",
+              isbn: b.isbn || "N/A",
+              source: "bnf",
+            }));
+          })(),
         ]);
+
+        const bnfResults = bnfSettled.status === "fulfilled" ? bnfSettled.value : [];
 
         const googleResults = googleSettled.status === "fulfilled" ? googleSettled.value : [];
         const masterResults = masterSettled.status === "fulfilled" ? masterSettled.value : [];
-        // La base Plume (masterBooks) est prioritaire : on évite les doublons
-        // en excluant de Google Books tout titre déjà présent côté masterBooks.
-        const dedupedGoogle = googleResults.filter((g: any) =>
-          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase())
+        // La base Plume (masterBooks) est prioritaire, suivie de la BnF
+        // (plus fiable que Google Books pour les éditeurs français) :
+        // on évite les doublons en excluant de chaque source suivante
+        // tout titre déjà présent dans les sources précédentes.
+        const dedupedBnf = bnfResults.filter((b: any) =>
+          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (b.title || "").toLowerCase())
         );
-        setResults([...masterResults, ...dedupedGoogle]);
+        const dedupedGoogle = googleResults.filter((g: any) =>
+          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase()) &&
+          !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (g.title || "").toLowerCase())
+        );
+        setResults([...masterResults, ...dedupedBnf, ...dedupedGoogle]);
       } catch (e) {
         console.error(e);
       } finally {

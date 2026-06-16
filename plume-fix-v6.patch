@@ -1,0 +1,1259 @@
+From e12c4bda94ac26efe1ed9c841c4fd36387e4bcb1 Mon Sep 17 00:00:00 2001
+From: Plume Assistant <assistant@plume.local>
+Date: Tue, 16 Jun 2026 16:55:19 +0000
+Subject: [PATCH] =?UTF-8?q?Ajout=20BnF=20comme=20source=20de=20recherche?=
+ =?UTF-8?q?=20suppl=C3=A9mentaire=20(fiches=20livres/auteurs),=20suppressi?=
+ =?UTF-8?q?on=20du=20fichier=20patch=20committ=C3=A9=20par=20erreur?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ plume-fix-v5.patch              | 874 --------------------------------
+ src/app/add/page.tsx            |  50 +-
+ src/app/api/bnf-search/route.ts | 150 ++++++
+ src/app/author/[name]/page.tsx  |  49 +-
+ src/lib/utils.ts                |  27 +
+ 5 files changed, 261 insertions(+), 889 deletions(-)
+ delete mode 100644 plume-fix-v5.patch
+ create mode 100644 src/app/api/bnf-search/route.ts
+
+diff --git a/plume-fix-v5.patch b/plume-fix-v5.patch
+deleted file mode 100644
+index b9623b5..0000000
+--- a/plume-fix-v5.patch
++++ /dev/null
+@@ -1,874 +0,0 @@
+-From a646240b0c74d72793ccf4f3a7bff7d12a73285d Mon Sep 17 00:00:00 2001
+-From: Plume Maintenance <maintenance@plume.app>
+-Date: Tue, 16 Jun 2026 15:30:36 +0000
+-Subject: [PATCH] =?UTF-8?q?fix+feat:=20navigation,=20page=20auteur,=20mobi?=
+- =?UTF-8?q?le,=20modale,=20recherche=20ISBN/=C3=A9diteur,=20fiches=20auteu?=
+- =?UTF-8?q?r,=20renommage=20r=C3=A9serve?=
+-MIME-Version: 1.0
+-Content-Type: text/plain; charset=UTF-8
+-Content-Transfer-Encoding: 8bit
+-
+----
+- src/app/add/page.tsx           | 116 ++++++++++++++++++-------
+- src/app/admin/page.tsx         |  75 +++++++++++++---
+- src/app/author/[name]/page.tsx | 151 ++++++++++++++++++++++-----------
+- src/app/book/[id]/page.tsx     |  15 ++--
+- src/app/library/page.tsx       |   2 +-
+- src/app/login/page.tsx         |   2 +-
+- src/app/manifest.ts            |   2 +-
+- src/app/page.tsx               |   4 +-
+- src/app/profile/page.tsx       |  19 +++--
+- src/app/signup/page.tsx        |   2 +-
+- src/components/auth-guard.tsx  |   2 +-
+- src/components/navigation.tsx  |  19 ++++-
+- src/lib/utils.ts               |   7 ++
+- 13 files changed, 302 insertions(+), 114 deletions(-)
+-
+-diff --git a/src/app/add/page.tsx b/src/app/add/page.tsx
+-index 82d7045..7ebf6be 100644
+---- a/src/app/add/page.tsx
+-+++ b/src/app/add/page.tsx
+-@@ -17,9 +17,8 @@ import { useUser, useFirestore } from "@/firebase";
+- import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from "firebase/firestore";
+- import { Badge } from "@/components/ui/badge";
+- import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+--import { ScrollArea } from "@/components/ui/scroll-area";
+- import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
+--import { cn, fetchWithTimeout } from "@/lib/utils";
+-+import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
+- 
+- export default function AddBookPage() {
+-   const { user } = useUser();
+-@@ -27,6 +26,7 @@ export default function AddBookPage() {
+-   const { toast } = useToast();
+-   
+-   const [queryStr, setQueryStr] = useState("");
+-+  const [searchMode, setSearchMode] = useState<"general" | "publisher">("general");
+-   const [results, setResults] = useState<any[]>([]);
+-   const [isSearching, setIsSearching] = useState(false);
+-   const [pendingBook, setPendingBook] = useState<any | null>(null);
+-@@ -38,7 +38,7 @@ export default function AddBookPage() {
+-     e.preventDefault();
+-     const searchVal = queryStr.trim();
+-     if (!searchVal) {
+--      toast({ title: "Champ vide", description: "Veuillez saisir un titre ou un auteur." });
+-+      toast({ title: "Champ vide", description: "Veuillez saisir un titre, un auteur, un éditeur ou un ISBN." });
+-       return;
+-     }
+-     if (!db || isSearching) return; // Évite les recherches concurrentes (double-clic, touche Entrée répétée)
+-@@ -48,6 +48,18 @@ export default function AddBookPage() {
+- 
+-     let allResults: any[] = [];
+- 
+-+    // Détection automatique d'une recherche par ISBN (10 ou 13 chiffres,
+-+    // tirets/espaces tolérés) : on bascule alors la requête Google Books
+-+    // sur l'opérateur "isbn:" pour une correspondance exacte plutôt
+-+    // qu'une recherche floue, et la Master DB sur le champ isbn.
+-+    const cleanedDigits = searchVal.replace(/[-\s]/g, "");
+-+    const isIsbnQuery = /^\d{10}(\d{3})?$/.test(cleanedDigits);
+-+    const googleQuery = isIsbnQuery
+-+      ? `isbn:${cleanedDigits}`
+-+      : searchMode === "publisher"
+-+        ? `inpublisher:${searchVal}`
+-+        : searchVal;
+-+
+-     try {
+-       // 1 & 2. Recherche Master Database (Plume) et Google Books en parallèle :
+-       // ces deux sources sont indépendantes, les attendre en série n'apporte
+-@@ -55,13 +67,18 @@ export default function AddBookPage() {
+-       const [masterSettled, googleSettled] = await Promise.allSettled([
+-         (async () => {
+-           const masterRef = collection(db, "masterBooks");
+--          // Recherche simple par égalité ou préfixe (attention aux index Firestore)
+--          const q = query(masterRef, where("title", ">=", searchVal), where("title", "<=", searchVal + "\uf8ff"));
+-+          // Recherche par préfixe sur le champ pertinent selon le mode
+-+          // (titre par défaut, éditeur, ou ISBN en correspondance exacte).
+-+          const q = isIsbnQuery
+-+            ? query(masterRef, where("isbn13", "==", cleanedDigits))
+-+            : searchMode === "publisher"
+-+              ? query(masterRef, where("publisher", ">=", searchVal), where("publisher", "<=", searchVal + "\uf8ff"))
+-+              : query(masterRef, where("title", ">=", searchVal), where("title", "<=", searchVal + "\uf8ff"));
+-           const masterSnap = await getDocs(q);
+-           return masterSnap.docs.map(d => ({ ...d.data(), id: d.id, source: "master" }));
+-         })(),
+-         (async () => {
+--          const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchVal)}&maxResults=10`;
+-+          const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(googleQuery)}&maxResults=10`;
+-           const res = await fetchWithTimeout(gUrl, {}, 8000);
+-           if (!res.ok) return [];
+-           const data = await res.json();
+-@@ -110,7 +127,12 @@ export default function AddBookPage() {
+-       // 3. Fallback Open Library (si toujours peu de résultats, timeout 8s également)
+-       if (allResults.length < 5) {
+-         try {
+--          const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchVal)}&limit=5`;
+-+          const olQuery = isIsbnQuery
+-+            ? `isbn:${cleanedDigits}`
+-+            : searchMode === "publisher"
+-+              ? `publisher:${searchVal}`
+-+              : searchVal;
+-+          const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(olQuery)}&limit=5`;
+-           const res = await fetchWithTimeout(olUrl, {}, 8000);
+-           if (res.ok) {
+-             const data = await res.json();
+-@@ -165,9 +187,9 @@ export default function AddBookPage() {
+-         const masterRef = doc(collection(db, "masterBooks"));
+-         masterBookId = masterRef.id;
+-         await setDoc(masterRef, {
+--          title: pendingBook.title,
+-+          title: pendingBook.title || "Titre inconnu",
+-           subtitle: pendingBook.subtitle || "",
+--          author: pendingBook.author,
+-+          author: pendingBook.author || "Auteur inconnu",
+-           cover: pendingBook.cover || "",
+-           isbn13: pendingBook.isbn || "",
+-           isbn10: pendingBook.isbn10 || "",
+-@@ -176,7 +198,7 @@ export default function AddBookPage() {
+-           pageCount: pendingBook.pages || 0,
+-           language: pendingBook.language || "",
+-           publishedDate: pendingBook.publishedDate || "",
+--          genres: pendingBook.genres || [],
+-+          genres: toArray<string>(pendingBook.genres),
+-           updatedAt: serverTimestamp(),
+-           source: "discovered"
+-         });
+-@@ -188,10 +210,10 @@ export default function AddBookPage() {
+-       // masterBook, sans quoi ils ne se débloqueraient jamais.
+-       const userBookData = {
+-         masterBookId,
+--        title: pendingBook.title,
+--        author: pendingBook.author,
+-+        title: pendingBook.title || "Titre inconnu",
+-+        author: pendingBook.author || "Auteur inconnu",
+-         cover: pendingBook.cover || "",
+--        genres: pendingBook.genres || [],
+-+        genres: toArray<string>(pendingBook.genres),
+-         status: selectedStatus,
+-         format: selectedFormat,
+-         dateAdded: serverTimestamp(),
+-@@ -199,11 +221,18 @@ export default function AddBookPage() {
+- 
+-       await addDoc(collection(db, "users", user.uid, "books"), userBookData);
+-       
+--      toast({ title: "Pépite ajoutée", description: `${pendingBook.title} est dans votre sanctuaire.` });
+-+      toast({ title: "Pépite ajoutée", description: `${pendingBook.title} est dans votre réserve.` });
+-       setPendingBook(null);
+--    } catch (err) {
+-+    } catch (err: any) {
+-       console.error("Add Book Error:", err);
+--      toast({ variant: "destructive", title: "Impossible d'ajouter le livre" });
+-+      // On affiche le vrai message d'erreur (ex: règles Firestore, champ
+-+      // invalide...) plutôt qu'un message générique, pour pouvoir
+-+      // diagnostiquer sans avoir besoin d'ouvrir la console du navigateur.
+-+      toast({
+-+        variant: "destructive",
+-+        title: "Impossible d'ajouter le livre",
+-+        description: err?.message || "Erreur inconnue.",
+-+      });
+-     } finally {
+-       setIsAdding(false);
+-     }
+-@@ -216,17 +245,43 @@ export default function AddBookPage() {
+-         <p className="text-primary/60 italic">Recherchez dans la base Plume ou sur le web.</p>
+-       </header>
+- 
+--      <form onSubmit={searchBooks} className="max-w-2xl mx-auto flex gap-4">
+--        <Input 
+--          placeholder="Titre, auteur ou ISBN..." 
+--          value={queryStr}
+--          onChange={(e) => setQueryStr(e.target.value)}
+--          className="h-14 rounded-2xl bg-white/60 border-white shadow-sm italic text-lg"
+--        />
+--        <Button type="submit" disabled={isSearching} className="h-14 px-8 rounded-2xl bg-primary text-lg font-headline italic">
+--          {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
+--        </Button>
+--      </form>
+-+      <div className="max-w-2xl mx-auto space-y-4">
+-+        <div className="flex justify-center gap-2">
+-+          <Button
+-+            type="button"
+-+            variant="outline"
+-+            onClick={() => setSearchMode("general")}
+-+            className={cn(
+-+              "rounded-full h-9 px-5 text-[10px] uppercase font-bold tracking-widest transition-all",
+-+              searchMode === "general" ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40"
+-+            )}
+-+          >
+-+            Titre, auteur ou ISBN
+-+          </Button>
+-+          <Button
+-+            type="button"
+-+            variant="outline"
+-+            onClick={() => setSearchMode("publisher")}
+-+            className={cn(
+-+              "rounded-full h-9 px-5 text-[10px] uppercase font-bold tracking-widest transition-all",
+-+              searchMode === "publisher" ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40"
+-+            )}
+-+          >
+-+            Éditeur (BMR, Nox, Hugo...)
+-+          </Button>
+-+        </div>
+-+        <form onSubmit={searchBooks} className="flex gap-4">
+-+          <Input 
+-+            placeholder={searchMode === "publisher" ? "Nom de l'éditeur (BMR, Nox, Chatterley, Hugo, &H...)" : "Titre, auteur ou ISBN..."}
+-+            value={queryStr}
+-+            onChange={(e) => setQueryStr(e.target.value)}
+-+            className="h-14 rounded-2xl bg-white/60 border-white shadow-sm italic text-lg"
+-+          />
+-+          <Button type="submit" disabled={isSearching} className="h-14 px-8 rounded-2xl bg-primary text-lg font-headline italic">
+-+            {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
+-+          </Button>
+-+        </form>
+-+      </div>
+- 
+-       <div className="max-w-4xl mx-auto grid gap-6">
+-         {results.map((book) => (
+-@@ -239,6 +294,7 @@ export default function AddBookPage() {
+-                 <div className="space-y-1">
+-                   <h3 className="text-xl font-headline italic leading-tight">{book.title}</h3>
+-                   <p className="text-xs text-muted-foreground font-bold uppercase">{book.author}</p>
+-+                  {book.publisher && <p className="text-[10px] text-primary/50 italic">{book.publisher}</p>}
+-                   {book.source === 'master' && (
+-                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px] mt-2">
+-                       Base Plume
+-@@ -257,9 +313,9 @@ export default function AddBookPage() {
+-       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
+-         <DialogContent className="glass-card max-w-lg p-0 overflow-hidden flex flex-col max-h-[90vh] border-none">
+-           <DialogHeader className="p-10 border-b bg-white/40">
+--            <DialogTitle className="font-headline text-3xl italic">Ajouter au sanctuaire</DialogTitle>
+-+            <DialogTitle className="font-headline text-3xl italic">Ajouter dans ma réserve</DialogTitle>
+-           </DialogHeader>
+--          <ScrollArea className="flex-1 min-h-0">
+-+          <div className="flex-1 min-h-0 overflow-y-auto">
+-             <div className="p-10 space-y-8">
+-               <div className="space-y-4">
+-                 <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Intention</label>
+-@@ -298,7 +354,7 @@ export default function AddBookPage() {
+-                 </div>
+-               </div>
+-             </div>
+--          </ScrollArea>
+-+          </div>
+-           <DialogFooter className="p-10 border-t bg-white/60">
+-             <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic">
+-               {isAdding ? <Loader2 className="animate-spin" /> : "Confirmer l'ajout"}
+-diff --git a/src/app/admin/page.tsx b/src/app/admin/page.tsx
+-index e3290aa..3d7617a 100644
+---- a/src/app/admin/page.tsx
+-+++ b/src/app/admin/page.tsx
+-@@ -3,7 +3,7 @@
+- 
+- import { useState, useRef } from "react";
+- import { useUser, useFirestore } from "@/firebase";
+--import { collection, doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+-+import { collection, doc, setDoc, serverTimestamp, getDoc, getDocs, arrayUnion } from "firebase/firestore";
+- import { Button } from "@/components/ui/button";
+- import { Input } from "@/components/ui/input";
+- import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+-@@ -24,10 +24,7 @@ import * as XLSX from "xlsx";
+- import { Progress } from "@/components/ui/progress";
+- import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+- import { ScrollArea } from "@/components/ui/scroll-area";
+--import { cn, fetchWithTimeout } from "@/lib/utils";
+--
+--// LISTE DES EMAILS ADMINS AUTORISÉS
+--const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
+-+import { cn, fetchWithTimeout, ADMIN_EMAILS } from "@/lib/utils";
+- 
+- export default function AdminPage() {
+-   const { user } = useUser();
+-@@ -43,6 +40,7 @@ export default function AdminPage() {
+-   const [isProcessing, setIsProcessing] = useState(false);
+-   const [progress, setProgress] = useState(0);
+-   const [importResults, setImportResults] = useState<{ success: number; errors: number } | null>(null);
+-+  const [isSyncingAuthors, setIsSyncingAuthors] = useState(false);
+- 
+-   // Simple Admin check
+-   const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
+-@@ -144,13 +142,18 @@ export default function AdminPage() {
+-           }, { merge: true });
+-         }
+- 
+--        // 3. Création/Mise à jour Authors si présent
+--        const actualAuthors = bookData.author.split(",").map(s => s.trim());
+-+        // 3. Création/Mise à jour Authors si présent — on référence aussi
+-+        // l'œuvre elle-même (titre + ID de la fiche maître) sur la fiche
+-+        // auteur, pour que sa bibliographie se complète au fil des imports
+-+        // au lieu de ne stocker que son nom.
+-+        const actualAuthors = bookData.author.split(",").map((s: string) => s.trim()).filter(Boolean);
+-         for (const authName of actualAuthors) {
+-           const authId = slugify(authName);
+-           await setDoc(doc(db, "authors", authId), {
+-             name: authName,
+-             slug: authId,
+-+            works: arrayUnion(bookData.title),
+-+            bookIds: arrayUnion(bookId),
+-             updatedAt: serverTimestamp()
+-           }, { merge: true });
+-         }
+-@@ -176,6 +179,52 @@ export default function AdminPage() {
+-     setExcelData([]); // Clear data after import
+-   };
+- 
+-+  // Reconstruit les fiches auteur (nom, œuvres, IDs des livres) à partir
+-+  // de TOUS les livres déjà présents dans masterBooks — pas seulement ceux
+-+  // importés par Excel, mais aussi ceux ajoutés via la recherche/l'API.
+-+  // Permet de compléter les fiches auteur après coup, sans réimporter.
+-+  const syncAuthors = async () => {
+-+    if (!db) return;
+-+    setIsSyncingAuthors(true);
+-+    let booksProcessed = 0;
+-+    let authorsTouched = 0;
+-+    try {
+-+      const snap = await getDocs(collection(db, "masterBooks"));
+-+      for (const bookDoc of snap.docs) {
+-+        const data = bookDoc.data();
+-+        const authorStr = (data.author || "").toString();
+-+        if (!authorStr) continue;
+-+        const authorNames = authorStr.split(",").map((s: string) => s.trim()).filter(Boolean);
+-+        for (const authName of authorNames) {
+-+          const authId = slugify(authName);
+-+          if (!authId) continue;
+-+          try {
+-+            await setDoc(doc(db, "authors", authId), {
+-+              name: authName,
+-+              slug: authId,
+-+              works: arrayUnion(data.title || "Titre inconnu"),
+-+              bookIds: arrayUnion(bookDoc.id),
+-+              updatedAt: serverTimestamp()
+-+            }, { merge: true });
+-+            authorsTouched++;
+-+          } catch (err) {
+-+            console.error("Sync Author Error:", authName, err);
+-+          }
+-+        }
+-+        booksProcessed++;
+-+      }
+-+      toast({
+-+        title: "Synchronisation terminée",
+-+        description: `${booksProcessed} livres parcourus, ${authorsTouched} fiches auteur mises à jour.`
+-+      });
+-+    } catch (err) {
+-+      console.error("Sync Authors Error:", err);
+-+      toast({ variant: "destructive", title: "Échec de la synchronisation", description: "Vérifie les règles Firestore (lecture sur masterBooks, écriture sur authors)." });
+-+    } finally {
+-+      setIsSyncingAuthors(false);
+-+    }
+-+  };
+-+
+-   const importByIsbn = async () => {
+-     const cleanIsbn = isbn.trim();
+-     if (!cleanIsbn || !db) return;
+-@@ -234,23 +283,23 @@ export default function AdminPage() {
+-             <div className="flex items-center justify-between">
+-               <div className="space-y-2">
+-                 <CardTitle className="font-headline text-3xl italic flex items-center gap-3">
+--                  <FileSpreadsheet className="h-8 w-8 text-emerald-500" /> Importer depuis Excel
+-+                  <FileSpreadsheet className="h-8 w-8 text-emerald-500" /> Importer ma base de données
+-                 </CardTitle>
+--                <CardDescription className="italic">Colonnes : isbn13, title, authors, publisher, genres, tropes...</CardDescription>
+-+                <CardDescription className="italic">Fichier .xlsx, .xls ou .csv — colonnes : isbn13, title, authors, publisher, genres, tropes...</CardDescription>
+-               </div>
+-               <input 
+-                 type="file" 
+-                 ref={fileInputRef} 
+-                 onChange={handleFileUpload} 
+-                 className="hidden" 
+--                accept=".xlsx"
+-+                accept=".xlsx,.xls,.csv"
+-               />
+-               <Button 
+-                 onClick={() => fileInputRef.current?.click()} 
+-                 variant="outline"
+-                 className="rounded-2xl h-14 px-8 border-emerald-200 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-50 italic font-headline text-xl"
+-               >
+--                <Upload className="mr-3" /> Choisir .xlsx
+-+                <Upload className="mr-3" /> Choisir un fichier
+-               </Button>
+-             </div>
+-           </CardHeader>
+-@@ -355,7 +404,9 @@ export default function AdminPage() {
+-               </CardTitle>
+-             </CardHeader>
+-             <CardContent className="p-10 flex flex-col gap-4">
+--               <Button variant="outline" className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">Synchroniser les Auteurs</Button>
+-+               <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+-+                 {isSyncingAuthors ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Synchroniser les Auteurs
+-+               </Button>
+-                <Button variant="outline" className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">Nettoyer les Genres</Button>
+-                <p className="text-[10px] text-center opacity-40 font-bold uppercase tracking-widest mt-4">Statut : En ligne et sécurisé</p>
+-             </CardContent>
+-diff --git a/src/app/author/[name]/page.tsx b/src/app/author/[name]/page.tsx
+-index d9639f4..9d297fd 100644
+---- a/src/app/author/[name]/page.tsx
+-+++ b/src/app/author/[name]/page.tsx
+-@@ -4,7 +4,7 @@
+- import { useState, useEffect, useMemo, useCallback } from "react";
+- import { useParams } from "next/navigation";
+- import { useUser, useFirestore, useCollection } from "@/firebase";
+--import { collection, addDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
+-+import { collection, addDoc, doc, setDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+- import { useToast } from "@/hooks/use-toast";
+- import { 
+-   ArrowLeft, 
+-@@ -27,7 +27,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
+- import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+- import { ScrollArea } from "@/components/ui/scroll-area";
+- import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
+--import { cn, fetchWithTimeout } from "@/lib/utils";
+-+import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
+- 
+- export default function AuthorPage() {
+-   const params = useParams();
+-@@ -82,32 +82,71 @@ export default function AuthorPage() {
+-            }
+-         }
+- 
+--        const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
+--        const response = await fetchWithTimeout(url, {}, 8000);
+--        const data = await response.json();
+--        
+--        if (data.items) {
+--          const formatted = data.items.map((item: any) => {
+--            const info = item.volumeInfo;
+--            return {
+--              id: item.id,
+--              title: info.title,
+--              subtitle: info.subtitle,
+--              author: info.authors ? info.authors.join(", ") : authorName,
+--              publisher: info.publisher,
+--              cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
+--              pages: info.pageCount || 0,
+--              description: info.description || "",
+--              publicationDate: info.publishedDate,
+--              genres: info.categories || [],
+--              language: "Français",
+--              isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
+--                    info.industryIdentifiers?.[0]?.identifier || 
+--                    "N/A",
+--            };
+--          });
+--          setResults(formatted);
+--        }
+-+        // On interroge en parallèle Google Books (univers large) et la
+-+        // base Plume (masterBooks) : sans ça, les livres importés via
+-+        // Excel/admin mais peu présents sur Google Books n'apparaissent
+-+        // jamais sur la fiche de leur auteur.
+-+        const [googleSettled, masterSettled] = await Promise.allSettled([
+-+          (async () => {
+-+            const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
+-+            const response = await fetchWithTimeout(url, {}, 8000);
+-+            const data = await response.json();
+-+            if (!data.items) return [];
+-+            return data.items.map((item: any) => {
+-+              const info = item.volumeInfo;
+-+              return {
+-+                id: item.id,
+-+                title: info.title,
+-+                subtitle: info.subtitle,
+-+                author: info.authors ? info.authors.join(", ") : authorName,
+-+                publisher: info.publisher,
+-+                cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
+-+                pages: info.pageCount || 0,
+-+                description: info.description || "",
+-+                publicationDate: info.publishedDate,
+-+                genres: info.categories || [],
+-+                language: "Français",
+-+                isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier ||
+-+                      info.industryIdentifiers?.[0]?.identifier ||
+-+                      "N/A",
+-+              };
+-+            });
+-+          })(),
+-+          (async () => {
+-+            if (!db) return [];
+-+            const masterRef = collection(db, "masterBooks");
+-+            const q = query(masterRef, where("author", ">=", authorName), where("author", "<=", authorName + "\uf8ff"));
+-+            const snap = await getDocs(q);
+-+            return snap.docs.map(d => {
+-+              const data: any = d.data();
+-+              return {
+-+                id: d.id,
+-+                masterBookId: d.id,
+-+                title: data.title,
+-+                subtitle: data.subtitle,
+-+                author: data.author || authorName,
+-+                publisher: data.publisher,
+-+                cover: data.cover,
+-+                pages: data.pageCount || data.pages || 0,
+-+                description: data.description || "",
+-+                publicationDate: data.publishedDate,
+-+                genres: data.genres || [],
+-+                language: data.language || "Français",
+-+                isbn: data.isbn13 || data.isbn || "N/A",
+-+                source: "master",
+-+              };
+-+            });
+-+          })(),
+-+        ]);
+-+
+-+        const googleResults = googleSettled.status === "fulfilled" ? googleSettled.value : [];
+-+        const masterResults = masterSettled.status === "fulfilled" ? masterSettled.value : [];
+-+        // La base Plume (masterBooks) est prioritaire : on évite les doublons
+-+        // en excluant de Google Books tout titre déjà présent côté masterBooks.
+-+        const dedupedGoogle = googleResults.filter((g: any) =>
+-+          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase())
+-+        );
+-+        setResults([...masterResults, ...dedupedGoogle]);
+-       } catch (e) {
+-         console.error(e);
+-       } finally {
+-@@ -130,33 +169,38 @@ export default function AuthorPage() {
+- 
+-     setIsAdding(true);
+-     try {
+--      // On crée d'abord la fiche bibliographique complète (livre, auteur,
+--      // édition) dans masterBooks, comme pour l'ajout depuis la recherche —
+--      // sans ça, la fiche détail du livre n'affiche pas l'éditeur, l'ISBN
+-+      // Si le livre vient déjà de la base Plume (masterBooks), on réutilise
+-+      // sa fiche existante au lieu d'en recréer une en double. Sinon
+-+      // (résultat Google Books), on crée la fiche bibliographique complète
+-+      // — sans ça, la fiche détail du livre n'affiche pas l'éditeur, l'ISBN
+-       // ou le résumé pour les livres ajoutés depuis la page auteur.
+--      const masterRef = doc(collection(db, "masterBooks"));
+--      await setDoc(masterRef, {
+--        title: pendingBook.title,
+--        subtitle: pendingBook.subtitle || "",
+--        author: pendingBook.author,
+--        cover: pendingBook.cover || "",
+--        isbn13: pendingBook.isbn || "",
+--        description: pendingBook.description || "",
+--        publisher: pendingBook.publisher || "",
+--        pageCount: pendingBook.pages || 0,
+--        publishedDate: pendingBook.publicationDate || "",
+--        genres: pendingBook.genres || [],
+--        updatedAt: serverTimestamp(),
+--        source: "discovered"
+--      });
+-+      let masterBookId = pendingBook.masterBookId;
+-+      if (!masterBookId) {
+-+        const masterRef = doc(collection(db, "masterBooks"));
+-+        masterBookId = masterRef.id;
+-+        await setDoc(masterRef, {
+-+          title: pendingBook.title || "Titre inconnu",
+-+          subtitle: pendingBook.subtitle || "",
+-+          author: pendingBook.author || authorName,
+-+          cover: pendingBook.cover || "",
+-+          isbn13: pendingBook.isbn || "",
+-+          description: pendingBook.description || "",
+-+          publisher: pendingBook.publisher || "",
+-+          pageCount: pendingBook.pages || 0,
+-+          publishedDate: pendingBook.publicationDate || "",
+-+          genres: toArray<string>(pendingBook.genres),
+-+          updatedAt: serverTimestamp(),
+-+          source: "discovered"
+-+        });
+-+      }
+- 
+-       const booksRef = collection(db, "users", user.uid, "books");
+-       const bookData = {
+--        masterBookId: masterRef.id,
+--        title: pendingBook.title,
+--        author: pendingBook.author,
+-+        masterBookId,
+-+        title: pendingBook.title || "Titre inconnu",
+-+        author: pendingBook.author || authorName,
+-         cover: pendingBook.cover || "",
+--        genres: pendingBook.genres || [],
+-+        genres: toArray<string>(pendingBook.genres),
+-         status: selectedStatus,
+-         format: selectedFormat,
+-         dePlume: isDePlume,
+-@@ -167,7 +211,7 @@ export default function AuthorPage() {
+- 
+-       await addDoc(booksRef, bookData)
+-         .then(() => {
+--          toast({ title: "Pépite ajoutée", description: `${pendingBook.title} a rejoint votre écrin.` });
+-+          toast({ title: "Pépite ajoutée", description: `${pendingBook.title} a rejoint votre réserve.` });
+-           setPendingBook(null);
+-         })
+-         .catch(async () => {
+-@@ -234,6 +278,11 @@ export default function AuthorPage() {
+-                       <div className="space-y-3">
+-                         <h3 className="text-2xl font-headline italic leading-tight group-hover:text-primary transition-colors">{book.title}</h3>
+-                         {book.subtitle && <p className="text-sm text-muted-foreground italic opacity-60">{book.subtitle}</p>}
+-+                        {book.source === 'master' && (
+-+                          <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px]">
+-+                            Base Plume
+-+                          </Badge>
+-+                        )}
+-                         <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest opacity-40 pt-2">
+-                           <span className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> {book.pages} pages</span>
+-                           <span className="flex items-center gap-2"><Globe className="h-4 w-4" /> {book.publisher || "Éditeur inconnu"}</span>
+-diff --git a/src/app/book/[id]/page.tsx b/src/app/book/[id]/page.tsx
+-index 19a97b4..8bd0572 100644
+---- a/src/app/book/[id]/page.tsx
+-+++ b/src/app/book/[id]/page.tsx
+-@@ -138,7 +138,7 @@ export default function BookDetailPage() {
+-   };
+- 
+-   const handleDelete = async () => {
+--    if (!userBookRef || !confirm("Retirer ce livre de votre sanctuaire ?")) return;
+-+    if (!userBookRef || !confirm("Retirer ce livre de votre réserve ?")) return;
+-     try {
+-       await deleteDoc(userBookRef);
+-       toast({ title: "Livre retiré" });
+-@@ -161,7 +161,7 @@ export default function BookDetailPage() {
+-     return (
+-       <div className="p-20 text-center space-y-6">
+-         <h2 className="text-3xl font-headline italic">Livre introuvable</h2>
+--        <p className="text-muted-foreground italic">Cette pépite semble avoir disparu de votre sanctuaire.</p>
+-+        <p className="text-muted-foreground italic">Cette pépite semble avoir disparu de votre réserve.</p>
+-         <Button asChild variant="outline" className="rounded-2xl italic font-headline">
+-           <Link href="/library">Retour à la bibliothèque</Link>
+-         </Button>
+-@@ -183,7 +183,7 @@ export default function BookDetailPage() {
+-       </header>
+- 
+-       <div className="grid lg:grid-cols-[350px_1fr] gap-16">
+--        <div className="space-y-8">
+-+        <div className="space-y-8 max-w-[280px] mx-auto lg:max-w-none lg:mx-0 w-full">
+-           <div className="relative aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
+-             <Image 
+-               src={editedData.cover || masterBook?.cover || "https://picsum.photos/seed/p/400/600"} 
+-@@ -261,14 +261,19 @@ export default function BookDetailPage() {
+-           </Card>
+- 
+-           <Button variant="ghost" onClick={handleDelete} className="w-full text-destructive hover:text-destructive hover:bg-rose-50 rounded-2xl h-14 italic font-headline text-lg">
+--            <Trash2 className="mr-3 h-5 w-5" /> Retirer du sanctuaire
+-+            <Trash2 className="mr-3 h-5 w-5" /> Retirer de la réserve
+-           </Button>
+-         </div>
+- 
+-         <div className="space-y-12">
+-           <div className="space-y-4">
+-             <h1 className="text-6xl font-headline italic leading-tight">{masterBook?.title || userBook.title}</h1>
+--            <p className="text-3xl font-headline text-primary italic">{masterBook?.author || userBook.author}</p>
+-+            <Link
+-+              href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
+-+              className="text-3xl font-headline text-primary italic hover:underline inline-block"
+-+            >
+-+              {masterBook?.author || userBook.author}
+-+            </Link>
+-           </div>
+- 
+-           <Tabs defaultValue="overview">
+-diff --git a/src/app/library/page.tsx b/src/app/library/page.tsx
+-index b5b06db..a05812f 100644
+---- a/src/app/library/page.tsx
+-+++ b/src/app/library/page.tsx
+-@@ -214,7 +214,7 @@ export default function LibraryPage() {
+-           {loading ? (
+-             <div className="py-40 text-center flex flex-col items-center gap-6">
+-               <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
+--              <p className="font-headline italic text-primary/40 text-xl">Exploration du sanctuaire...</p>
+-+              <p className="font-headline italic text-primary/40 text-xl">Exploration de la réserve...</p>
+-             </div>
+-           ) : filteredBooks.length > 0 ? (
+-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
+-diff --git a/src/app/login/page.tsx b/src/app/login/page.tsx
+-index 3d11e94..f34ce89 100644
+---- a/src/app/login/page.tsx
+-+++ b/src/app/login/page.tsx
+-@@ -103,7 +103,7 @@ export default function LoginPage() {
+-             <Feather className="h-6 w-6" />
+-           </div>
+-           <CardTitle className="text-3xl font-headline italic">Heureux de vous revoir</CardTitle>
+--          <CardDescription className="italic">Retrouvez votre sanctuaire littéraire.</CardDescription>
+-+          <CardDescription className="italic">Retrouvez votre réserve littéraire.</CardDescription>
+-         </CardHeader>
+-         <CardContent>
+-           {user ? (
+-diff --git a/src/app/manifest.ts b/src/app/manifest.ts
+-index 9fb04c4..e8df2f6 100644
+---- a/src/app/manifest.ts
+-+++ b/src/app/manifest.ts
+-@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
+-   return {
+-     name: 'PLUME - Journal de Lecture',
+-     short_name: 'Plume',
+--    description: 'Votre sanctuaire littéraire précieux et authentique.',
+-+    description: 'Votre réserve littéraire précieuse et authentique.',
+-     start_url: '/',
+-     display: 'standalone',
+-     background_color: '#fdf2f5',
+-diff --git a/src/app/page.tsx b/src/app/page.tsx
+-index 8fdc9d8..1353086 100644
+---- a/src/app/page.tsx
+-+++ b/src/app/page.tsx
+-@@ -97,7 +97,7 @@ export default function Home() {
+-   if (authLoading) return (
+-     <div className="h-[60vh] flex flex-col items-center justify-center gap-6">
+-       <Loader2 className="h-12 w-12 animate-spin text-primary/40" />
+--      <p className="font-headline italic text-primary/60 text-2xl">Ouverture de votre sanctuaire...</p>
+-+      <p className="font-headline italic text-primary/60 text-2xl">Ouverture de votre réserve...</p>
+-     </div>
+-   );
+- 
+-@@ -246,7 +246,7 @@ export default function Home() {
+-           ) : (
+-             <Card className="glass-card p-24 text-center border-dashed border-primary/20 bg-white/20 group">
+-               <BookOpen className="h-20 w-20 mx-auto text-primary/20 mb-6 group-hover:scale-110 group-hover:text-primary/40 transition-all duration-700" />
+--              <p className="text-primary/60 italic font-headline text-3xl mb-2">Sanctuaire paisible.</p>
+-+              <p className="text-primary/60 italic font-headline text-3xl mb-2">Réserve paisible.</p>
+-               <p className="text-muted-foreground italic text-xl">Aucune lecture en cours pour le moment.</p>
+-               <Button asChild variant="outline" className="mt-10 rounded-2xl border-primary/20 text-primary h-14 px-12 text-lg shadow-sm hover:bg-white">
+-                 <Link href="/add">Explorer vos étagères</Link>
+-diff --git a/src/app/profile/page.tsx b/src/app/profile/page.tsx
+-index 505a828..8da8c9b 100644
+---- a/src/app/profile/page.tsx
+-+++ b/src/app/profile/page.tsx
+-@@ -26,12 +26,13 @@ import {
+-   FileText,
+-   ChevronRight,
+-   Shield,
+-+  ShieldCheck,
+-   Medal,
+-   Award,
+-   Heart
+- } from 'lucide-react';
+- import { useRouter } from 'next/navigation';
+--import { cn, toArray } from '@/lib/utils';
+-+import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
+- import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
+- import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+- import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+-@@ -163,7 +164,7 @@ export default function ProfilePage() {
+-   if (profileLoading) return (
+-     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+-       <Loader2 className="h-10 w-10 animate-spin text-primary/40" />
+--      <p className="font-headline italic text-primary/60">Ouverture de votre sanctuaire...</p>
+-+      <p className="font-headline italic text-primary/60">Ouverture de votre réserve...</p>
+-     </div>
+-   );
+- 
+-@@ -198,6 +199,14 @@ export default function ProfilePage() {
+-         </div>
+-         <div className="flex flex-col gap-4 w-full md:w-auto">
+-             <EditProfileDialog profile={profile} />
+-+            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-amber-600 hover:bg-amber-50 font-headline italic text-lg transition-colors">
+-+                <Link href="/subscription"><Crown className="h-5 w-5 mr-3" /> Abonnement</Link>
+-+            </Button>
+-+            {user?.email && ADMIN_EMAILS.includes(user.email) && (
+-+              <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+-+                  <Link href="/admin"><ShieldCheck className="h-5 w-5 mr-3" /> Administration</Link>
+-+              </Button>
+-+            )}
+-             <Button variant="ghost" onClick={handleLogout} className="rounded-full h-14 px-8 text-destructive hover:bg-rose-50 font-headline italic text-lg transition-colors">
+-                 <LogOut className="h-5 w-5 mr-3" /> Déconnexion
+-             </Button>
+-@@ -387,12 +396,12 @@ function EditProfileDialog({ profile }: { profile: any }) {
+-           <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
+-         </Button>
+-       </DialogTrigger>
+--      <DialogContent className="max-w-4xl max-h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
+-+      <DialogContent className="max-w-4xl h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
+-         <DialogHeader className="p-8 border-b bg-white/40 shrink-0">
+-           <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
+-         </DialogHeader>
+-         
+--        <ScrollArea className="flex-1 w-full min-h-0">
+-+        <div className="flex-1 min-h-0 w-full overflow-y-auto">
+-           <div className="p-8 space-y-16 pb-12">
+-             <div className="space-y-10">
+-               <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Informations Personnelles</h3>
+-@@ -505,7 +514,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
+-               </div>
+-             </div>
+-           </div>
+--        </ScrollArea>
+-+        </div>
+-         
+-         <DialogFooter className="p-8 border-t bg-white/60 shrink-0 gap-4 sm:gap-2">
+-           <Button variant="ghost" onClick={() => setOpen(false)} className="h-14 font-headline italic text-xl px-8 rounded-2xl">Annuler</Button>
+-diff --git a/src/app/signup/page.tsx b/src/app/signup/page.tsx
+-index de14eb4..2d8e71b 100644
+---- a/src/app/signup/page.tsx
+-+++ b/src/app/signup/page.tsx
+-@@ -55,7 +55,7 @@ export default function SignupPage() {
+- 
+-       toast({
+-         title: "Bienvenue sur Plume !",
+--        description: `Votre sanctuaire littéraire est prêt, ${name}.`,
+-+        description: `Votre réserve littéraire est prête, ${name}.`,
+-       });
+-       
+-       router.replace("/");
+-diff --git a/src/components/auth-guard.tsx b/src/components/auth-guard.tsx
+-index c28c688..11d47fb 100644
+---- a/src/components/auth-guard.tsx
+-+++ b/src/components/auth-guard.tsx
+-@@ -29,7 +29,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
+-       <div className="h-screen flex items-center justify-center bg-background">
+-         <div className="flex flex-col items-center gap-6">
+-           <div className="h-16 w-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+--          <p className="font-headline italic text-primary/60 text-2xl animate-pulse">Ouverture de votre sanctuaire...</p>
+-+          <p className="font-headline italic text-primary/60 text-2xl animate-pulse">Ouverture de votre réserve...</p>
+-         </div>
+-       </div>
+-     );
+-diff --git a/src/components/navigation.tsx b/src/components/navigation.tsx
+-index d2c89ee..b06bca7 100644
+---- a/src/components/navigation.tsx
+-+++ b/src/components/navigation.tsx
+-@@ -3,9 +3,9 @@
+- 
+- import Link from "next/link";
+- import { usePathname } from "next/navigation";
+--import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle } from "lucide-react";
+--import { cn } from "@/lib/utils";
+--import { useAuth } from "@/firebase";
+-+import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, Crown, ShieldCheck } from "lucide-react";
+-+import { cn, ADMIN_EMAILS } from "@/lib/utils";
+-+import { useAuth, useUser } from "@/firebase";
+- import { signOut } from "firebase/auth";
+- import { useToast } from "@/hooks/use-toast";
+- import { useRouter } from "next/navigation";
+-@@ -22,9 +22,20 @@ const navItems = [
+- export function Navigation() {
+-   const pathname = usePathname();
+-   const auth = useAuth();
+-+  const { user } = useUser();
+-   const router = useRouter();
+-   const { toast } = useToast();
+- 
+-+  // "Abonnement" est visible pour tout le monde (page des 3 formules).
+-+  // "Admin" n'apparaît que pour le(s) email(s) autorisé(s) — la page
+-+  // /admin existe mais ne doit être visible que pour Joana.
+-+  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+-+  const allNavItems = [
+-+    ...navItems,
+-+    { href: "/subscription", label: "Abonnement", icon: Crown },
+-+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
+-+  ];
+-+
+-   const handleLogout = async () => {
+-     if (!auth) return;
+-     try {
+-@@ -51,7 +62,7 @@ export function Navigation() {
+-           <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">PLUME</span>
+-         </div>
+-         <div className="flex items-center gap-2">
+--          {navItems.map((item) => {
+-+          {allNavItems.map((item) => {
+-             const Icon = item.icon;
+-             const isActive = pathname === item.href;
+-             return (
+-diff --git a/src/lib/utils.ts b/src/lib/utils.ts
+-index 99f2b1c..a86ce6f 100644
+---- a/src/lib/utils.ts
+-+++ b/src/lib/utils.ts
+-@@ -37,3 +37,10 @@ export async function fetchWithTimeout(
+-     clearTimeout(timeoutId);
+-   }
+- }
+-+
+-+/**
+-+ * Liste des emails autorisés à accéder à /admin. Centralisé ici pour que
+-+ * la page admin et la navigation (qui doit savoir si elle affiche le lien
+-+ * vers /admin) restent toujours synchronisées.
+-+ */
+-+export const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
+--- 
+-2.43.0
+-
+diff --git a/src/app/add/page.tsx b/src/app/add/page.tsx
+index 7ebf6be..b881ef6 100644
+--- a/src/app/add/page.tsx
++++ b/src/app/add/page.tsx
+@@ -18,7 +18,7 @@ import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc
+ import { Badge } from "@/components/ui/badge";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+ import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
+-import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
++import { cn, fetchWithTimeout, toArray, searchBnF } from "@/lib/utils";
+ 
+ export default function AddBookPage() {
+   const { user } = useUser();
+@@ -61,10 +61,15 @@ export default function AddBookPage() {
+         : searchVal;
+ 
+     try {
+-      // 1 & 2. Recherche Master Database (Plume) et Google Books en parallèle :
+-      // ces deux sources sont indépendantes, les attendre en série n'apporte
+-      // rien et double la latence perçue par l'utilisatrice.
+-      const [masterSettled, googleSettled] = await Promise.allSettled([
++      // 1, 2 & 3. Recherche Master Database (Plume), Google Books et BnF
++      // (Bibliothèque nationale de France) en parallèle : ces trois
++      // sources sont indépendantes, les attendre en série n'apporte
++      // rien et double/triple la latence perçue par l'utilisatrice.
++      // La BnF référence par dépôt légal tout livre publié en France,
++      // y compris les petites maisons (BMR, Nox, Chatterley...) que
++      // Google Books manque souvent.
++      const bnfType = isIsbnQuery ? "isbn" : searchMode === "publisher" ? "publisher" : "general";
++      const [masterSettled, googleSettled, bnfSettled] = await Promise.allSettled([
+         (async () => {
+           const masterRef = collection(db, "masterBooks");
+           // Recherche par préfixe sur le champ pertinent selon le mode
+@@ -106,6 +111,25 @@ export default function AddBookPage() {
+             };
+           });
+         })(),
++        (async () => {
++          const bnfResults = await searchBnF(searchVal, bnfType);
++          return bnfResults.map((b: any) => ({
++            id: b.id,
++            title: b.title || "Titre inconnu",
++            subtitle: "",
++            author: b.author || "Auteur inconnu",
++            cover: b.cover || undefined,
++            isbn: b.isbn || "N/A",
++            isbn10: "",
++            description: "",
++            publisher: b.publisher || "",
++            pages: 0,
++            language: b.language || "",
++            publishedDate: b.publishedDate || "",
++            genres: toArray<string>(b.genres),
++            source: "api"
++          }));
++        })(),
+       ]);
+ 
+       if (masterSettled.status === "fulfilled") {
+@@ -124,6 +148,22 @@ export default function AddBookPage() {
+         // On continue même si Google Books échoue ou expire
+       }
+ 
++      if (bnfSettled.status === "fulfilled") {
++        // Doublons exclus par ISBN, mais aussi par titre+auteur : la BnF
++        // ne renvoie pas toujours d'ISBN propre, l'ISBN seul ne suffit
++        // donc pas ici à éviter les répétitions avec Google Books.
++        const newBnfResults = bnfSettled.value.filter((b: any) =>
++          !allResults.find(m =>
++            (m.isbn13 === b.isbn || m.isbn === b.isbn) ||
++            ((m.title || "").toLowerCase() === (b.title || "").toLowerCase() && (m.author || "").toLowerCase() === (b.author || "").toLowerCase())
++          )
++        );
++        allResults = [...allResults, ...newBnfResults];
++      } else {
++        console.error("BnF Error:", bnfSettled.reason);
++        // On continue même si la BnF échoue ou expire : source bonus, pas bloquante
++      }
++
+       // 3. Fallback Open Library (si toujours peu de résultats, timeout 8s également)
+       if (allResults.length < 5) {
+         try {
+diff --git a/src/app/api/bnf-search/route.ts b/src/app/api/bnf-search/route.ts
+new file mode 100644
+index 0000000..266376f
+--- /dev/null
++++ b/src/app/api/bnf-search/route.ts
+@@ -0,0 +1,150 @@
++import { NextRequest, NextResponse } from "next/server";
++
++/**
++ * Route API serveur qui interroge le Catalogue général de la BnF
++ * (Bibliothèque nationale de France) via son service public SRU,
++ * gratuit et sans authentification.
++ *
++ * Pourquoi côté serveur et pas directement depuis le navigateur :
++ * 1. Le service ne renvoie que du XML (pas de JSON), plus simple à
++ *    traiter ici qu'en JS navigateur (pas de DOMParser fiable côté
++ *    Node, on utilise donc une extraction par expressions régulières).
++ * 2. Un appel direct depuis le navigateur risquerait d'être bloqué par
++ *    la politique CORS du service (non garantie pour un usage front),
++ *    ce qui ferait échouer cette source pour 100% des utilisatrices.
++ *    En passant par notre propre route, le navigateur n'appelle que
++ *    notre domaine ; c'est notre serveur qui parle à la BnF.
++ *
++ * Pourquoi cette source : le dépôt légal impose à tout éditeur français
++ * de déposer chaque livre publié à la BnF. Ce catalogue est donc, en
++ * théorie, exhaustif pour les maisons françaises — y compris les petites
++ * maisons de romance/dark romance (BMR, Nox, Chatterley, Hugo, &H...)
++ * que Google Books et Open Library référencent de façon très incomplète.
++ *
++ * Échec systématiquement silencieux (tableau vide) : cette source est un
++ * bonus en plus de Google Books / Open Library / la base Plume, jamais
++ * un point de blocage. Si la BnF ne répond pas ou change son format, les
++ * autres sources continuent de fonctionner normalement.
++ */
++
++const BNF_SRU_URL = "https://catalogue.bnf.fr/api/SRU";
++
++function decodeXmlEntities(str: string): string {
++  return str
++    .replace(/&lt;/g, "<")
++    .replace(/&gt;/g, ">")
++    .replace(/&quot;/g, '"')
++    .replace(/&apos;/g, "'")
++    .replace(/&#0?39;/g, "'")
++    .replace(/&amp;/g, "&")
++    .replace(/<[^>]+>/g, "") // retire d'éventuelles balises imbriquées résiduelles
++    .replace(/\s+/g, " ")
++    .trim();
++}
++
++function extractAll(block: string, tag: string): string[] {
++  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "g");
++  const out: string[] = [];
++  let m;
++  while ((m = re.exec(block)) !== null) {
++    const val = decodeXmlEntities(m[1]);
++    if (val) out.push(val);
++  }
++  return out;
++}
++
++function extractFirst(block: string, tag: string): string {
++  return extractAll(block, tag)[0] || "";
++}
++
++/**
++ * Les notices d'autorité de la BnF nomment les auteurs au format
++ * "Nom, Prénom (dates)" (ex: "Moncomble, Morgane (1992-....)"). Sans
++ * cette conversion, l'affichage serait inversé et les doublons avec
++ * Google Books (qui renvoie "Prénom Nom") ne seraient jamais détectés.
++ */
++function normalizeAuthorName(raw: string): string {
++  const withoutDates = raw.replace(/\s*\([^)]*\)\s*$/, "").trim();
++  const parts = withoutDates.split(",");
++  if (parts.length === 2 && parts[0].trim() && parts[1].trim()) {
++    return `${parts[1].trim()} ${parts[0].trim()}`;
++  }
++  return withoutDates;
++}
++
++export async function GET(req: NextRequest) {
++  const { searchParams } = new URL(req.url);
++  const qRaw = (searchParams.get("q") || "").trim();
++  const type = searchParams.get("type") || "general"; // "author" | "isbn" | "publisher" | "general"
++
++  if (!qRaw) {
++    return NextResponse.json({ results: [] });
++  }
++
++  // On retire les guillemets de la valeur recherchée : leur présence
++  // casserait la syntaxe de la requête CQL ci-dessous.
++  const q = qRaw.replace(/"/g, "'");
++
++  let cql = "";
++  if (type === "isbn") {
++    cql = `bib.isbn all "${q}"`;
++  } else if (type === "author") {
++    cql = `bib.author all "${q}"`;
++  } else if (type === "publisher") {
++    cql = `bib.publisher all "${q}"`;
++  } else {
++    cql = `(bib.title all "${q}") or (bib.author all "${q}")`;
++  }
++
++  const url = `${BNF_SRU_URL}?version=1.2&operation=searchRetrieve&query=${encodeURIComponent(cql)}&recordSchema=dublincore&maximumRecords=20`;
++
++  try {
++    const controller = new AbortController();
++    const timeoutId = setTimeout(() => controller.abort(), 8000);
++    let res: Response;
++    try {
++      res = await fetch(url, { signal: controller.signal });
++    } finally {
++      clearTimeout(timeoutId);
++    }
++
++    if (!res.ok) {
++      return NextResponse.json({ results: [] });
++    }
++
++    const xml = await res.text();
++    const recordBlocks = xml.match(/<srw:record>([\s\S]*?)<\/srw:record>/g) || [];
++
++    const results = recordBlocks
++      .map((block) => {
++        const title = extractFirst(block, "dc:title");
++        const creators = extractAll(block, "dc:creator").map(normalizeAuthorName);
++        const publisher = extractFirst(block, "dc:publisher").replace(/^Editeur\s*:?\s*/i, "");
++        const date = extractFirst(block, "dc:date");
++        const language = extractFirst(block, "dc:language");
++        const subjects = extractAll(block, "dc:subject").slice(0, 5);
++        const identifiers = extractAll(block, "dc:identifier");
++        const isbnRaw = identifiers.find((id) => /97[89][\d\-X]{9,16}/i.test(id));
++        const isbn = isbnRaw ? (isbnRaw.match(/97[89][\d\-X]{9,16}/i) || [""])[0].replace(/-/g, "") : "";
++
++        return {
++          id: `bnf-${isbn || title}-${creators[0] || ""}`.slice(0, 140),
++          title: title || "",
++          author: creators.length ? creators.join(", ") : "",
++          publisher,
++          publishedDate: (date.match(/\d{4}/) || [])[0] || date,
++          publicationDate: (date.match(/\d{4}/) || [])[0] || date,
++          language: /^fre?$/i.test(language) ? "Français" : language,
++          genres: subjects,
++          isbn,
++          cover: "",
++          source: "bnf",
++        };
++      })
++      .filter((b) => b.title && b.author);
++
++    return NextResponse.json({ results });
++  } catch {
++    return NextResponse.json({ results: [] });
++  }
++}
+diff --git a/src/app/author/[name]/page.tsx b/src/app/author/[name]/page.tsx
+index 9d297fd..695e887 100644
+--- a/src/app/author/[name]/page.tsx
++++ b/src/app/author/[name]/page.tsx
+@@ -27,7 +27,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+ import { ScrollArea } from "@/components/ui/scroll-area";
+ import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
+-import { cn, fetchWithTimeout, toArray } from "@/lib/utils";
++import { cn, fetchWithTimeout, toArray, searchBnF } from "@/lib/utils";
+ 
+ export default function AuthorPage() {
+   const params = useParams();
+@@ -82,11 +82,14 @@ export default function AuthorPage() {
+            }
+         }
+ 
+-        // On interroge en parallèle Google Books (univers large) et la
+-        // base Plume (masterBooks) : sans ça, les livres importés via
+-        // Excel/admin mais peu présents sur Google Books n'apparaissent
+-        // jamais sur la fiche de leur auteur.
+-        const [googleSettled, masterSettled] = await Promise.allSettled([
++        // On interroge en parallèle Google Books (univers large), la
++        // base Plume (masterBooks) et la BnF (Bibliothèque nationale de
++        // France) : sans ça, les livres importés via Excel/admin ou
++        // publiés chez de petites maisons françaises (BMR, Nox,
++        // Chatterley...) que Google Books référence mal n'apparaissent
++        // jamais sur la fiche de leur auteur. Le dépôt légal rend le
++        // catalogue de la BnF exhaustif pour tout livre publié en France.
++        const [googleSettled, masterSettled, bnfSettled] = await Promise.allSettled([
+           (async () => {
+             const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
+             const response = await fetchWithTimeout(url, {}, 8000);
+@@ -137,16 +140,42 @@ export default function AuthorPage() {
+               };
+             });
+           })(),
++          (async () => {
++            const bnfResults = await searchBnF(authorName, "author");
++            return bnfResults.map((b: any) => ({
++              id: b.id,
++              title: b.title,
++              subtitle: "",
++              author: b.author || authorName,
++              publisher: b.publisher,
++              cover: b.cover || undefined,
++              pages: 0,
++              description: "",
++              publicationDate: b.publicationDate,
++              genres: toArray<string>(b.genres),
++              language: b.language || "Français",
++              isbn: b.isbn || "N/A",
++              source: "bnf",
++            }));
++          })(),
+         ]);
+ 
++        const bnfResults = bnfSettled.status === "fulfilled" ? bnfSettled.value : [];
++
+         const googleResults = googleSettled.status === "fulfilled" ? googleSettled.value : [];
+         const masterResults = masterSettled.status === "fulfilled" ? masterSettled.value : [];
+-        // La base Plume (masterBooks) est prioritaire : on évite les doublons
+-        // en excluant de Google Books tout titre déjà présent côté masterBooks.
++        // La base Plume (masterBooks) est prioritaire, suivie de la BnF
++        // (plus fiable que Google Books pour les éditeurs français) :
++        // on évite les doublons en excluant de chaque source suivante
++        // tout titre déjà présent dans les sources précédentes.
++        const dedupedBnf = bnfResults.filter((b: any) =>
++          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (b.title || "").toLowerCase())
++        );
+         const dedupedGoogle = googleResults.filter((g: any) =>
+-          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase())
++          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase()) &&
++          !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (g.title || "").toLowerCase())
+         );
+-        setResults([...masterResults, ...dedupedGoogle]);
++        setResults([...masterResults, ...dedupedBnf, ...dedupedGoogle]);
+       } catch (e) {
+         console.error(e);
+       } finally {
+diff --git a/src/lib/utils.ts b/src/lib/utils.ts
+index a86ce6f..773faf5 100644
+--- a/src/lib/utils.ts
++++ b/src/lib/utils.ts
+@@ -38,6 +38,33 @@ export async function fetchWithTimeout(
+   }
+ }
+ 
++/**
++ * Interroge notre propre route API /api/bnf-search (voir
++ * src/app/api/bnf-search/route.ts), qui relaie une recherche vers le
++ * Catalogue général de la BnF côté serveur. Le dépôt légal rend ce
++ * catalogue exhaustif pour les éditeurs français, contrairement à
++ * Google Books / Open Library qui manquent beaucoup de petites maisons
++ * (BMR, Nox, Chatterley...). Échoue toujours silencieusement (tableau
++ * vide) : cette source est un bonus, jamais un blocage pour les autres.
++ */
++export async function searchBnF(
++  q: string,
++  type: "author" | "isbn" | "publisher" | "general" = "general"
++): Promise<any[]> {
++  try {
++    const res = await fetchWithTimeout(
++      `/api/bnf-search?q=${encodeURIComponent(q)}&type=${type}`,
++      {},
++      8000
++    );
++    if (!res.ok) return [];
++    const data = await res.json();
++    return Array.isArray(data.results) ? data.results : [];
++  } catch {
++    return [];
++  }
++}
++
+ /**
+  * Liste des emails autorisés à accéder à /admin. Centralisé ici pour que
+  * la page admin et la navigation (qui doit savoir si elle affiche le lien
+-- 
+2.43.0
+
