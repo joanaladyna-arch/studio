@@ -34,7 +34,8 @@ import {
   Trophy,
   User as UserIcon,
   Quote,
-  Star
+  Star,
+  ChevronRight
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -53,6 +54,16 @@ const LEVELS = [
   { label: "Silver", min: 15, color: "text-slate-400", bg: "bg-slate-100" },
   { label: "Gold", min: 30, color: "text-yellow-500", bg: "bg-yellow-100" },
   { label: "Diamond", min: 50, color: "text-cyan-400", bg: "bg-cyan-100" },
+];
+
+const SPINE_COLORS = [
+  'bg-rose-100 text-rose-700 border-rose-200',
+  'bg-blue-100 text-blue-700 border-blue-200',
+  'bg-emerald-100 text-emerald-700 border-emerald-200',
+  'bg-amber-100 text-amber-700 border-amber-200',
+  'bg-purple-100 text-purple-700 border-purple-200',
+  'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'bg-orange-100 text-orange-700 border-orange-200',
 ];
 
 export default function ProfilePage() {
@@ -87,6 +98,7 @@ export default function ProfilePage() {
     const currentYear = now.getFullYear();
 
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
+    const palBooks = allBooks.filter(b => b.status === 'pal');
     const monthlyRead = readBooks.filter(b => {
       if (!b.endDate) return false;
       const d = new Date(b.endDate);
@@ -113,6 +125,7 @@ export default function ProfilePage() {
 
     return {
       readCount: readBooks.length,
+      palBooks,
       monthlyCount: monthlyRead.length,
       pagesRead,
       audioHours: Math.round(audioHours),
@@ -251,6 +264,78 @@ export default function ProfilePage() {
               </div>
             </Card>
           ))}
+        </div>
+      </section>
+
+      {/* Section Étagère PAL */}
+      <section className="space-y-10 pt-10">
+        <div className="flex items-center justify-between px-2">
+          <div className="space-y-1">
+            <h2 className="text-4xl font-headline italic flex items-center gap-4">
+              <BookMarked className="h-8 w-8 text-primary/40" /> Mon étagère PAL
+            </h2>
+            <p className="text-sm text-muted-foreground italic ml-12">
+              {stats.palBooks.length} pépites en attente de découverte
+            </p>
+          </div>
+          <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg hover:bg-primary/5">
+            <Link href="/library?tab=pal" className="flex items-center">
+              Voir toute ma PAL <ChevronRight className="ml-2 h-5 w-5" />
+            </Link>
+          </Button>
+        </div>
+
+        <div className="relative group px-2">
+          {/* L'étagère (planche de bois illustrée) */}
+          <div className="absolute bottom-0 left-0 right-0 h-4 bg-[#e8d5c8] rounded-full shadow-inner border-b-4 border-[#d4bcad] z-0" />
+          
+          {/* Les livres sous forme de dos */}
+          <div className="flex items-end gap-1.5 overflow-x-auto pb-4 pt-10 px-6 no-scrollbar min-h-[280px] z-10 relative">
+            {stats.palBooks.length > 0 ? (
+              stats.palBooks.map((book, idx) => {
+                const colorClass = SPINE_COLORS[idx % SPINE_COLORS.length];
+                return (
+                  <Link 
+                    key={book.id} 
+                    href={`/book/${book.id}`} 
+                    className="shrink-0 transition-all hover:-translate-y-6 hover:brightness-105 active:scale-95 duration-500 group/book"
+                  >
+                    <div className={cn(
+                      "w-12 sm:w-14 h-48 sm:h-60 rounded-t-lg border-x-2 border-t-2 flex flex-col items-center justify-center p-2 relative shadow-md",
+                      colorClass
+                    )}>
+                      {/* Titre vertical */}
+                      <span className="[writing-mode:vertical-rl] rotate-180 text-[10px] sm:text-xs font-bold uppercase tracking-widest text-center truncate max-h-[160px] leading-tight opacity-80">
+                        {book.title}
+                      </span>
+                      
+                      {/* Détails illustrés */}
+                      <div className="absolute top-3 w-full flex justify-center opacity-20">
+                        <div className="h-0.5 w-3/4 bg-current rounded-full" />
+                      </div>
+                      <div className="absolute bottom-6 w-full flex flex-col items-center gap-1 opacity-20">
+                        <div className="h-0.5 w-3/4 bg-current rounded-full" />
+                        <div className="h-0.5 w-1/2 bg-current rounded-full" />
+                      </div>
+                      
+                      {/* Ombre portée sur l'étagère */}
+                      <div className="absolute -bottom-1 left-0 right-0 h-1 bg-black/10 blur-sm rounded-full" />
+                    </div>
+                  </Link>
+                );
+              })
+            ) : (
+              <div className="w-full text-center py-16 glass-card bg-white/20 border-dashed border-primary/10">
+                <BookOpen className="h-12 w-12 mx-auto text-primary/10 mb-4" />
+                <p className="italic text-muted-foreground opacity-60 font-headline text-xl">Votre étagère PAL est encore vide.</p>
+              </div>
+            )}
+          </div>
+          
+          {/* Indicateur visuel de scroll si beaucoup de livres */}
+          {stats.palBooks.length > 8 && (
+            <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-8 h-32 bg-gradient-to-l from-background to-transparent pointer-events-none z-20 md:hidden" />
+          )}
         </div>
       </section>
 
@@ -549,7 +634,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
                     className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
                     disabled={uploading}
                   >
-                    {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Camera className="h-5 w-5 text-white" />}
+                    {uploading ? <Loader2 className="h-5 w-5 text-white animate-spin" /> : <Camera className="h-6 w-6 text-white" />}
                   </button>
                   <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
                 </div>
@@ -678,3 +763,4 @@ function EditProfileDialog({ profile }: { profile: any }) {
     </Dialog>
   );
 }
+
