@@ -23,8 +23,10 @@ export interface Book {
   title: string;
   author: string;
   publisher?: string;
+  collection?: string;
   isbn?: string;
   publicationDate?: string;
+  language?: string;
   series?: string;
   volume?: string;
   cover: string;

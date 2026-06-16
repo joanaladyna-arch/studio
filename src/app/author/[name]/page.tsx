@@ -146,7 +146,7 @@ export default function AuthorPage() {
                       <h3 className="text-xl font-headline italic leading-tight">{book.title}</h3>
                       <div className="flex gap-4 text-[9px] font-bold uppercase tracking-widest opacity-60">
                         <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" /> {book.pages} pages</span>
-                        <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {book.publicationDate}</span>
+                        <span className="flex items-center gap-1"><CalendarIcon className="h-3 w-3" /> {book.publicationDate}</span>
                       </div>
                     </div>
                     <div className="pt-4 flex justify-end">
