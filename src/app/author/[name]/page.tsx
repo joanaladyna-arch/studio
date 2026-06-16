@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
@@ -27,7 +27,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn } from "@/lib/utils";
+import { cn, fetchWithTimeout } from "@/lib/utils";
 
 export default function AuthorPage() {
   const params = useParams();
@@ -39,6 +39,7 @@ export default function AuthorPage() {
   const [loading, setLoading] = useState(true);
   const [authorBio, setAuthorBio] = useState("");
   const [authorPhoto, setAuthorPhoto] = useState<string | null>(null);
+  const [authorPhotoFailed, setAuthorPhotoFailed] = useState(false);
 
   const [pendingBook, setPendingBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
@@ -56,25 +57,33 @@ export default function AuthorPage() {
   const isAlreadyInLibrary = useCallback((book: any) => {
     return currentLibrary.find(b => 
       (b.isbn && b.isbn === book.isbn) || 
-      (b.title.toLowerCase() === book.title.toLowerCase() && b.author.toLowerCase() === book.author.toLowerCase())
+      ((b.title || "").toLowerCase() === (book.title || "").toLowerCase() && (b.author || "").toLowerCase() === (book.author || "").toLowerCase())
     );
   }, [currentLibrary]);
 
   useEffect(() => {
     const fetchAuthorUniverse = async () => {
       setLoading(true);
+      setAuthorPhotoFailed(false);
       try {
-        const olRes = await fetch(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(authorName)}`);
+        const olRes = await fetchWithTimeout(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(authorName)}`, {}, 8000);
         const olData = await olRes.json();
-        if (olData.docs?.[0]) {
-           const bioRes = await fetch(`https://openlibrary.org/authors/${olData.docs[0].key}.json`);
-           const bioData = await bioRes.json();
-           setAuthorBio(typeof bioData.bio === 'string' ? bioData.bio : bioData.bio?.value || "Biographie en cours d'écriture...");
-           setAuthorPhoto(`https://covers.openlibrary.org/a/id/${olData.docs[0].id}-L.jpg`);
+        if (olData.docs?.[0]?.key) {
+           try {
+             const bioRes = await fetchWithTimeout(`https://openlibrary.org/authors/${olData.docs[0].key}.json`, {}, 8000);
+             const bioData = await bioRes.json();
+             setAuthorBio(typeof bioData.bio === 'string' ? bioData.bio : bioData.bio?.value || "Biographie en cours d'écriture...");
+             // Format correct selon la Covers API d'Open Library : /a/olid/{OLID}-L.jpg
+             // (le champ utilisé précédemment, .id, n'existe pas dans cette réponse).
+             setAuthorPhoto(`https://covers.openlibrary.org/a/olid/${olData.docs[0].key}-L.jpg`);
+           } catch (bioErr) {
+             console.error("Author Bio Error:", bioErr);
+             // On continue sans biographie plutôt que de bloquer toute la page
+           }
         }
 
         const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url, {}, 8000);
         const data = await response.json();
         
         if (data.items) {
@@ -120,27 +129,56 @@ export default function AuthorPage() {
     if (!db || !user || !pendingBook) return;
 
     setIsAdding(true);
-    const bookData = {
-      ...pendingBook,
-      status: selectedStatus,
-      format: selectedFormat,
-      dePlume: isDePlume,
-      dateAdded: serverTimestamp(),
-      progress: selectedStatus === 'read' ? 100 : 0,
-      pagesRead: 0,
-    };
+    try {
+      // On crée d'abord la fiche bibliographique complète (livre, auteur,
+      // édition) dans masterBooks, comme pour l'ajout depuis la recherche —
+      // sans ça, la fiche détail du livre n'affiche pas l'éditeur, l'ISBN
+      // ou le résumé pour les livres ajoutés depuis la page auteur.
+      const masterRef = doc(collection(db, "masterBooks"));
+      await setDoc(masterRef, {
+        title: pendingBook.title,
+        subtitle: pendingBook.subtitle || "",
+        author: pendingBook.author,
+        cover: pendingBook.cover || "",
+        isbn13: pendingBook.isbn || "",
+        description: pendingBook.description || "",
+        publisher: pendingBook.publisher || "",
+        pageCount: pendingBook.pages || 0,
+        publishedDate: pendingBook.publicationDate || "",
+        genres: pendingBook.genres || [],
+        updatedAt: serverTimestamp(),
+        source: "discovered"
+      });
 
-    const booksRef = collection(db, "users", user.uid, "books");
+      const booksRef = collection(db, "users", user.uid, "books");
+      const bookData = {
+        masterBookId: masterRef.id,
+        title: pendingBook.title,
+        author: pendingBook.author,
+        cover: pendingBook.cover || "",
+        genres: pendingBook.genres || [],
+        status: selectedStatus,
+        format: selectedFormat,
+        dePlume: isDePlume,
+        dateAdded: serverTimestamp(),
+        progress: selectedStatus === 'read' ? 100 : 0,
+        pagesRead: 0,
+      };
 
-    addDoc(booksRef, bookData)
-      .then(() => {
-        toast({ title: "Pépite ajoutée", description: `${pendingBook.title} a rejoint votre écrin.` });
-        setPendingBook(null);
-      })
-      .catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: booksRef.path, operation: 'create', requestResourceData: bookData }));
-      })
-      .finally(() => setIsAdding(false));
+      await addDoc(booksRef, bookData)
+        .then(() => {
+          toast({ title: "Pépite ajoutée", description: `${pendingBook.title} a rejoint votre écrin.` });
+          setPendingBook(null);
+        })
+        .catch(async () => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({ path: booksRef.path, operation: 'create', requestResourceData: bookData }));
+        });
+    } catch (err) {
+      console.error("Add Book From Author Error:", err);
+      toast({ variant: "destructive", title: "Impossible d'ajouter le livre" });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   return (
@@ -152,8 +190,8 @@ export default function AuthorPage() {
         
         <div className="flex flex-col md:flex-row gap-12 items-center md:items-start text-center md:text-left">
           <div className="relative h-48 w-48 shrink-0 rounded-full overflow-hidden border-4 border-white shadow-2xl bg-primary/5 flex items-center justify-center">
-            {authorPhoto ? (
-               <Image src={authorPhoto} alt={authorName} fill className="object-cover" />
+            {authorPhoto && !authorPhotoFailed ? (
+               <Image src={authorPhoto} alt={authorName} fill className="object-cover" onError={() => setAuthorPhotoFailed(true)} />
             ) : (
                <UserIcon className="h-20 w-20 text-primary/20" />
             )}
@@ -228,7 +266,7 @@ export default function AuthorPage() {
             <DialogTitle className="font-headline text-4xl italic">Ajouter la pépite</DialogTitle>
           </DialogHeader>
           
-          <ScrollArea className="flex-1 overflow-y-auto">
+          <ScrollArea className="flex-1 overflow-y-auto min-h-0">
             <div className="p-10 space-y-10">
               <div className="flex gap-8 items-start">
                  <div className="relative h-44 w-32 shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/60">

@@ -1,6 +1,5 @@
 "use client";
 
-import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,8 +18,6 @@ const PLATFORMS = [
 export default function ConnectionsPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      <Navigation />
-
       <header>
         <h1 className="text-4xl font-headline">Connexions</h1>
         <p className="text-muted-foreground">Centralisez votre univers littéraire en connectant vos plateformes préférées.</p>

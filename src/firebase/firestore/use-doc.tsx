@@ -12,10 +12,18 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    // On réinitialise systématiquement l'état au changement de référence,
+    // sinon l'ancien document reste affiché brièvement (ou indéfiniment en
+    // cas d'erreur) pendant que le nouveau se charge.
+    setData(null);
+    setError(null);
+
     if (!ref) {
       setLoading(false);
       return;
     }
+
+    setLoading(true);
     const unsubscribe = onSnapshot(
       ref,
       (doc) => {

@@ -15,7 +15,7 @@ export default function CoeurDePlumePage() {
     if (!db || !user) return null;
     return query(
       collection(db, "users", user.uid, "books"),
-      where("rank", "in", ["diamant", "royale"])
+      where("plumeRank", "in", ["diamant", "royale"])
     );
   }, [db, user]);
 
@@ -43,7 +43,7 @@ export default function CoeurDePlumePage() {
             {prestigiousBooks.map((book) => (
               <div key={book.id} className="relative group">
                 <div className="absolute -top-4 -left-4 z-20 transition-transform duration-500 group-hover:scale-110">
-                    {book.rank === 'diamant' ? (
+                    {book.plumeRank === 'diamant' ? (
                         <div className="bg-cyan-50 text-cyan-400 p-2.5 rounded-full shadow-lg border border-cyan-100">
                             <Diamond className="h-4 w-4" />
                         </div>

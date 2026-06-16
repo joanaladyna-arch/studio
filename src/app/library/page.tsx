@@ -16,7 +16,14 @@ import {
   Book as BookIcon,
   Tablet,
   Smartphone,
-  Headphones
+  Headphones,
+  Diamond,
+  Crown,
+  Award,
+  Medal,
+  Feather,
+  Meh,
+  Frown
 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +46,9 @@ export interface MasterBook {
   cover: string;
   description?: string;
   pages?: number;
+  pageCount?: number;
+  language?: string;
+  publishedDate?: string;
   isbn?: string;
   isbn10?: string;
   isbn13?: string;
@@ -63,6 +73,8 @@ export interface UserBook {
   pagesRead?: number;
   favorite?: boolean;
   dePlume?: boolean;
+  emotions?: string[];
+  favoriteQuote?: string;
 }
 
 export type Book = UserBook;
@@ -103,6 +115,31 @@ export const STATUSES: Record<BookStatus, { label: string, icon: any, color: str
   dnf: { label: "DNF", icon: DoorOpen, color: "bg-rose-400" },
   pause: { label: "Pause", icon: Pause, color: "bg-amber-400" },
   reread: { label: "Relecture", icon: RefreshCw, color: "bg-purple-400" },
+};
+
+// Grades de prestige "Plume" (du meilleur au moins bon). Utilisés par la
+// fiche livre, "Cœur de Plume" et le partage BookTok.
+export const RANKS: Record<RankType, { label: string, icon: any, color: string }> = {
+  diamant: { label: "Diamant de Plume", icon: Diamond, color: "text-cyan-400" },
+  royale: { label: "Plume Royale", icon: Crown, color: "text-amber-500" },
+  doree: { label: "Plume Dorée", icon: Award, color: "text-yellow-500" },
+  argentee: { label: "Plume Argentée", icon: Medal, color: "text-slate-400" },
+  simple: { label: "Plume Simple", icon: Feather, color: "text-muted-foreground" },
+  froissee: { label: "Plume Froissée", icon: Meh, color: "text-orange-400" },
+  brisee: { label: "Plume Brisée", icon: Frown, color: "text-rose-400" },
+  dnf: { label: "DNF", icon: DoorOpen, color: "text-rose-500" },
+};
+
+// Émotions ressenties à la lecture, utilisées par la fiche de partage BookTok.
+export const EMOTIONS: Record<string, { icon: string, label: string }> = {
+  coupdecoeur: { icon: "😍", label: "Coup de cœur" },
+  larmes: { icon: "😭", label: "En larmes" },
+  frissons: { icon: "🥶", label: "Frissons" },
+  rire: { icon: "😂", label: "Fou rire" },
+  colere: { icon: "😡", label: "Colère" },
+  espoir: { icon: "🌸", label: "Espoir" },
+  nostalgie: { icon: "🌙", label: "Nostalgie" },
+  suspense: { icon: "😰", label: "Suspense" },
 };
 
 const CATEGORIES = [

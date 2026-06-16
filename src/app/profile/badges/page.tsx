@@ -9,7 +9,7 @@ import { Award, Medal, BookOpen, Star, Sparkles, Diamond, Crown, Shield, Lock } 
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { GENRES_LIST, TROPES_LIST, Book } from "@/app/library/page";
-import { cn } from "@/lib/utils";
+import { cn, toArray } from "@/lib/utils";
 
 const LEVELS = [
   { label: "Bronze", min: 5, color: "text-amber-600", bg: "bg-amber-100" },
@@ -37,7 +37,7 @@ export default function BadgesMedalsPage() {
     const stats: Record<string, number> = {};
     GENRES_LIST.forEach(g => stats[g] = 0);
     readBooks.forEach(b => {
-      b.genres?.forEach(g => {
+      toArray<string>(b.genres).forEach(g => {
         if (stats[g] !== undefined) stats[g]++;
       });
     });
@@ -48,7 +48,7 @@ export default function BadgesMedalsPage() {
     const stats: Record<string, number> = {};
     TROPES_LIST.forEach(t => stats[t] = 0);
     readBooks.forEach(b => {
-      b.tropes?.forEach(t => {
+      toArray<string>(b.tropes).forEach(t => {
         if (stats[t] !== undefined) stats[t]++;
       });
     });
@@ -116,7 +116,7 @@ export default function BadgesMedalsPage() {
 
       <section className="space-y-6">
         <div className="flex items-center gap-3">
-          <MedalIcon className="h-6 w-6 text-secondary" />
+          <Medal className="h-6 w-6 text-secondary" />
           <h2 className="text-2xl font-headline italic">Médailles de Tropes</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -135,7 +135,7 @@ export default function BadgesMedalsPage() {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className={cn("p-1.5 rounded-lg", level ? level.bg : "bg-muted")}>
-                      {isUnlocked ? <MedalIcon className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                      {isUnlocked ? <Medal className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                     </div>
                   </div>
                   <div className="space-y-0.5">

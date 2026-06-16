@@ -9,7 +9,7 @@ import { Download, Instagram, Music } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { RANKS, EMOTIONS, Book, BookCard } from "@/app/library/page";
-import { cn } from "@/lib/utils";
+import { cn, toArray } from "@/lib/utils";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 
@@ -33,7 +33,7 @@ export default function SharePage() {
     return books[0];
   }, [books, selectedBookId]);
 
-  const rank = selectedBook?.rank ? RANKS[selectedBook.rank] : null;
+  const rank = selectedBook?.plumeRank ? RANKS[selectedBook.plumeRank as keyof typeof RANKS] : null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
@@ -90,7 +90,7 @@ export default function SharePage() {
                     )}
 
                     <div className="flex flex-wrap justify-center gap-1.5">
-                      {selectedBook.emotions?.map(e => (
+                      {toArray<string>(selectedBook.emotions).map(e => (
                         <span key={e} className="text-[9px] px-2 py-1 rounded-full bg-white/90 border border-white shadow-sm font-bold flex items-center gap-1">
                           {EMOTIONS[e]?.icon} {EMOTIONS[e]?.label}
                         </span>

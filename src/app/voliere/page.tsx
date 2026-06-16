@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Navigation } from "@/components/navigation";
 import { BookCard, Book } from "@/app/library/page";
 import { Diamond, Crown, Sparkles, Heart } from "lucide-react";
 import { useCollection, useUser, useFirestore } from "@/firebase";
@@ -15,7 +14,7 @@ export default function VolierePage() {
     if (!db || !user) return null;
     return query(
       collection(db, "users", user.uid, "books"),
-      where("rank", "in", ["diamant", "royale"])
+      where("plumeRank", "in", ["diamant", "royale"])
     );
   }, [db, user]);
 
@@ -23,8 +22,6 @@ export default function VolierePage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
-      <Navigation />
-
       <header className="text-center space-y-4 py-12">
         <div className="flex justify-center gap-3 mb-2">
           <Heart className="h-8 w-8 text-primary/40 animate-pulse" />
@@ -45,7 +42,7 @@ export default function VolierePage() {
             {prestigiousBooks.map((book) => (
               <div key={book.id} className="relative group">
                 <div className="absolute -top-4 -left-4 z-20 transition-transform duration-500 group-hover:scale-110">
-                    {book.rank === 'diamant' ? (
+                    {book.plumeRank === 'diamant' ? (
                         <div className="bg-cyan-50 text-cyan-400 p-2.5 rounded-full shadow-lg border border-cyan-100">
                             <Diamond className="h-4 w-4" />
                         </div>

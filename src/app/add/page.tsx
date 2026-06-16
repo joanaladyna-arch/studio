@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -20,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn } from "@/lib/utils";
+import { cn, fetchWithTimeout } from "@/lib/utils";
 
 export default function AddBookPage() {
   const { user } = useUser();
@@ -42,7 +41,7 @@ export default function AddBookPage() {
       toast({ title: "Champ vide", description: "Veuillez saisir un titre ou un auteur." });
       return;
     }
-    if (!db) return;
+    if (!db || isSearching) return; // Évite les recherches concurrentes (double-clic, touche Entrée répétée)
 
     setIsSearching(true);
     setResults([]);
@@ -50,49 +49,107 @@ export default function AddBookPage() {
     let allResults: any[] = [];
 
     try {
-      // 1. Recherche Master Database (Plume)
-      const masterRef = collection(db, "masterBooks");
-      const q = query(masterRef, where("title", ">=", searchVal), where("title", "<=", searchVal + "\uf8ff"));
-      const masterSnap = await getDocs(q);
-      const plumeResults = masterSnap.docs.map(d => ({ ...d.data(), id: d.id, source: "master" }));
-      allResults = [...plumeResults];
-
-      // 2. Fallback Google Books
-      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchVal)}&maxResults=10`;
-      const res = await fetch(gUrl);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.items) {
-          const googleResults = data.items.map((item: any) => {
-            const info = item.volumeInfo;
-            const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
+      // 1 & 2. Recherche Master Database (Plume) et Google Books en parallèle :
+      // ces deux sources sont indépendantes, les attendre en série n'apporte
+      // rien et double la latence perçue par l'utilisatrice.
+      const [masterSettled, googleSettled] = await Promise.allSettled([
+        (async () => {
+          const masterRef = collection(db, "masterBooks");
+          // Recherche simple par égalité ou préfixe (attention aux index Firestore)
+          const q = query(masterRef, where("title", ">=", searchVal), where("title", "<=", searchVal + "\uf8ff"));
+          const masterSnap = await getDocs(q);
+          return masterSnap.docs.map(d => ({ ...d.data(), id: d.id, source: "master" }));
+        })(),
+        (async () => {
+          const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchVal)}&maxResults=10`;
+          const res = await fetchWithTimeout(gUrl, {}, 8000);
+          if (!res.ok) return [];
+          const data = await res.json();
+          if (!data.items) return [];
+          return data.items.map((item: any) => {
+            const info = item.volumeInfo || {};
+            const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier ||
                          info.industryIdentifiers?.find((id: any) => id.type === "ISBN_10")?.identifier || "N/A";
+            const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_10")?.identifier || "";
             return {
               id: item.id,
-              title: info.title,
+              title: info.title || "Titre inconnu",
+              subtitle: info.subtitle || "",
               author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
               cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
               isbn: isbn,
+              isbn10: isbn10,
               description: info.description || "",
               publisher: info.publisher || "",
               pages: info.pageCount || 0,
+              language: info.language || "",
+              publishedDate: info.publishedDate || "",
+              genres: info.categories || [],
               source: "api"
             };
           });
-          const newApiResults = googleResults.filter((api: any) => !allResults.find(m => (m.isbn13 === api.isbn || m.isbn === api.isbn)));
-          allResults = [...allResults, ...newApiResults];
+        })(),
+      ]);
+
+      if (masterSettled.status === "fulfilled") {
+        allResults = [...masterSettled.value];
+      } else {
+        console.error("Master Search Error:", masterSettled.reason);
+        // On continue même si la base Plume échoue
+      }
+
+      if (googleSettled.status === "fulfilled") {
+        // Merge avoiding duplicates by ISBN
+        const newApiResults = googleSettled.value.filter((api: any) => !allResults.find(m => m.isbn13 === api.isbn || m.isbn === api.isbn));
+        allResults = [...allResults, ...newApiResults];
+      } else {
+        console.error("Google Books Error:", googleSettled.reason);
+        // On continue même si Google Books échoue ou expire
+      }
+
+      // 3. Fallback Open Library (si toujours peu de résultats, timeout 8s également)
+      if (allResults.length < 5) {
+        try {
+          const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(searchVal)}&limit=5`;
+          const res = await fetchWithTimeout(olUrl, {}, 8000);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.docs) {
+              const olResults = data.docs.map((doc: any) => ({
+                id: doc.key,
+                title: doc.title || "Titre inconnu",
+                author: doc.author_name ? doc.author_name.join(", ") : "Inconnu",
+                cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null,
+                isbn: doc.isbn?.[0] || "N/A",
+                pages: doc.number_of_pages_median || 0,
+                publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : "",
+                language: doc.language?.[0] || "",
+                genres: (doc.subject || []).slice(0, 5),
+                source: "api"
+              }));
+              const newOlResults = olResults.filter((api: any) => !allResults.find(m => m.isbn13 === api.isbn || m.isbn === api.isbn));
+              allResults = [...allResults, ...newOlResults];
+            }
+          }
+        } catch (err) {
+          console.error("Open Library Error:", err);
+          // On continue même si Open Library échoue ou expire
         }
       }
-    } catch (err) {
-      console.error("Search Error:", err);
-      toast({ variant: "destructive", title: "Erreur de recherche" });
-    } finally {
-      setIsSearching(false);
+
       setResults(allResults);
+
       if (allResults.length === 0) {
-        toast({ title: "Aucun résultat", description: "Essayez une autre recherche." });
+        toast({ title: "Aucun résultat", description: "Aucune pépite trouvée pour cette recherche." });
       }
+    } finally {
+      // Garantit que le spinner s'arrête toujours, quoi qu'il arrive
+      setIsSearching(false);
     }
+  };
+
+  const handleAddClick = (book: any) => {
+    setPendingBook(book);
   };
 
   const confirmAdd = async () => {
@@ -102,34 +159,47 @@ export default function AddBookPage() {
     try {
       let masterBookId = pendingBook.id;
 
+      // 1. Si source est API, on crée le document dans masterBooks avec
+      // toutes les informations bibliographiques disponibles (livre, auteur, édition)
       if (pendingBook.source === "api") {
         const masterRef = doc(collection(db, "masterBooks"));
         masterBookId = masterRef.id;
         await setDoc(masterRef, {
           title: pendingBook.title,
+          subtitle: pendingBook.subtitle || "",
           author: pendingBook.author,
           cover: pendingBook.cover || "",
           isbn13: pendingBook.isbn || "",
+          isbn10: pendingBook.isbn10 || "",
           description: pendingBook.description || "",
           publisher: pendingBook.publisher || "",
           pageCount: pendingBook.pages || 0,
+          language: pendingBook.language || "",
+          publishedDate: pendingBook.publishedDate || "",
+          genres: pendingBook.genres || [],
           updatedAt: serverTimestamp(),
           source: "discovered"
         });
       }
 
+      // 2. Ajout à la bibliothèque personnelle. On copie les genres ici
+      // aussi (en plus du masterBook) : les badges/médailles du profil
+      // se basent sur le champ "genres" du livre utilisateur, pas du
+      // masterBook, sans quoi ils ne se débloqueraient jamais.
       const userBookData = {
         masterBookId,
         title: pendingBook.title,
         author: pendingBook.author,
         cover: pendingBook.cover || "",
+        genres: pendingBook.genres || [],
         status: selectedStatus,
         format: selectedFormat,
         dateAdded: serverTimestamp(),
       };
 
       await addDoc(collection(db, "users", user.uid, "books"), userBookData);
-      toast({ title: "Pépite ajoutée", description: "Livre ajouté à votre bibliothèque." });
+      
+      toast({ title: "Pépite ajoutée", description: `${pendingBook.title} est dans votre sanctuaire.` });
       setPendingBook(null);
     } catch (err) {
       console.error("Add Book Error:", err);
@@ -153,8 +223,8 @@ export default function AddBookPage() {
           onChange={(e) => setQueryStr(e.target.value)}
           className="h-14 rounded-2xl bg-white/60 border-white shadow-sm italic text-lg"
         />
-        <Button type="submit" disabled={isSearching} className="h-14 px-8 rounded-2xl bg-primary text-lg font-headline italic min-w-[120px]">
-          {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : "Chercher"}
+        <Button type="submit" disabled={isSearching} className="h-14 px-8 rounded-2xl bg-primary text-lg font-headline italic">
+          {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
         </Button>
       </form>
 
@@ -169,8 +239,13 @@ export default function AddBookPage() {
                 <div className="space-y-1">
                   <h3 className="text-xl font-headline italic leading-tight">{book.title}</h3>
                   <p className="text-xs text-muted-foreground font-bold uppercase">{book.author}</p>
+                  {book.source === 'master' && (
+                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px] mt-2">
+                      Base Plume
+                    </Badge>
+                  )}
                 </div>
-                <Button onClick={() => setPendingBook(book)} className="h-12 px-6 rounded-xl bg-primary italic shrink-0">
+                <Button onClick={() => handleAddClick(book)} className="h-12 px-6 rounded-xl bg-primary italic shrink-0">
                   Ajouter
                 </Button>
               </div>
@@ -180,12 +255,12 @@ export default function AddBookPage() {
       </div>
 
       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
-        <DialogContent className="glass-card max-w-lg p-0 overflow-hidden flex flex-col max-h-[90vh] border-none bg-white/95 backdrop-blur-3xl shadow-2xl">
-          <DialogHeader className="p-10 border-b bg-white/40 shrink-0">
+        <DialogContent className="glass-card max-w-lg p-0 overflow-hidden flex flex-col max-h-[90vh] border-none">
+          <DialogHeader className="p-10 border-b bg-white/40">
             <DialogTitle className="font-headline text-3xl italic">Ajouter au sanctuaire</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 w-full h-full">
-            <div className="p-10 space-y-10 pb-24">
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-10 space-y-8">
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Intention</label>
                 <div className="flex flex-wrap gap-2">
@@ -196,7 +271,7 @@ export default function AddBookPage() {
                       onClick={() => setSelectedStatus(k as BookStatus)} 
                       className={cn(
                         "rounded-full h-10 px-4 text-[10px] uppercase font-bold transition-all", 
-                        selectedStatus === k ? "bg-primary text-white border-primary shadow-lg" : "bg-white/60"
+                        selectedStatus === k ? "bg-primary text-white border-primary" : "bg-white/60"
                       )}
                     >
                       {v.label}
@@ -206,27 +281,27 @@ export default function AddBookPage() {
               </div>
               <div className="space-y-4">
                 <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Format</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2">
                   {Object.entries(FORMATS).map(([k, v]) => (
                     <Button 
                       key={k} 
                       variant="outline" 
                       onClick={() => setSelectedFormat(k as BookFormat)} 
                       className={cn(
-                        "rounded-xl h-14 flex items-center justify-center gap-3 italic transition-all", 
-                        selectedFormat === k ? "bg-primary text-white border-primary shadow-lg" : "bg-white/60"
+                        "rounded-xl h-12 flex gap-3 italic transition-all", 
+                        selectedFormat === k ? "bg-primary text-white border-primary" : "bg-white/60"
                       )}
                     >
-                      <v.icon className="h-5 w-5" /> {v.label}
+                      <v.icon className="h-4 w-4" /> {v.label}
                     </Button>
                   ))}
                 </div>
               </div>
             </div>
           </ScrollArea>
-          <DialogFooter className="p-8 border-t bg-white/95 backdrop-blur-md absolute bottom-0 left-0 right-0 shrink-0 z-20">
-            <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic shadow-xl">
-              {isAdding ? <Loader2 className="animate-spin" /> : "Enregistrer ce livre"}
+          <DialogFooter className="p-10 border-t bg-white/60">
+            <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic">
+              {isAdding ? <Loader2 className="animate-spin" /> : "Confirmer l'ajout"}
             </Button>
           </DialogFooter>
         </DialogContent>

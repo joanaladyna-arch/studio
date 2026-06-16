@@ -1,6 +1,5 @@
 "use client";
 
-import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -59,8 +58,6 @@ const PLANS = [
 export default function SubscriptionPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      <Navigation />
-
       <header className="text-center space-y-2 py-8">
         <h1 className="text-4xl font-headline">Sublime ton expérience Plume</h1>
         <p className="text-muted-foreground max-w-lg mx-auto italic">“Garde une trace précieuse de ton voyage littéraire avec nos outils authentiques.”</p>

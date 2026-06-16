@@ -1,7 +1,6 @@
 
 "use client";
 
-import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Star, Book, Flame, Map, Search, Crown, Heart } from "lucide-react";
@@ -27,8 +26,6 @@ export default function PassportPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      <Navigation />
-
       <header className="flex items-center justify-between pt-8">
         <div>
           <h1 className="text-4xl font-headline italic">Passeport de Lectrice</h1>

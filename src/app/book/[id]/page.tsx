@@ -22,13 +22,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
-import { UserBook, MasterBook, STATUSES } from "@/app/library/page";
+import { cn, toArray } from "@/lib/utils";
+import { UserBook, MasterBook, STATUSES, RANKS, RankType } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
 
@@ -64,12 +65,14 @@ export default function BookDetailPage() {
         setMasterBook({ id: mSnap.id, ...mSnap.data() } as MasterBook);
       } else {
         console.warn("Master Book not found for ID:", mid);
-        // Fallback: on utilise les infos du userBook s'il y en a
+        // Fallback: on utilise les infos du userBook s'il y en a, pour ne
+        // jamais afficher une fiche vide alors que des données existent.
         setMasterBook({
           id: mid,
           title: userBook?.title || "Titre inconnu",
           author: userBook?.author || "Auteur inconnu",
           cover: userBook?.cover || "",
+          genres: userBook?.genres || [],
         } as MasterBook);
       }
     } catch (err) {
@@ -217,6 +220,31 @@ export default function BookDetailPage() {
              </div>
 
              <div className="space-y-4 pt-4 border-t border-primary/5">
+               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang Plume</Label>
+               <div className="flex flex-wrap gap-2">
+                 {Object.entries(RANKS).map(([k, v]) => {
+                   const isActive = editedData.plumeRank === k;
+                   const RankIcon = v.icon;
+                   return (
+                     <Button
+                      key={k}
+                      variant="outline"
+                      onClick={() => setEditedData({ ...editedData, plumeRank: isActive ? null : (k as RankType) } as any)}
+                      className={cn(
+                        "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
+                        isActive ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
+                      )}
+                     >
+                       <RankIcon className={cn("h-3.5 w-3.5", isActive ? "text-white" : v.color)} />
+                       {v.label}
+                     </Button>
+                   );
+                 })}
+               </div>
+               <p className="text-[10px] text-muted-foreground italic">Cliquez à nouveau sur un rang pour le retirer.</p>
+             </div>
+
+             <div className="space-y-4 pt-4 border-t border-primary/5">
                 <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center gap-2">
                   <LinkIcon className="h-3 w-3" /> URL Couverture
                 </Label>
@@ -259,6 +287,16 @@ export default function BookDetailPage() {
                  <h4 className="font-headline text-2xl italic mb-6 opacity-40">Résumé de la pépite</h4>
                  <p className="italic text-lg leading-relaxed text-muted-foreground">{masterBook?.description || "Cette œuvre attend que vous en décriviez l'essence."}</p>
                </div>
+               {(() => {
+                 const genres = toArray<string>(masterBook?.genres).length > 0 ? toArray<string>(masterBook?.genres) : toArray<string>(userBook.genres);
+                 return genres.length > 0 ? (
+                   <div className="flex flex-wrap gap-2">
+                     {genres.map((g) => (
+                       <Badge key={g} variant="outline" className="rounded-full border-primary/20 text-primary/70 italic text-xs px-4 py-1.5">{g}</Badge>
+                     ))}
+                   </div>
+                 ) : null;
+               })()}
             </TabsContent>
 
             <TabsContent value="journal" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">

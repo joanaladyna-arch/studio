@@ -66,15 +66,13 @@ export default function Home() {
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     
     const monthlyRead = readBooks.filter(b => {
-      if (!b.endDate) return false;
-      try {
-        const d = new Date(b.endDate);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-      } catch (e) { return false; }
+      if (!b.dateAdded) return false;
+      const d = b.dateAdded.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
-    const pagesRead = readBooks.reduce((acc, b) => acc + (b.pages || 0), 0);
-    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (b.pages || 0) / 50 : 0), 0);
+    const pagesRead = readBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
+    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.pagesRead) || 0) / 50 : 0), 0);
 
     const goals = {
       annual: profile?.annualGoal || 24,

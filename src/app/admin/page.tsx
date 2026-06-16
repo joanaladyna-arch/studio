@@ -24,10 +24,10 @@ import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { cn, fetchWithTimeout } from "@/lib/utils";
 
 // LISTE DES EMAILS ADMINS AUTORISÉS
-const ADMIN_EMAILS = ["votre-email@admin.com", "joanaladyna-arch@example.com"]; 
+const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -145,7 +145,6 @@ export default function AdminPage() {
         }
 
         // 3. Création/Mise à jour Authors si présent
-        const authorList = bookData.genres; // Oops meant authors
         const actualAuthors = bookData.author.split(",").map(s => s.trim());
         for (const authName of actualAuthors) {
           const authId = slugify(authName);
@@ -178,33 +177,38 @@ export default function AdminPage() {
   };
 
   const importByIsbn = async () => {
-    if (!isbn.trim() || !db) return;
+    const cleanIsbn = isbn.trim();
+    if (!cleanIsbn || !db) return;
     setLoading(true);
     try {
-      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`;
-      const res = await fetch(gUrl);
+      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(cleanIsbn)}`;
+      const res = await fetchWithTimeout(gUrl, {}, 8000);
       const data = await res.json();
-      
-      if (data.items) {
+
+      if (data.items?.[0]?.volumeInfo) {
         const info = data.items[0].volumeInfo;
-        const masterRef = doc(db, "masterBooks", isbn);
+        // On nettoie l'ISBN avant de l'utiliser comme identifiant de document
+        // Firestore (un "/" dans l'ID casserait le chemin).
+        const docId = slugify(cleanIsbn);
+        const masterRef = doc(db, "masterBooks", docId);
         await setDoc(masterRef, {
-          title: info.title,
+          title: info.title || "Titre inconnu",
           author: info.authors ? info.authors.join(", ") : "Inconnu",
           cover: info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
-          isbn13: isbn,
+          isbn13: cleanIsbn,
           description: info.description || "",
           publisher: info.publisher || "",
           pageCount: info.pageCount || 0,
           updatedAt: serverTimestamp(),
           source: "admin-isbn-import"
         }, { merge: true });
-        toast({ title: "Livre importé", description: `${info.title} ajouté à la base centrale.` });
+        toast({ title: "Livre importé", description: `${info.title || "Le livre"} a été ajouté à la base centrale.` });
         setIsbn("");
       } else {
         toast({ variant: "destructive", title: "ISBN introuvable" });
       }
     } catch (err) {
+      console.error("Import ISBN Error:", err);
       toast({ variant: "destructive", title: "Erreur d'importation" });
     } finally {
       setLoading(false);
