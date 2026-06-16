@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
@@ -7,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { 
   Search, 
   Plus, 
-  BookPlus, 
   Loader2, 
   Sparkles, 
   Calendar, 
@@ -15,27 +13,22 @@ import {
   Hash,
   BookOpen,
   CheckCircle2,
-  Book as BookIcon,
   Scan,
   Camera,
   Barcode,
   X,
   RefreshCw,
-  SearchCode,
   Globe,
-  Star,
-  Bookmark,
   Heart
 } from "lucide-react";
 import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
@@ -101,12 +94,12 @@ export default function AddBookPage() {
     setErrorDetails(null);
     setResults([]);
 
-    console.log(`[PLUME] Recherche de : "${search}"`);
+    console.log(`[PLUME] Début de recherche pour : "${search}"`);
 
+    let finalResults: any[] = [];
+
+    // 1. Essai Google Books
     try {
-      let finalResults: any[] = [];
-
-      // 1. Essai Google Books
       const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=20`;
       console.log(`[PLUME] Appel Google Books: ${gUrl}`);
       
@@ -115,16 +108,17 @@ export default function AddBookPage() {
 
       if (gRes.ok) {
         const gData = await gRes.json();
-        console.log(`[PLUME] Google Books résultats: ${gData.totalItems || 0}`);
+        const items = gData.items || [];
+        console.log(`[PLUME] Google Books: ${items.length} résultats trouvés`);
         
-        if (gData.items && gData.items.length > 0) {
-          finalResults = gData.items.map((item: any) => {
+        if (items.length > 0) {
+          finalResults = items.map((item: any) => {
             const info = item.volumeInfo;
             const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier || 
                          info.industryIdentifiers?.[0]?.identifier || "N/A";
             return {
               id: item.id,
-              title: info.title,
+              title: info.title || "Titre inconnu",
               subtitle: info.subtitle,
               author: info.authors ? info.authors.join(", ") : "Auteur inconnu",
               publisher: info.publisher,
@@ -139,9 +133,13 @@ export default function AddBookPage() {
           });
         }
       }
+    } catch (e) {
+      console.error("[PLUME] Erreur lors de l'appel Google Books:", e);
+    }
 
-      // 2. Si aucun résultat Google Books ou erreur, essai Open Library
-      if (finalResults.length === 0) {
+    // 2. Si aucun résultat Google Books ou erreur, essai Open Library
+    if (finalResults.length === 0) {
+      try {
         const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=20`;
         console.log(`[PLUME] Fallback Open Library: ${olUrl}`);
         
@@ -150,37 +148,35 @@ export default function AddBookPage() {
 
         if (olRes.ok) {
           const olData = await olRes.json();
-          console.log(`[PLUME] Open Library résultats: ${olData.numFound || 0}`);
+          const docs = olData.docs || [];
+          console.log(`[PLUME] Open Library: ${docs.length} résultats trouvés`);
           
-          if (olData.docs && olData.docs.length > 0) {
-            finalResults = olData.docs.map((doc: any) => ({
+          if (docs.length > 0) {
+            finalResults = docs.map((doc: any) => ({
               id: doc.key,
-              title: doc.title,
+              title: doc.title || "Titre inconnu",
               author: doc.author_name ? doc.author_name.join(", ") : "Auteur inconnu",
               publisher: doc.publisher?.[0],
               cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
               pages: doc.number_of_pages_median || 0,
               publicationDate: doc.first_publish_year?.toString(),
               genres: doc.subject?.slice(0, 5) || [],
-              language: "Français", // Par défaut pour OL si non spécifié
+              language: "Français",
               isbn: doc.isbn?.[0] || "N/A"
             }));
           }
         }
+      } catch (e) {
+        console.error("[PLUME] Erreur lors de l'appel Open Library:", e);
       }
-
-      if (finalResults.length === 0) {
-        setErrorDetails("Aucun livre trouvé. Essayez avec l'ISBN ou un titre plus précis.");
-      } else {
-        setResults(finalResults);
-      }
-
-    } catch (e) {
-      console.error("[PLUME] Erreur lors de la recherche:", e);
-      setErrorDetails("Erreur de connexion aux services de recherche.");
-    } finally {
-      setIsSearching(false);
     }
+
+    if (finalResults.length === 0) {
+      setErrorDetails("Aucun livre trouvé. Essayez avec l'ISBN ou un titre plus précis.");
+    } else {
+      setResults(finalResults);
+    }
+    setIsSearching(false);
   };
 
   const handleSearch = (e: React.FormEvent) => {
