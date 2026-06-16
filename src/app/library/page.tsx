@@ -28,15 +28,14 @@ import {
   CheckCircle2,
   Clock,
   LayoutGrid,
-  List,
-  AlertCircle
+  List
 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
-import { collection, query } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import Link from "next/link";
 
@@ -142,13 +141,11 @@ export default function LibraryPage() {
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
-    // On retire l'orderBy pour éviter que Firestore ne masque les docs sans dateAdded
     return collection(db, "users", user.uid, "books");
   }, [db, user]);
 
   const { data: booksRaw = [], loading } = useCollection(booksQuery);
 
-  // Tri en mémoire pour garantir la visibilité de TOUS les livres
   const books = useMemo(() => {
     return [...booksRaw].sort((a, b) => {
       const dateA = a.dateAdded?.seconds || 0;
@@ -191,12 +188,6 @@ export default function LibraryPage() {
         <div className="text-center space-y-4">
           <h1 className="text-6xl font-headline tracking-tight italic">Ma Bibliothèque</h1>
           <p className="text-primary/60 italic font-medium">Votre univers littéraire centralisé.</p>
-          
-          {/* Debug Message */}
-          <div className="flex items-center justify-center gap-2 py-2 px-4 bg-primary/5 rounded-full max-w-xs mx-auto text-primary/60 text-xs italic font-bold">
-            <AlertCircle className="h-3 w-3" />
-            Nombre de livres Firestore : {books.length}
-          </div>
         </div>
         
         <div className="flex flex-col md:flex-row gap-4 max-w-4xl mx-auto items-center">
@@ -308,7 +299,7 @@ export default function LibraryPage() {
             </div>
           ) : (
             <div className="py-40 text-center space-y-8 glass-card border-dashed bg-white/20">
-               <BookText className="h-20 w-20 mx-auto text-primary/10 animate-float" />
+               <Bookmark className="h-20 w-20 mx-auto text-primary/10 animate-float" />
                <div className="space-y-3">
                  <p className="text-primary/60 italic font-headline text-3xl">Étagères vides.</p>
                  <p className="text-muted-foreground italic text-lg">Cette section attend sa première pépite.</p>

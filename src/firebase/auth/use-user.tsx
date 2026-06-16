@@ -14,8 +14,6 @@ export function useUser(auth: Auth | null) {
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      // Log pour vérifier que onAuthStateChanged met bien à jour l'utilisateur
-      console.log("PLUME Auth State Change (onAuthStateChanged):", firebaseUser ? `Connecté (UID: ${firebaseUser.uid})` : "Déconnecté");
       setUser(firebaseUser);
       setLoading(false);
     });

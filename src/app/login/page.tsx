@@ -29,10 +29,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
 
-  // Redirection automatique si déjà connecté
   useEffect(() => {
     if (user && !authLoading) {
-      console.log("PLUME Login Redirect: Utilisateur présent, direction l'accueil.");
       router.replace("/");
     }
   }, [user, authLoading, router]);
@@ -51,7 +49,7 @@ export default function LoginPage() {
         updatedAt: serverTimestamp(),
       }, { merge: true });
     } catch (e) {
-      console.error("PLUME Profile Sync Error:", e);
+      // Profile sync error
     }
   };
 
@@ -60,14 +58,11 @@ export default function LoginPage() {
     if (!auth) return;
     setLoading(true);
     try {
-      console.log("PLUME Auth: Tentative de connexion (Email/Pass)...");
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log("PLUME Auth: Connexion réussie - UID:", userCredential.user.uid);
       await syncUserProfile(userCredential.user, "password");
       toast({ title: "Bon retour !", description: "Heureux de vous revoir sur Plume." });
       router.replace("/");
     } catch (error: any) {
-      console.error("PLUME Auth: Erreur de connexion", error.code, error.message);
       toast({ variant: "destructive", title: "Erreur de connexion", description: "Identifiants incorrects ou compte inexistant." });
     } finally {
       setLoading(false);
@@ -78,14 +73,11 @@ export default function LoginPage() {
     if (!auth) return;
     const provider = new GoogleAuthProvider();
     try {
-      console.log("PLUME Auth: Tentative de connexion Google...");
       const result = await signInWithPopup(auth, provider);
-      console.log("PLUME Auth: Google OK - UID:", result.user.uid);
       await syncUserProfile(result.user, "google.com");
       toast({ title: "Connexion réussie", description: "Bienvenue sur votre carnet de lecture." });
       router.replace("/");
     } catch (error: any) {
-      console.error("PLUME Auth: Erreur Google", error.code, error.message);
       toast({ variant: "destructive", title: "Erreur Google", description: error.message });
     }
   };

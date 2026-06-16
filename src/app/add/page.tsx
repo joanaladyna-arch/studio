@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useCallback, useRef, useMemo, useEffect } from "react";
@@ -18,7 +19,6 @@ import {
   Barcode,
   X,
   RefreshCw,
-  Globe,
   Heart
 } from "lucide-react";
 import Image from "next/image";
@@ -59,14 +59,12 @@ export default function AddBookPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
-  // States for Scanning
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanMode, setScanMode] = useState<"barcode" | "cover">("barcode");
   const [isProcessingScan, setIsProcessingScan] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // States for the Add Confirmation Dialog
   const [pendingBook, setPendingBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
   const [selectedFormat, setSelectedFormat] = useState<BookFormat>("papier");
@@ -94,22 +92,15 @@ export default function AddBookPage() {
     setErrorDetails(null);
     setResults([]);
 
-    console.log(`[PLUME] Début de recherche pour : "${search}"`);
-
     let finalResults: any[] = [];
 
-    // 1. Essai Google Books
     try {
       const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(search)}&maxResults=20`;
-      console.log(`[PLUME] Appel Google Books: ${gUrl}`);
-      
       const gRes = await fetch(gUrl);
-      console.log(`[PLUME] Google Books Status: ${gRes.status}`);
 
       if (gRes.ok) {
         const gData = await gRes.json();
         const items = gData.items || [];
-        console.log(`[PLUME] Google Books: ${items.length} résultats trouvés`);
         
         if (items.length > 0) {
           finalResults = items.map((item: any) => {
@@ -134,22 +125,17 @@ export default function AddBookPage() {
         }
       }
     } catch (e) {
-      console.error("[PLUME] Erreur lors de l'appel Google Books:", e);
+      // Slient fail for fallback
     }
 
-    // 2. Si aucun résultat Google Books ou erreur, essai Open Library
     if (finalResults.length === 0) {
       try {
         const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=20`;
-        console.log(`[PLUME] Fallback Open Library: ${olUrl}`);
-        
         const olRes = await fetch(olUrl);
-        console.log(`[PLUME] Open Library Status: ${olRes.status}`);
 
         if (olRes.ok) {
           const olData = await olRes.json();
           const docs = olData.docs || [];
-          console.log(`[PLUME] Open Library: ${docs.length} résultats trouvés`);
           
           if (docs.length > 0) {
             finalResults = docs.map((doc: any) => ({
@@ -167,7 +153,7 @@ export default function AddBookPage() {
           }
         }
       } catch (e) {
-        console.error("[PLUME] Erreur lors de l'appel Open Library:", e);
+        // Search error
       }
     }
 
@@ -184,8 +170,6 @@ export default function AddBookPage() {
     if (!queryStr.trim()) return;
     fetchUniversalMetadata(queryStr);
   };
-
-  // --- Scanning Logic ---
 
   useEffect(() => {
     if (isScannerOpen && scanMode === "barcode") {
@@ -271,8 +255,6 @@ export default function AddBookPage() {
       setIsProcessingScan(false);
     }
   };
-
-  // --- Add Logic ---
 
   const handleOpenAddDialog = (book: any) => {
     setPendingBook(book);
@@ -425,7 +407,6 @@ export default function AddBookPage() {
         </div>
       </div>
 
-      {/* Scanner Dialog */}
       <Dialog open={isScannerOpen} onOpenChange={(o) => { if (!o) stopScanner(); setIsScannerOpen(o); }}>
         <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl">
           <DialogHeader className="p-10 border-b border-primary/5 bg-white/40 flex flex-row items-center justify-between">
@@ -489,7 +470,6 @@ export default function AddBookPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Confirmation Dialog */}
       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>
         <DialogContent className="glass-card border-none max-w-xl p-0 overflow-hidden bg-white/95">
           <DialogHeader className="p-10 border-b border-primary/5 bg-white/40">
