@@ -32,7 +32,7 @@ export function useDoc<T = DocumentData>(ref: DocumentReference<T> | null) {
         setError(null);
       },
       async (err) => {
-        console.error("PLUME Firestore Doc Error:", err);
+        console.error("LECTORIA Firestore Doc Error:", err);
         const permissionError = new FirestorePermissionError({
           path: ref.path,
           operation: 'get',

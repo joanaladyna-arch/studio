@@ -3,7 +3,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { RANKS, RankType } from "@/app/library/page";
-import { Diamond, Crown, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart } from "lucide-react";
+import { Diamond, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import Link from "next/link";
 
-export default function CoeurDePlumePage() {
+export default function CoupsDeCoeurPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -89,7 +89,7 @@ export default function CoeurDePlumePage() {
     }
   };
 
-  // On récupère désormais les livres de TOUS les rangs Plume attribués
+  // On récupère désormais les livres de TOUTES les Palmes attribuées
   // (pas seulement Diamant/Royale), pour les afficher façon pile en
   // éventail — comme "Mon étagère PAL" — avec un écrin spécial réservé
   // aux deux rangs les plus prestigieux.
@@ -119,9 +119,9 @@ export default function CoeurDePlumePage() {
         <div className="flex justify-center gap-3 mb-2">
           <Heart className="h-8 w-8 text-primary/40 animate-pulse" />
         </div>
-        <h1 className="text-6xl font-headline tracking-tight">Cœur de Plume</h1>
+        <h1 className="text-6xl font-headline tracking-tight">Coups de Cœur</h1>
         <p className="text-primary/60 max-w-md mx-auto italic text-lg font-medium">
-          L'écrin de vos lectures, classées selon le Rang Plume que vous leur avez attribué.
+          L'écrin de vos lectures, classées selon la Palme que vous leur avez attribuée.
         </p>
       </header>
 
@@ -269,8 +269,8 @@ export default function CoeurDePlumePage() {
         <div className="py-24 text-center space-y-6">
           <Sparkles className="h-16 w-16 mx-auto text-primary/10" />
           <p className="text-muted-foreground italic text-lg">
-            Le Cœur de Plume attend vos premières lectures.<br />
-            Attribuez un Rang Plume à vos livres pour les voir apparaître ici.
+            Vos Coups de Cœur attendent vos premières lectures.<br />
+            Attribuez une Palme à vos livres pour les voir apparaître ici.
           </p>
         </div>
       )}
@@ -280,15 +280,15 @@ export default function CoeurDePlumePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
           <div className="p-8 rounded-[2.5rem] bg-white/40 border border-white/60 shadow-sm hover:bg-white/60 transition-colors">
             <h3 className="font-headline text-2xl flex items-center gap-3 text-cyan-500 mb-2">
-                <Diamond className="h-5 w-5" /> Diamant de Plume
+                <Sparkles className="h-5 w-5" /> Palme Éternelle
             </h3>
             <p className="text-sm text-muted-foreground italic leading-relaxed">Le coup de cœur absolu. Un livre qui a laissé une empreinte indélébile sur votre âme.</p>
           </div>
           <div className="p-8 rounded-[2.5rem] bg-white/40 border border-white/60 shadow-sm hover:bg-white/60 transition-colors">
             <h3 className="font-headline text-2xl flex items-center gap-3 text-amber-500 mb-2">
-                <Crown className="h-5 w-5" /> Plume Royale
+                <Diamond className="h-5 w-5" /> Palme de Diamant
             </h3>
-            <p className="text-sm text-muted-foreground italic leading-relaxed">Une lecture exceptionnelle, portée par une plume magistrale de bout en bout.</p>
+            <p className="text-sm text-muted-foreground italic leading-relaxed">Une lecture exceptionnelle, portée par une écriture magistrale de bout en bout.</p>
           </div>
         </div>
       </section>

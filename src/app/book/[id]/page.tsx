@@ -361,7 +361,7 @@ export default function BookDetailPage() {
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang Plume</Label>
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label>
              <div className="flex flex-wrap gap-2">
                {Object.entries(RANKS).map(([k, v]) => {
                  const isActive = editedData.plumeRank === k;

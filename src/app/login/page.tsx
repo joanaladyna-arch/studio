@@ -62,13 +62,13 @@ export default function LoginPage() {
 
   const syncUserProfile = async (firebaseUser: any, provider: string) => {
     if (!db) return;
-    const userSeed = firebaseUser.uid || firebaseUser.email || "plume-user";
+    const userSeed = firebaseUser.uid || firebaseUser.email || "lectoria-user";
     try {
       const userRef = doc(db, "users", firebaseUser.uid);
       await setDoc(userRef, {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
-        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Lectrice Plume",
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Lectrice Lectoria",
         photoURL: firebaseUser.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`,
         provider: provider,
         updatedAt: serverTimestamp(),
@@ -85,7 +85,7 @@ export default function LoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await syncUserProfile(userCredential.user, "password");
-      toast({ title: "Bon retour !", description: "Heureux de vous revoir sur Plume." });
+      toast({ title: "Bon retour !", description: "Heureux de vous revoir sur Lectoria." });
       router.replace("/");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erreur de connexion", description: "Identifiants incorrects ou compte inexistant." });
@@ -183,7 +183,7 @@ export default function LoginPage() {
                 <p className="text-sm italic text-primary">Vous êtes déjà connecté : <b>{user.email}</b></p>
               </div>
               <Button onClick={() => router.replace("/")} className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-lg shadow-lg shadow-primary/20">
-                Entrer dans PLUME <ArrowRight className="ml-2 h-5 w-5" />
+                Entrer dans LECTORIA <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
           ) : (

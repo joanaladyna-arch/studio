@@ -39,7 +39,7 @@ export default function Home() {
   const { data: profile } = useDoc(profileRef);
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'cher lecteur';
-  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'plume'}/200/200`;
+  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
 
   const currentReadQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -325,11 +325,11 @@ export default function Home() {
                 </div>
                 <span className="font-headline text-3xl italic">Mes Badges</span>
               </Link>
-              <Link href="/coeur-de-plume" className="flex items-center gap-8 p-8 rounded-[3rem] bg-amber-50 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+              <Link href="/coups-de-coeur" className="flex items-center gap-8 p-8 rounded-[3rem] bg-amber-50 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
                 <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
                   <Sparkles className="h-8 w-8 text-amber-500" />
                 </div>
-                <span className="font-headline text-3xl italic">De Plume</span>
+                <span className="font-headline text-3xl italic">Coups de Cœur</span>
               </Link>
             </div>
           </div>

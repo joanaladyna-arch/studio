@@ -15,10 +15,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading) {
       if (!user && !publicRoutes.includes(pathname)) {
-        console.log("PLUME AuthGuard: Pas d'utilisateur, redirection vers /login");
+        console.log("LECTORIA AuthGuard: Pas d'utilisateur, redirection vers /login");
         router.replace("/login");
       } else if (user && publicRoutes.includes(pathname)) {
-        console.log("PLUME AuthGuard: Utilisateur déjà connecté, redirection vers /");
+        console.log("LECTORIA AuthGuard: Utilisateur déjà connecté, redirection vers /");
         router.replace("/");
       }
     }

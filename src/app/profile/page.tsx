@@ -51,7 +51,7 @@ import Link from 'next/link';
 // catégories confondues — du plus léger au plus dévorant, à la demande
 // explicite de l'utilisatrice.
 const READER_TITLES = [
-  { min: 0, label: "Lectrice Plume" },
+  { min: 0, label: "Lectrice Lectoria" },
   { min: 10, label: "Lectrice Curieuse" },
   { min: 25, label: "Lectrice Passionnée" },
   { min: 50, label: "Lectrice Assidue" },
@@ -192,8 +192,8 @@ export default function ProfilePage() {
     </div>
   );
 
-  const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Plume';
-  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'plume'}/200/200`;
+  const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Lectoria';
+  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
 
   return (
     <div className="space-y-16 animate-paper pb-20">
@@ -383,7 +383,7 @@ export default function ProfilePage() {
       <section className="space-y-10 pt-10">
         <div className="flex items-center justify-between">
           <h2 className="text-4xl font-headline italic flex items-center gap-4">
-            <Heart className="h-8 w-8 text-primary/40" /> Ma Liste Plume
+            <Heart className="h-8 w-8 text-primary/40" /> Mes Coups de Cœur
           </h2>
           <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
             <Link href="/library">Voir tout <ChevronRight className="ml-2 h-5 w-5" /></Link>
@@ -491,7 +491,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       </DialogTrigger>
       <DialogContent className="max-w-4xl h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
         <DialogHeader className="p-8 border-b bg-white/40 shrink-0">
-          <DialogTitle className="font-headline text-4xl italic">Identité Plume</DialogTitle>
+          <DialogTitle className="font-headline text-4xl italic">Identité Lectoria</DialogTitle>
         </DialogHeader>
         
         <div className="flex-1 min-h-0 w-full overflow-y-auto">

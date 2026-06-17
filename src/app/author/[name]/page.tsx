@@ -160,7 +160,7 @@ export default function AuthorPage() {
         }
 
         // On interroge en parallèle Google Books (univers large), la
-        // base Plume (masterBooks) et la BnF (Bibliothèque nationale de
+        // base Lectoria (masterBooks) et la BnF (Bibliothèque nationale de
         // France) : sans ça, les livres importés via Excel/admin ou
         // publiés chez de petites maisons françaises (BMR, Nox,
         // Chatterley...) que Google Books référence mal n'apparaissent
@@ -265,7 +265,7 @@ export default function AuthorPage() {
           .filter((g: any) => isAuthorMatch(g.author, authorName));
         const masterResults = (masterSettled.status === "fulfilled" ? masterSettled.value : [])
           .filter((m: any) => isAuthorMatch(m.author, authorName));
-        // La base Plume (masterBooks) est prioritaire, suivie de la BnF
+        // La base Lectoria (masterBooks) est prioritaire, suivie de la BnF
         // (plus fiable que Google Books pour les éditeurs français) :
         // on évite les doublons en excluant de chaque source suivante
         // tout titre déjà présent dans les sources précédentes.
@@ -306,7 +306,7 @@ export default function AuthorPage() {
 
     setIsAdding(true);
     try {
-      // Si le livre vient déjà de la base Plume (masterBooks), on réutilise
+      // Si le livre vient déjà de la base Lectoria (masterBooks), on réutilise
       // sa fiche existante au lieu d'en recréer une en double. Sinon
       // (résultat Google Books/BnF/Open Library), on calcule un
       // identifiant STABLE (ISBN nettoyé, ou clé titre+auteur normalisée)
@@ -507,7 +507,7 @@ export default function AuthorPage() {
                         {book.subtitle && <p className="text-sm text-muted-foreground italic opacity-60">{book.subtitle}</p>}
                         {book.source === 'master' && (
                           <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px]">
-                            Base Plume
+                            Base Lectoria
                           </Badge>
                         )}
                         <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest opacity-40 pt-2">
@@ -636,7 +636,7 @@ export default function AuthorPage() {
 
                 <div className="pt-4 border-t border-primary/5 flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="font-headline italic text-xl">Ajouter à De Plume</p>
+                    <p className="font-headline italic text-xl">Ajouter aux Coups de Cœur</p>
                     <p className="text-[10px] uppercase tracking-widest opacity-40 font-bold">L'écrin de vos favoris absolus</p>
                   </div>
                   <Button 

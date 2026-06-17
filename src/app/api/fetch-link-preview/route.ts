@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; PlumeBot/1.0; +https://plume.app)" },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; LectoriaBot/1.0)" },
       signal: controller.signal,
     });
     clearTimeout(timeout);

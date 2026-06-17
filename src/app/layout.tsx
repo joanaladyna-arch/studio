@@ -19,7 +19,7 @@ export default function RootLayout({
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const hasVisited = sessionStorage.getItem("plume-visited");
+    const hasVisited = sessionStorage.getItem("lectoria-visited");
     if (hasVisited) {
       setShowSplash(false);
     }
@@ -27,19 +27,19 @@ export default function RootLayout({
 
   const handleSplashFinish = () => {
     setShowSplash(false);
-    sessionStorage.setItem("plume-visited", "true");
+    sessionStorage.setItem("lectoria-visited", "true");
   };
 
   return (
     <html lang="fr">
       <head>
-        <title>PLUME - Journal de Lecture Personnel</title>
+        <title>LECTORIA - Journal de Lecture Personnel</title>
         <meta name="description" content="Ton carnet de lecture précieux et authentique." />
         
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Plume" />
+        <meta name="apple-mobile-web-app-title" content="Lectoria" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#fdf2f5" />

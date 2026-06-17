@@ -19,7 +19,7 @@ export const navItems = [
   { id: "home", href: "/", label: "Accueil", icon: Home },
   { id: "library", href: "/library", label: "Bibliothèque", icon: Library },
   { id: "add", href: "/add", label: "Ajouter", icon: PlusCircle },
-  { id: "coeur-de-plume", href: "/coeur-de-plume", label: "De Plume", icon: Heart },
+  { id: "coeur-de-plume", href: "/coups-de-coeur", label: "Coups de Cœur", icon: Heart },
   { id: "actualites", href: "/actualites", label: "Actualités", icon: Newspaper },
   { id: "journal", href: "/journal", label: "Journal", icon: PenTool },
   { id: "profile", href: "/profile", label: "Profil", icon: User },
@@ -101,11 +101,11 @@ export function Navigation() {
       await signOut(auth);
       toast({
         title: "Déconnexion",
-        description: "À bientôt sur Plume !",
+        description: "À bientôt sur Lectoria !",
       });
       router.push("/login");
     } catch (error) {
-      console.error("PLUME Auth Error:", error);
+      console.error("LECTORIA Auth Error:", error);
     }
   };
 
@@ -118,7 +118,7 @@ export function Navigation() {
           <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
              <Feather className="h-6 w-6 text-primary" />
           </div>
-          <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">PLUME</span>
+          <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">LECTORIA</span>
         </div>
         <div className="flex items-center gap-2">
           {allNavItems.map((item) => {

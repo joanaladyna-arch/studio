@@ -22,7 +22,7 @@ import { NextRequest, NextResponse } from "next/server";
  * que Google Books et Open Library référencent de façon très incomplète.
  *
  * Échec systématiquement silencieux (tableau vide) : cette source est un
- * bonus en plus de Google Books / Open Library / la base Plume, jamais
+ * bonus en plus de Google Books / Open Library / la base Lectoria, jamais
  * un point de blocage. Si la BnF ne répond pas ou change son format, les
  * autres sources continuent de fonctionner normalement.
  */

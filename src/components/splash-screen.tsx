@@ -51,7 +51,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
             stage >= 2 ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
           }`}
         >
-          PLUME
+          LECTORIA
         </h1>
         <p
           className={`mt-2 text-[11px] uppercase tracking-[0.25em] text-primary/50 transition-all duration-500 delay-150 ease-out ${

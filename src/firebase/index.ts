@@ -26,7 +26,7 @@ export function initializeFirebase(): FirebaseInstances {
 
     return { app, db, auth, storage };
   } catch (error) {
-    console.error("PLUME : Erreur fatale lors de l'initialisation Firebase.", error);
+    console.error("LECTORIA : Erreur fatale lors de l'initialisation Firebase.", error);
     return { app: null, db: null, auth: null, storage: null };
   }
 }

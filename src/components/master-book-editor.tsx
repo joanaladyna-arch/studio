@@ -17,12 +17,12 @@ import { useTaxonomy } from "@/hooks/use-taxonomy";
 import { cn, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
 
 /**
- * Éditeur complet d'une fiche MasterBook (base partagée Plume) — couvre
+ * Éditeur complet d'une fiche MasterBook (base partagée Lectoria) — couvre
  * tous les champs : couverture, résumé, genres, tropes, thèmes, etc.
  *
  * Composant volontairement autonome (state interne géré ici) pour être
  * utilisé aussi bien depuis la page /admin (recherche + édition) que
- * directement depuis Bibliothèque, Coeur de Plume ou Ajouter via un
+ * directement depuis Bibliothèque, Coups de Cœur ou Ajouter via un
  * bouton "éditer" contextuel (en général dans un Dialog) — sans dupliquer
  * cette logique à chaque endroit.
  *

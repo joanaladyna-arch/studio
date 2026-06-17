@@ -25,7 +25,7 @@ import {
   Crown,
   Award,
   Medal,
-  Feather,
+  Sparkles,
   Meh,
   Frown,
   Heart,
@@ -170,16 +170,16 @@ export const STATUSES: Record<BookStatus, { label: string, icon: any, color: str
   envie: { label: "Envie", icon: Heart, color: "bg-pink-400" },
 };
 
-// Grades de prestige "Plume" (du meilleur au moins bon). Utilisés par la
-// fiche livre, "Cœur de Plume" et le partage BookTok.
+// Grades de prestige "Palme" (du meilleur au moins bon). Utilisés par la
+// fiche livre, "Coups de Cœur" et le partage BookTok.
 export const RANKS: Record<RankType, { label: string, icon: any, color: string }> = {
-  diamant: { label: "Diamant de Plume", icon: Diamond, color: "text-cyan-400" },
-  royale: { label: "Plume Royale", icon: Crown, color: "text-amber-500" },
-  doree: { label: "Plume Dorée", icon: Award, color: "text-yellow-500" },
-  argentee: { label: "Plume Argentée", icon: Medal, color: "text-slate-400" },
-  simple: { label: "Plume Simple", icon: Feather, color: "text-muted-foreground" },
-  froissee: { label: "Plume Froissée", icon: Meh, color: "text-orange-400" },
-  brisee: { label: "Plume Brisée", icon: Frown, color: "text-rose-400" },
+  diamant: { label: "Palme Éternelle", icon: Sparkles, color: "text-cyan-400" },
+  royale: { label: "Palme de Diamant", icon: Diamond, color: "text-amber-500" },
+  doree: { label: "Palme Royale", icon: Crown, color: "text-yellow-500" },
+  argentee: { label: "Palme d'Or", icon: Award, color: "text-slate-400" },
+  simple: { label: "Palme d'Argent", icon: Medal, color: "text-muted-foreground" },
+  froissee: { label: "Palme de Bronze", icon: Meh, color: "text-orange-400" },
+  brisee: { label: "Palme de Cuivre", icon: Frown, color: "text-rose-400" },
   dnf: { label: "DNF", icon: DoorOpen, color: "text-rose-500" },
 };
 

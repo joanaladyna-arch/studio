@@ -90,7 +90,7 @@ export default function AddBookPage() {
         : searchVal;
 
     try {
-      // 1, 2 & 3. Recherche Master Database (Plume), Google Books et BnF
+      // 1, 2 & 3. Recherche Master Database (Lectoria), Google Books et BnF
       // (Bibliothèque nationale de France) en parallèle : ces trois
       // sources sont indépendantes, les attendre en série n'apporte
       // rien et double/triple la latence perçue par l'utilisatrice.
@@ -194,7 +194,7 @@ export default function AddBookPage() {
         allResults = [...masterSettled.value];
       } else {
         console.error("Master Search Error:", masterSettled.reason);
-        // On continue même si la base Plume échoue
+        // On continue même si la base Lectoria échoue
       }
 
       if (googleSettled.status === "fulfilled") {
@@ -385,7 +385,7 @@ export default function AddBookPage() {
     <div className="space-y-12 animate-paper pb-32">
       <header className="text-center space-y-4 pt-8">
         <h1 className="text-6xl font-headline italic">Nouvelles Pépites</h1>
-        <p className="text-primary/60 italic">Recherchez dans la base Plume ou sur le web.</p>
+        <p className="text-primary/60 italic">Recherchez dans la base Lectoria ou sur le web.</p>
       </header>
 
       {isAdmin && (
@@ -454,7 +454,7 @@ export default function AddBookPage() {
                   {book.publisher && <p className="text-[10px] text-primary/50 italic">{book.publisher}</p>}
                   {book.source === 'master' && (
                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px] mt-2">
-                      Base Plume
+                      Base Lectoria
                     </Badge>
                   )}
                 </div>
@@ -539,7 +539,7 @@ export default function AddBookPage() {
           </div>
           <DialogFooter className="p-10 border-t bg-white/60">
             <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic">
-              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans ma liste Plume" : "Confirmer l'ajout")}
+              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans mes Coups de Cœur" : "Confirmer l'ajout")}
             </Button>
           </DialogFooter>
         </DialogContent>

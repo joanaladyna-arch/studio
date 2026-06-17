@@ -79,7 +79,7 @@ export default function SharePage() {
               <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-white/60 to-transparent" />
               
               <div className="relative z-10 space-y-6 w-full flex flex-col items-center">
-                <div className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary/60">Mon Carnet Plume</div>
+                <div className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary/60">Mon Carnet Lectoria</div>
                 
                 {selectedBook && (
                   <>
@@ -117,7 +117,7 @@ export default function SharePage() {
                   </>
                 )}
 
-                <div className="absolute bottom-4 text-primary/30 font-headline italic text-sm tracking-widest">@Plume</div>
+                <div className="absolute bottom-4 text-primary/30 font-headline italic text-sm tracking-widest">@Lectoria</div>
               </div>
             </div>
 

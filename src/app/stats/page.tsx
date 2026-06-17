@@ -117,7 +117,7 @@ export default function StatsPage() {
                   <Star className="h-10 w-10 mx-auto text-amber-300" />
                   <h3 className="text-xl font-headline italic">Coups de cœur</h3>
                   <p className="text-4xl font-headline italic text-primary/80">{stats.favorites}</p>
-                  <p className="text-xs text-muted-foreground italic">Lectures gravées dans votre cœur de plume.</p>
+                  <p className="text-xs text-muted-foreground italic">Lectures gravées dans votre cœur de lectrice.</p>
                </div>
                <div className="pt-6 border-t border-primary/5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Statistiques basées sur vos pépites personnelles</p>

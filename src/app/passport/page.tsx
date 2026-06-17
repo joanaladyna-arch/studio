@@ -12,7 +12,7 @@ const TITLES = [
   { name: "Exploratrice Littéraire", icon: Search, color: "bg-blue-100 text-blue-600", desc: "Avoir cherché 50 livres" },
   { name: "Reine de la Romance", icon: Heart, color: "bg-rose-100 text-rose-600", desc: "10 romances classées Diamant" },
   { name: "Maîtresse des Dragons", icon: Flame, color: "bg-orange-100 text-orange-600", desc: "5 sagas fantasy complétées" },
-  { name: "Lectrice Royale", icon: Crown, color: "bg-amber-100 text-amber-600", desc: "Avoir classé un livre Plume Royale" },
+  { name: "Lectrice Royale", icon: Crown, color: "bg-amber-100 text-amber-600", desc: "Avoir classé un livre Palme Royale" },
   { name: "BookTok Addict", icon: Trophy, color: "bg-purple-100 text-purple-600", desc: "5 fiches partagées" },
   { name: "Voyageuse des Mondes", icon: Map, color: "bg-emerald-100 text-emerald-600", desc: "Livres de 5 continents différents" },
   { name: "Chasseuse de Pépites", icon: Star, color: "bg-yellow-100 text-yellow-600", desc: "Avoir déterré un livre oublié" },
@@ -20,8 +20,8 @@ const TITLES = [
 
 export default function PassportPage() {
   const { user } = useUser();
-  const userName = user?.displayName || user?.email?.split('@')[0] || "Lectrice Plume";
-  const userSeed = user?.uid || user?.email || "plume-user";
+  const userName = user?.displayName || user?.email?.split('@')[0] || "Lectrice Lectoria";
+  const userSeed = user?.uid || user?.email || "lectoria-user";
   const userPhoto = user?.photoURL || `https://picsum.photos/seed/${userSeed}/200/200`;
 
   return (
@@ -45,7 +45,7 @@ export default function PassportPage() {
             <div className="space-y-2">
               <h2 className="text-3xl font-headline italic">{userName}</h2>
               <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                <Badge className="bg-primary/20 text-primary border-none">Exploratrice Plume</Badge>
+                <Badge className="bg-primary/20 text-primary border-none">Exploratrice Lectoria</Badge>
                 <Badge variant="outline" className="border-primary/20 text-primary/60 italic">Membre depuis peu</Badge>
               </div>
               <p className="text-sm text-muted-foreground italic">"Chaque livre est une nouvelle vie."</p>

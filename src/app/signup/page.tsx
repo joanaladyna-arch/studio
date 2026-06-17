@@ -40,7 +40,7 @@ export default function SignupPage() {
       const firebaseUser = userCredential.user;
       await updateProfile(firebaseUser, { displayName: name });
       
-      const userSeed = firebaseUser.uid || firebaseUser.email || "plume-user";
+      const userSeed = firebaseUser.uid || firebaseUser.email || "lectoria-user";
       const userDocRef = doc(db, "users", firebaseUser.uid);
       await setDoc(userDocRef, {
         uid: firebaseUser.uid,
@@ -54,13 +54,13 @@ export default function SignupPage() {
       });
 
       toast({
-        title: "Bienvenue sur Plume !",
+        title: "Bienvenue sur Lectoria !",
         description: `Votre réserve littéraire est prête, ${name}.`,
       });
       
       router.replace("/");
     } catch (error: any) {
-      console.error("Plume Signup Error:", error.code, error.message);
+      console.error("Lectoria Signup Error:", error.code, error.message);
       toast({ variant: "destructive", title: "Erreur d'inscription", description: error.message });
     } finally {
       setLoading(false);
@@ -86,7 +86,7 @@ export default function SignupPage() {
                 <p className="text-sm italic text-primary">Compte créé avec succès.</p>
               </div>
               <Button onClick={() => router.replace("/")} className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90">
-                Entrer dans PLUME <ArrowRight className="ml-2 h-4 w-4" />
+                Entrer dans LECTORIA <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           ) : (

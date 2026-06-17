@@ -15,7 +15,7 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     // Log utile pour le débogage, sans jamais exposer la stack à l'utilisatrice
-    console.error("PLUME — Erreur d'affichage interceptée :", error);
+    console.error("LECTORIA — Erreur d'affichage interceptée :", error);
   }, [error]);
 
   return (

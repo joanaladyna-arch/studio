@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Feather } from "lucide-react";
+import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * Affiche la couverture d'un livre, ou — quand aucune couverture n'a été
- * trouvée par la recherche (base Plume, Google Books, Open Library, BnF,
- * toutes interrogées avant d'arriver ici) ou que le lien fourni est mort
- * ou invalide — un repli sur le logo Plume (icône Feather sur fond doux)
+ * trouvée par la recherche (base Lectoria, Google Books, Open Library,
+ * BnF, toutes interrogées avant d'arriver ici) ou que le lien fourni est
+ * mort ou invalide — un repli sur une icône de livre sur fond doux
  * plutôt que sur une photo aléatoire sans rapport avec un livre.
  *
  * S'utilise comme un <Image fill /> classique : le parent direct doit
@@ -36,7 +36,7 @@ export function BookCover({
         className
       )}
     >
-      <Feather className="h-10 w-10 text-primary/30" />
+      <BookOpen className="h-10 w-10 text-primary/30" />
     </div>
   );
 }

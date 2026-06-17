@@ -93,7 +93,7 @@ export default function AdminPage() {
   // --- Éditeur complet de fiches MasterBook : la recherche/sélection
   // reste ici (spécifique à l'admin), le formulaire lui-même vit dans le
   // composant partagé <MasterBookEditor>, réutilisé aussi depuis
-  // Bibliothèque/Coeur de Plume/Ajouter via un bouton "éditer" contextuel.
+  // Bibliothèque/Coups de Cœur/Ajouter via un bouton "éditer" contextuel.
 
   const cleanGenres = async () => {
     if (!db) return;
@@ -143,7 +143,7 @@ export default function AdminPage() {
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
 
   if (!user || !isAdmin) {
-    return <div className="p-20 text-center italic">Accès réservé aux gardiens de Plume.</div>;
+    return <div className="p-20 text-center italic">Accès réservé aux gardiens de Lectoria.</div>;
   }
 
   // Nettoie un contributeur au format catalographique "Nom, Prénom. Rôle"
@@ -188,8 +188,8 @@ export default function AdminPage() {
     const ws = XLSX.utils.aoa_to_sheet([headers, example, [], note]);
     ws["!cols"] = headers.map(() => ({ wch: 22 }));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Modèle Plume");
-    XLSX.writeFile(wb, "modele-import-plume.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Modèle Lectoria");
+    XLSX.writeFile(wb, "modele-import-lectoria.xlsx");
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -457,7 +457,7 @@ export default function AdminPage() {
           <Shield className="h-12 w-12 text-primary" />
           <div className="space-y-1">
             <h1 className="text-5xl font-headline italic">Sanctuaire Admin</h1>
-            <p className="text-primary/60 italic text-sm font-medium">Gestion de la base de données centrale Plume.</p>
+            <p className="text-primary/60 italic text-sm font-medium">Gestion de la base de données centrale Lectoria.</p>
           </div>
         </div>
       </header>
@@ -537,7 +537,7 @@ export default function AdminPage() {
                   onClick={importToFirestore} 
                   className="w-full h-16 rounded-[2rem] bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 font-headline italic text-2xl transition-transform active:scale-95"
                 >
-                  <CheckCircle2 className="mr-4 h-8 w-8" /> Lancer l'importation dans PLUME
+                  <CheckCircle2 className="mr-4 h-8 w-8" /> Lancer l'importation dans LECTORIA
                 </Button>
               </div>
             )}
@@ -549,7 +549,7 @@ export default function AdminPage() {
                   <p className="font-headline italic text-3xl">Gravure en cours... {progress}%</p>
                 </div>
                 <Progress value={progress} className="h-4 bg-primary/10" />
-                <p className="text-primary/40 italic">La base Plume s'enrichit de nouvelles pépites.</p>
+                <p className="text-primary/40 italic">La base Lectoria s’enrichit de nouvelles pépites.</p>
               </div>
             )}
 
