@@ -64,6 +64,23 @@ export default function AdminPage() {
       .trim();
   };
 
+  // Lit un champ par son nom quelle que soit sa casse dans le fichier
+  // source (TITRE, Titre, titre...) et accepte plusieurs noms candidats
+  // (français/anglais) — les fichiers Excel/CSV qu'on importe ne suivent
+  // jamais exactement la même convention de casse ou de langue d'une fois
+  // à l'autre (export BnF, export perso, copier-coller...).
+  const getField = (row: any, ...names: string[]): string => {
+    const lowerMap: Record<string, any> = {};
+    Object.keys(row).forEach((k) => {
+      lowerMap[k.toLowerCase().trim()] = row[k];
+    });
+    for (const name of names) {
+      const v = lowerMap[name.toLowerCase()];
+      if (v !== undefined && v !== null && v !== "") return v.toString();
+    }
+    return "";
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -99,36 +116,37 @@ export default function AdminPage() {
       const row = excelData[i];
       try {
         // Validation minimale
-        const title = row.title || row.Titre;
-        const authorStr = row.authors || row.Auteurs || "Inconnu";
-        
+        const title = getField(row, "title", "titre");
+        const authorStr = getField(row, "authors", "auteurs", "auteur") || "Inconnu";
+
         if (!title) {
           errors++;
           continue;
         }
 
-        const isbn13 = row.isbn13?.toString().trim();
+        const isbn13 = getField(row, "isbn13", "isbn");
         const bookId = isbn13 || slugify(`${title}-${authorStr}`);
 
         // 1. Création/Mise à jour MasterBook
         const masterBookRef = doc(db, "masterBooks", bookId);
         const bookData = {
           title: title.toString(),
-          subtitle: (row.subtitle || row.SousTitre || "").toString(),
+          subtitle: getField(row, "subtitle", "soustitre", "sous-titre"),
           author: authorStr.toString(),
+          translator: getField(row, "translator", "traducteur", "contributeur"),
           isbn13: isbn13 || "",
-          isbn10: (row.isbn10 || "").toString(),
-          publisher: (row.publisher || row.Editeur || "").toString(),
-          collection: (row.collection || "").toString(),
-          publishedDate: (row.publishedDate || row.DatePublication || "").toString(),
-          language: (row.language || row.Langue || "Français").toString(),
-          pageCount: parseInt(row.pageCount || row.Pages || "0"),
-          cover: (row.cover || row.Couverture || "").toString(),
-          description: (row.description || row.Description || "").toString(),
-          genres: (row.genres || "").toString().split(",").map((s: string) => s.trim()).filter(Boolean),
-          tropes: (row.tropes || "").toString().split(",").map((s: string) => s.trim()).filter(Boolean),
-          series: (row.series || "").toString(),
-          volume: (row.volume || "").toString(),
+          isbn10: getField(row, "isbn10"),
+          publisher: getField(row, "publisher", "editeur", "éditeur"),
+          collection: getField(row, "collection"),
+          publishedDate: getField(row, "publisheddate", "datepublication", "date", "annee", "année"),
+          language: getField(row, "language", "langue") || "Français",
+          pageCount: parseInt(getField(row, "pagecount", "pages") || "0"),
+          cover: getField(row, "cover", "couverture"),
+          description: getField(row, "description"),
+          genres: getField(row, "genres").split(",").map((s: string) => s.trim()).filter(Boolean),
+          tropes: getField(row, "tropes").split(",").map((s: string) => s.trim()).filter(Boolean),
+          series: getField(row, "series", "serie", "série"),
+          volume: getField(row, "volume", "tome"),
           updatedAt: serverTimestamp(),
           source: "excel-import"
         };
@@ -401,8 +419,8 @@ export default function AdminPage() {
                         {excelData.slice(0, 20).map((row, i) => (
                           <TableRow key={i} className="hover:bg-primary/5 transition-colors">
                             <TableCell className="text-xs font-mono">{row.isbn13 || row.ISBN13 || "-"}</TableCell>
-                            <TableCell className="font-headline italic text-sm">{row.title || row.Titre}</TableCell>
-                            <TableCell className="text-xs opacity-60 font-bold uppercase">{row.authors || row.Auteurs}</TableCell>
+                            <TableCell className="font-headline italic text-sm">{getField(row, "title", "titre")}</TableCell>
+                            <TableCell className="text-xs opacity-60 font-bold uppercase">{getField(row, "authors", "auteurs", "auteur")}</TableCell>
                             <TableCell className="text-xs italic">{row.publisher || row.Editeur}</TableCell>
                             <TableCell className="text-[10px] opacity-40">{row.genres || "-"}</TableCell>
                           </TableRow>
