@@ -1,0 +1,254 @@
+
+"use client";
+
+import { useState, useEffect } from "react";
+import { useFirestore } from "@/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, Pencil, X, Save, Sparkles } from "lucide-react";
+import { BookCover } from "@/components/book-cover";
+import { GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
+import { cn, slugify, cleanIsbnValue } from "@/lib/utils";
+
+/**
+ * Éditeur complet d'une fiche MasterBook (base partagée Plume) — couvre
+ * tous les champs : couverture, résumé, genres, tropes, thèmes, etc.
+ *
+ * Composant volontairement autonome (state interne géré ici) pour être
+ * utilisé aussi bien depuis la page /admin (recherche + édition) que
+ * directement depuis Bibliothèque, Coeur de Plume ou Ajouter via un
+ * bouton "éditer" contextuel (en général dans un Dialog) — sans dupliquer
+ * cette logique à chaque endroit.
+ *
+ * `book` : la fiche à éditer (avec son `id`), ou `{ isNew: true }` pour
+ * une création depuis zéro. `onClose` est appelé à l'annulation ET après
+ * un enregistrement réussi ; `onSaved` reçoit la fiche enregistrée pour
+ * que l'appelant puisse rafraîchir son propre affichage si besoin.
+ */
+export function MasterBookEditor({
+  book,
+  onClose,
+  onSaved,
+}: {
+  book: any;
+  onClose: () => void;
+  onSaved?: (savedBook: any) => void;
+}) {
+  const db = useFirestore();
+  const { toast } = useToast();
+  const [form, setForm] = useState<any>({});
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setForm({
+      title: book?.title || "",
+      subtitle: book?.subtitle || "",
+      author: book?.author || "",
+      translator: book?.translator || "",
+      publisher: book?.publisher || "",
+      isbn13: book?.isbn13 || "",
+      isbn10: book?.isbn10 || "",
+      language: book?.language || "Français",
+      publishedDate: book?.publishedDate || "",
+      pageCount: book?.pageCount || "",
+      volume: book?.volume || "",
+      cover: book?.cover || "",
+      description: book?.description || "",
+      genres: Array.isArray(book?.genres) ? book.genres : [],
+      tropes: Array.isArray(book?.tropes) ? book.tropes : [],
+      themes: Array.isArray(book?.themes) ? book.themes : [],
+    });
+  }, [book?.id]);
+
+  const toggleTag = (field: "genres" | "tropes" | "themes", value: string) => {
+    setForm((prev: any) => {
+      const current: string[] = Array.isArray(prev[field]) ? prev[field] : [];
+      const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
+      return { ...prev, [field]: next };
+    });
+  };
+
+  const isNew = !book?.id;
+
+  const handleSave = async () => {
+    if (!db) return;
+    if (!form.title?.trim()) {
+      toast({ variant: "destructive", title: "Le titre est obligatoire" });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const docId = isNew ? (cleanIsbnValue(form.isbn13) || slugify(`${form.title}-${form.author}`)) : book.id;
+      const ref = doc(db, "masterBooks", docId);
+      const dataToSave = {
+        title: form.title.trim(),
+        subtitle: form.subtitle?.trim() || "",
+        author: form.author?.trim() || "Inconnu",
+        translator: form.translator?.trim() || "",
+        publisher: form.publisher?.trim() || "",
+        isbn13: cleanIsbnValue(form.isbn13) || "",
+        isbn10: cleanIsbnValue(form.isbn10) || "",
+        language: form.language?.trim() || "Français",
+        publishedDate: form.publishedDate?.trim() || "",
+        pageCount: parseInt(form.pageCount) || 0,
+        volume: form.volume?.trim() || "",
+        cover: form.cover?.trim() || "",
+        description: form.description?.trim() || "",
+        genres: form.genres || [],
+        tropes: form.tropes || [],
+        themes: form.themes || [],
+        updatedAt: serverTimestamp(),
+        source: isNew ? "admin-manual" : (book.source || "admin-manual"),
+      };
+      await setDoc(ref, dataToSave, { merge: true });
+      toast({ title: isNew ? "Fiche créée" : "Fiche mise à jour", description: `${dataToSave.title} a été enregistré.` });
+      onSaved?.({ id: docId, ...dataToSave });
+      onClose();
+    } catch (err) {
+      console.error("Save MasterBook Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'enregistrement" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-10">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-headline italic flex items-center gap-3">
+          {isNew ? <Sparkles className="h-5 w-5 text-primary" /> : <Pencil className="h-5 w-5 text-primary" />}
+          {isNew ? "Nouvelle fiche" : "Modification de la fiche"}
+        </h3>
+        <Button variant="ghost" size="sm" onClick={onClose} className="rounded-xl">
+          <X className="h-4 w-4 mr-2" /> Annuler
+        </Button>
+      </div>
+
+      <div className="grid md:grid-cols-[200px_1fr] gap-8">
+        <div className="space-y-3">
+          <div className="relative h-64 rounded-2xl overflow-hidden bg-primary/5 shadow-inner">
+            <BookCover src={form.cover} alt={form.title || "Couverture"} className="object-cover" />
+          </div>
+          <Input
+            placeholder="URL de la couverture"
+            value={form.cover || ""}
+            onChange={(e) => setForm((p: any) => ({ ...p, cover: e.target.value }))}
+            className="text-xs italic bg-white/40 rounded-xl border-none shadow-inner h-11"
+          />
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-5">
+          <div className="space-y-2 sm:col-span-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Titre *</Label>
+            <Input value={form.title || ""} onChange={(e) => setForm((p: any) => ({ ...p, title: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Sous-titre</Label>
+            <Input value={form.subtitle || ""} onChange={(e) => setForm((p: any) => ({ ...p, subtitle: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Auteur</Label>
+            <Input value={form.author || ""} onChange={(e) => setForm((p: any) => ({ ...p, author: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Traducteur</Label>
+            <Input value={form.translator || ""} onChange={(e) => setForm((p: any) => ({ ...p, translator: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Éditeur</Label>
+            <Input value={form.publisher || ""} onChange={(e) => setForm((p: any) => ({ ...p, publisher: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Tome</Label>
+            <Input value={form.volume || ""} onChange={(e) => setForm((p: any) => ({ ...p, volume: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">ISBN 13</Label>
+            <Input value={form.isbn13 || ""} onChange={(e) => setForm((p: any) => ({ ...p, isbn13: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" disabled={!isNew} />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">ISBN 10</Label>
+            <Input value={form.isbn10 || ""} onChange={(e) => setForm((p: any) => ({ ...p, isbn10: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Langue</Label>
+            <Input value={form.language || ""} onChange={(e) => setForm((p: any) => ({ ...p, language: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Année</Label>
+            <Input value={form.publishedDate || ""} onChange={(e) => setForm((p: any) => ({ ...p, publishedDate: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Pages</Label>
+            <Input type="number" value={form.pageCount || ""} onChange={(e) => setForm((p: any) => ({ ...p, pageCount: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Résumé</Label>
+        <Textarea
+          value={form.description || ""}
+          onChange={(e) => setForm((p: any) => ({ ...p, description: e.target.value }))}
+          className="min-h-32 italic bg-white/40 rounded-2xl border-none shadow-inner"
+        />
+      </div>
+
+      <div className="space-y-4">
+        <Label className="italic text-xl font-headline">Genres</Label>
+        <div className="flex flex-wrap gap-2">
+          {GENRES_LIST.map((g) => {
+            const isActive = (form.genres || []).includes(g);
+            return (
+              <button key={g} type="button" onClick={() => toggleTag("genres", g)}
+                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
+                  isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60")}>
+                {g}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <Label className="italic text-xl font-headline">Tropes</Label>
+        <div className="flex flex-wrap gap-2">
+          {TROPES_LIST.map((t) => {
+            const isActive = (form.tropes || []).includes(t);
+            return (
+              <button key={t} type="button" onClick={() => toggleTag("tropes", t)}
+                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
+                  isActive ? "bg-secondary text-white border-secondary shadow-sm" : "border-secondary/20 text-secondary/70 bg-white/40 hover:bg-white/60")}>
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <Label className="italic text-xl font-headline">Thèmes principaux</Label>
+        <div className="flex flex-wrap gap-2">
+          {THEMES_LIST.map((t) => {
+            const isActive = (form.themes || []).includes(t);
+            return (
+              <button key={t} type="button" onClick={() => toggleTag("themes", t)}
+                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
+                  isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60")}>
+                {t}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Button onClick={handleSave} disabled={isSaving} className="w-full h-16 rounded-[2rem] bg-primary shadow-xl shadow-primary/10 font-headline italic text-2xl transition-transform active:scale-95">
+        {isSaving ? <Loader2 className="mr-4 h-8 w-8 animate-spin" /> : <Save className="mr-4 h-8 w-8" />} Enregistrer la fiche
+      </Button>
+    </div>
+  );
+}

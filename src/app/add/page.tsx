@@ -8,24 +8,45 @@ import {
   Plus, 
   Loader2, 
   CheckCircle2,
-  X
+  X,
+  Pencil
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc, getDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MasterBookEditor } from "@/components/master-book-editor";
 import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS } from "@/lib/utils";
 
 export default function AddBookPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
+  const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
+
+  const openMasterEditor = async (masterBookId?: string) => {
+    if (!db || !masterBookId) return;
+    setIsLoadingEditBook(true);
+    try {
+      const snap = await getDoc(doc(db, "masterBooks", masterBookId));
+      if (snap.exists()) setEditingMasterBook({ id: snap.id, ...snap.data() });
+      else toast({ variant: "destructive", title: "Fiche introuvable dans la base partagée" });
+    } catch (err) {
+      console.error("Load MasterBook Error:", err);
+      toast({ variant: "destructive", title: "Erreur de chargement" });
+    } finally {
+      setIsLoadingEditBook(false);
+    }
+  };
   
   const [queryStr, setQueryStr] = useState("");
   const [searchMode, setSearchMode] = useState<"general" | "publisher">("general");
@@ -397,9 +418,20 @@ export default function AddBookPage() {
                     </Badge>
                   )}
                 </div>
-                <Button onClick={() => handleAddClick(book)} className="h-12 px-6 rounded-xl bg-primary italic shrink-0">
-                  Ajouter
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {isAdmin && book.source === 'master' && (
+                    <button
+                      onClick={() => openMasterEditor(book.id)}
+                      className="h-12 w-12 rounded-xl flex items-center justify-center text-primary border border-primary/10 bg-white/40 hover:bg-white/70 transition-colors"
+                      title="Éditer la fiche (admin)"
+                    >
+                      {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                    </button>
+                  )}
+                  <Button onClick={() => handleAddClick(book)} className="h-12 px-6 rounded-xl bg-primary italic shrink-0">
+                    Ajouter
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -472,6 +504,22 @@ export default function AddBookPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {isAdmin && (
+        <Dialog open={!!editingMasterBook} onOpenChange={(open) => !open && setEditingMasterBook(null)}>
+          <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+            <ScrollArea className="max-h-[90vh] p-10">
+              {editingMasterBook && (
+                <MasterBookEditor
+                  book={editingMasterBook}
+                  onClose={() => setEditingMasterBook(null)}
+                  onSaved={() => setEditingMasterBook(null)}
+                />
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

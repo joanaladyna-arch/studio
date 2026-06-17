@@ -4,10 +4,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, ShieldCheck } from "lucide-react";
+import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, ShieldCheck, Newspaper } from "lucide-react";
 import { cn, ADMIN_EMAILS } from "@/lib/utils";
 import { useAuth, useUser, useFirestore } from "@/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,7 @@ export const navItems = [
   { id: "library", href: "/library", label: "Bibliothèque", icon: Library },
   { id: "add", href: "/add", label: "Ajouter", icon: PlusCircle },
   { id: "coeur-de-plume", href: "/coeur-de-plume", label: "De Plume", icon: Heart },
+  { id: "actualites", href: "/actualites", label: "Actualités", icon: Newspaper },
   { id: "journal", href: "/journal", label: "Journal", icon: PenTool },
   { id: "profile", href: "/profile", label: "Profil", icon: User },
 ];
@@ -34,6 +35,7 @@ export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
   const [overrides, setOverrides] = useState<Record<string, NavOverride>>({});
+  const [hasUnseenActuality, setHasUnseenActuality] = useState(false);
 
   // Lu une seule fois au montage (la Navigation reste montée tout au long
   // de la navigation côté client grâce au layout racine) : pas besoin de
@@ -50,6 +52,31 @@ export function Navigation() {
       });
   }, [db]);
 
+  // Point d'alerte sur "Actualités" : compare les actualités des auteurs
+  // suivis à la dernière visite de la page (lastSeenActualityAt). Échoue
+  // toujours silencieusement — un indicateur en moins n'est jamais
+  // bloquant pour la navigation elle-même.
+  useEffect(() => {
+    if (!db || !user) return;
+    (async () => {
+      try {
+        const profileSnap = await getDoc(doc(db, "users", user.uid));
+        const followedAuthors: string[] = profileSnap.data()?.followedAuthors || [];
+        if (followedAuthors.length === 0) return;
+        const lastSeenMillis = profileSnap.data()?.lastSeenActualityAt?.toMillis?.() || 0;
+        const actSnap = await getDocs(collection(db, "actualites"));
+        const hasNew = actSnap.docs.some((d) => {
+          const data: any = d.data();
+          if (!data.authorSlug || !followedAuthors.includes(data.authorSlug)) return false;
+          return (data.publishedAt?.toMillis?.() || 0) > lastSeenMillis;
+        });
+        setHasUnseenActuality(hasNew);
+      } catch {
+        // silencieux
+      }
+    })();
+  }, [db, user]);
+
   // "Admin" n'apparaît que pour le(s) email(s) autorisé(s) — la page
   // /admin existe mais ne doit être visible que pour Joana. Elle n'est
   // volontairement pas personnalisable ici, pour éviter de se couper
@@ -65,7 +92,7 @@ export function Navigation() {
     .filter((item) => item.visible);
   const allNavItems = [
     ...visibleNavItems,
-    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
+    ...(isAdmin ? [{ id: "admin", href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 
   const handleLogout = async () => {
@@ -110,6 +137,9 @@ export function Navigation() {
               >
                 <Icon className={cn("h-5 w-5 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
                 <span className="text-sm font-headline italic">{item.label}</span>
+                {item.id === "actualites" && hasUnseenActuality && (
+                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                )}
               </Link>
             );
           })}
@@ -139,10 +169,13 @@ export function Navigation() {
               )}
             >
               <div className={cn(
-                "p-2 rounded-xl transition-all duration-500",
+                "relative p-2 rounded-xl transition-all duration-500",
                 isActive ? "bg-primary/10 scale-125 shadow-sm" : "bg-transparent"
               )}>
                 <Icon className={cn("h-5 w-5", isActive && "fill-primary/20")} />
+                {item.id === "actualites" && hasUnseenActuality && (
+                  <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-rose-500" />
+                )}
               </div>
               <span className={cn(
                 "text-[10px] font-headline italic tracking-tight font-bold transition-all",

@@ -73,6 +73,55 @@ export async function searchBnF(
 export const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
 
 /**
+ * Transforme un texte libre en identifiant de document Firestore sûr
+ * (minuscules, sans accents/espaces/caractères spéciaux). Centralisé ici
+ * pour que tous les outils qui créent des fiches MasterBook (import
+ * Excel, import ISBN, éditeur de fiches...) génèrent le même identifiant
+ * pour un même titre+auteur, et ne créent jamais de doublons entre eux.
+ */
+export function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/--+/g, "-")
+    .trim();
+}
+
+/**
+ * Nettoie un ISBN de ses tirets/espaces. La recherche principale (page
+ * Ajouter) compare toujours des chiffres purs : un ISBN stocké avec des
+ * tirets ne serait jamais retrouvé par cette recherche, ce qui créerait
+ * un doublon silencieux à la prochaine tentative d'ajout du même livre.
+ */
+export function cleanIsbnValue(v: string | null | undefined): string {
+  return (v || "").toString().replace(/[-\s]/g, "").trim();
+}
+
+/**
+ * Identifiant d'auteur INSENSIBLE À L'ORDRE des mots du nom : les notices
+ * bibliographiques inversent souvent nom et prénom ("Kent Rina" en
+ * catalogue, "Rina Kent" en couverture). En triant les mots par ordre
+ * alphabétique avant de slugifier, les deux donnent le même identifiant
+ * (kent-rina), ce qui permet de relier une actualité saisie dans un sens
+ * à des livres stockés dans l'autre. À n'utiliser QUE pour le rattachement
+ * (suivi, actualités), pas comme identifiant de document MasterBook.
+ */
+export function authorKey(name: string | null | undefined): string {
+  return slugify(
+    (name || "")
+      .toString()
+      .split(/[\s,]+/)
+      .filter(Boolean)
+      .sort()
+      .join(" ")
+  );
+}
+
+/**
  * Nettoyage défensif, appliqué à l'AFFICHAGE, des artefacts catalographiques
  * qui ont pu être enregistrés dans Firestore avant la correction de
  * l'extraction BnF (mention de responsabilité dupliquée dans le titre,

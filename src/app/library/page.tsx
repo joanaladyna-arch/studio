@@ -4,6 +4,9 @@
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MasterBookEditor } from "@/components/master-book-editor";
 import { 
   Search, 
   Plus, 
@@ -24,15 +27,17 @@ import {
   Feather,
   Meh,
   Frown,
-  Heart
+  Heart,
+  Pencil
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
+import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
-import { collection } from "firebase/firestore";
+import { collection, doc, getDoc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
@@ -200,8 +205,30 @@ const CATEGORIES = [
 export default function LibraryPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
+  const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
+
+  const openMasterEditor = async (masterBookId?: string) => {
+    if (!db || !masterBookId) {
+      toast({ variant: "destructive", title: "Fiche non liée à la base partagée" });
+      return;
+    }
+    setIsLoadingEditBook(true);
+    try {
+      const snap = await getDoc(doc(db, "masterBooks", masterBookId));
+      if (snap.exists()) setEditingMasterBook({ id: snap.id, ...snap.data() });
+      else toast({ variant: "destructive", title: "Fiche introuvable dans la base partagée" });
+    } catch (err) {
+      console.error("Load MasterBook Error:", err);
+      toast({ variant: "destructive", title: "Erreur de chargement" });
+    } finally {
+      setIsLoadingEditBook(false);
+    }
+  };
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -266,9 +293,20 @@ export default function LibraryPage() {
           ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
               {filteredBooks.map((book) => (
-                <Link key={book.id} href={`/book/${book.id}`} className="group">
-                  <BookCard book={book} />
-                </Link>
+                <div key={book.id} className="relative">
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); openMasterEditor((book as any).masterBookId); }}
+                      className="absolute top-3 left-3 z-10 h-9 w-9 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary hover:scale-110 transition-transform"
+                      title="Éditer la fiche partagée (admin)"
+                    >
+                      {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                    </button>
+                  )}
+                  <Link href={`/book/${book.id}`} className="group block">
+                    <BookCard book={book} />
+                  </Link>
+                </div>
               ))}
             </div>
           ) : (
@@ -279,6 +317,22 @@ export default function LibraryPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {isAdmin && (
+        <Dialog open={!!editingMasterBook} onOpenChange={(open) => !open && setEditingMasterBook(null)}>
+          <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+            <ScrollArea className="max-h-[90vh] p-10">
+              {editingMasterBook && (
+                <MasterBookEditor
+                  book={editingMasterBook}
+                  onClose={() => setEditingMasterBook(null)}
+                  onSaved={() => setEditingMasterBook(null)}
+                />
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

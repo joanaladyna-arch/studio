@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collection, addDoc, doc, setDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, doc, setDoc, serverTimestamp, query, where, getDocs, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowLeft, 
@@ -15,7 +15,10 @@ import {
   CheckCircle2, 
   Plus, 
   Globe,
-  Heart
+  Heart,
+  Bell,
+  BellRing,
+  Newspaper
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -28,11 +31,12 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, authorKey } from "@/lib/utils";
 
 export default function AuthorPage() {
   const params = useParams();
   const authorName = decodeURIComponent(params.name as string);
+  const authorSlug = useMemo(() => authorKey(authorName), [authorName]);
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -41,6 +45,9 @@ export default function AuthorPage() {
   const [authorBio, setAuthorBio] = useState("");
   const [authorPhoto, setAuthorPhoto] = useState<string | null>(null);
   const [authorPhotoFailed, setAuthorPhotoFailed] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [actualites, setActualites] = useState<any[]>([]);
 
   const [pendingBook, setPendingBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
@@ -61,6 +68,49 @@ export default function AuthorPage() {
       ((b.title || "").toLowerCase() === (book.title || "").toLowerCase() && (b.author || "").toLowerCase() === (book.author || "").toLowerCase())
     );
   }, [currentLibrary]);
+
+  // Statut de suivi de cet auteur, et ses actualités publiées (visibles
+  // par toutes les lectrices) — échoue toujours silencieusement, jamais
+  // bloquant pour le reste de la fiche auteur.
+  useEffect(() => {
+    if (!db) return;
+    getDocs(collection(db, "actualites"))
+      .then((snap) => {
+        const matching = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() } as any))
+          .filter((a) => a.authorSlug === authorSlug);
+        matching.sort((a, b) => (b.publishedAt?.toMillis?.() || 0) - (a.publishedAt?.toMillis?.() || 0));
+        setActualites(matching);
+      })
+      .catch((err) => console.error("Load Author Actualites Error:", err));
+
+    if (!user) return;
+    getDoc(doc(db, "users", user.uid))
+      .then((snap) => {
+        const followed: string[] = snap.data()?.followedAuthors || [];
+        setIsFollowing(followed.includes(authorSlug));
+      })
+      .catch((err) => console.error("Load Follow Status Error:", err));
+  }, [db, user, authorSlug]);
+
+  const toggleFollow = async () => {
+    if (!db || !user) return;
+    setIsFollowLoading(true);
+    try {
+      await setDoc(
+        doc(db, "users", user.uid),
+        { followedAuthors: isFollowing ? arrayRemove(authorSlug) : arrayUnion(authorSlug) },
+        { merge: true }
+      );
+      setIsFollowing(!isFollowing);
+      toast({ title: isFollowing ? "Auteur retiré du suivi" : "Auteur suivi", description: isFollowing ? undefined : "Tu seras alertée des prochaines actualités de cet auteur." });
+    } catch (err) {
+      console.error("Toggle Follow Error:", err);
+      toast({ variant: "destructive", title: "Erreur" });
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchAuthorUniverse = async () => {
@@ -306,9 +356,37 @@ export default function AuthorPage() {
             <p className="text-muted-foreground italic text-lg leading-relaxed line-clamp-4">
                {authorBio || "Exploration de la bibliographie complète en cours..."}
             </p>
+            {user && (
+              <Button
+                onClick={toggleFollow}
+                disabled={isFollowLoading}
+                variant="outline"
+                className={cn(
+                  "rounded-2xl h-12 px-6 italic font-headline transition-all",
+                  isFollowing ? "bg-primary text-white border-primary shadow-lg" : "border-primary/20 text-primary/70 bg-white/40 hover:bg-white/60"
+                )}
+              >
+                {isFollowLoading ? <Loader2 className="h-4 w-4 mr-3 animate-spin" /> : isFollowing ? <BellRing className="h-4 w-4 mr-3" /> : <Bell className="h-4 w-4 mr-3" />}
+                {isFollowing ? "Auteur suivi" : "Suivre cet auteur"}
+              </Button>
+            )}
           </div>
         </div>
       </header>
+
+      {actualites.length > 0 && (
+        <div className="space-y-6 max-w-3xl">
+          <h2 className="text-2xl font-headline italic flex items-center gap-3">
+            <Newspaper className="h-5 w-5 text-primary/50" /> Actualités
+          </h2>
+          {actualites.map((item) => (
+            <div key={item.id} className="glass-card rounded-[2rem] p-8 bg-white/50 border-none shadow-sm space-y-2">
+              <h3 className="text-xl font-headline italic">{item.title}</h3>
+              <p className="text-muted-foreground italic leading-relaxed whitespace-pre-line">{item.content}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div className="py-40 text-center space-y-8 flex flex-col items-center">

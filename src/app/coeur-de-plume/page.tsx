@@ -1,18 +1,41 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { RANKS, RankType } from "@/app/library/page";
-import { Diamond, Crown, Sparkles, Heart } from "lucide-react";
+import { Diamond, Crown, Sparkles, Heart, Pencil, Loader2 } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
-import { cn } from "@/lib/utils";
+import { collection, query, where, doc, getDoc } from "firebase/firestore";
+import { cn, ADMIN_EMAILS } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
 export default function CoeurDePlumePage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
+  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
+  const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
+
+  const openMasterEditor = async (masterBookId?: string) => {
+    if (!db || !masterBookId) return;
+    setIsLoadingEditBook(true);
+    try {
+      const snap = await getDoc(doc(db, "masterBooks", masterBookId));
+      if (snap.exists()) setEditingMasterBook({ id: snap.id, ...snap.data() });
+      else toast({ variant: "destructive", title: "Fiche introuvable dans la base partagée" });
+    } catch (err) {
+      console.error("Load MasterBook Error:", err);
+      toast({ variant: "destructive", title: "Erreur de chargement" });
+    } finally {
+      setIsLoadingEditBook(false);
+    }
+  };
 
   // On récupère désormais les livres de TOUS les rangs Plume attribués
   // (pas seulement Diamant/Royale), pour les afficher façon pile en
@@ -74,14 +97,24 @@ export default function CoeurDePlumePage() {
             const pile = (
               <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
                 {books.slice(0, 14).map((book: any, i: number) => (
-                  <Link
-                    key={book.id}
-                    href={`/book/${book.id}`}
-                    className="relative shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
-                    style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
-                  >
-                    <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
-                  </Link>
+                  <div key={book.id} className="relative shrink-0">
+                    <Link
+                      href={`/book/${book.id}`}
+                      className="relative block w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
+                      style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
+                    >
+                      <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+                    </Link>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openMasterEditor(book.masterBookId); }}
+                        className="absolute -bottom-1 -right-1 z-30 h-6 w-6 rounded-full bg-white shadow-md flex items-center justify-center text-primary hover:scale-110 transition-transform"
+                        title="Éditer la fiche (admin)"
+                      >
+                        {isLoadingEditBook ? <Loader2 className="h-3 w-3 animate-spin" /> : <Pencil className="h-3 w-3" />}
+                      </button>
+                    )}
+                  </div>
                 ))}
                 {books.length > 14 && (
                   <div className="relative shrink-0 w-20 aspect-[2/3] rounded-xl border-2 border-dashed border-primary/20 bg-white/40 flex items-center justify-center -ml-7 text-primary/60 font-bold text-sm italic">
@@ -146,6 +179,22 @@ export default function CoeurDePlumePage() {
           </div>
         </div>
       </section>
+
+      {isAdmin && (
+        <Dialog open={!!editingMasterBook} onOpenChange={(open) => !open && setEditingMasterBook(null)}>
+          <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+            <ScrollArea className="max-h-[90vh] p-10">
+              {editingMasterBook && (
+                <MasterBookEditor
+                  book={editingMasterBook}
+                  onClose={() => setEditingMasterBook(null)}
+                  onSaved={() => setEditingMasterBook(null)}
+                />
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
