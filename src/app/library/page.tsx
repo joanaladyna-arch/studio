@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
+import { useAdminMode } from "@/components/admin-mode";
 import { collection, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -206,9 +207,10 @@ export default function LibraryPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const { adminMode } = useAdminMode();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const isAdmin = adminMode;
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
 
@@ -297,10 +299,10 @@ export default function LibraryPage() {
                   {isAdmin && (
                     <button
                       onClick={(e) => { e.preventDefault(); openMasterEditor((book as any).masterBookId); }}
-                      className="absolute top-3 left-3 z-10 h-9 w-9 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary hover:scale-110 transition-transform"
+                      className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
                       title="Éditer la fiche partagée (admin)"
                     >
-                      {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                      {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
                     </button>
                   )}
                   <Link href={`/book/${book.id}`} className="group block">

@@ -20,7 +20,9 @@ import {
   Upload,
   Share2,
   Flame,
-  ClipboardList
+  ClipboardList,
+  ShieldCheck,
+  Pencil
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -39,6 +41,9 @@ import { cn, toArray, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
+import { useAdminMode } from "@/components/admin-mode";
+import { MasterBookEditor } from "@/components/master-book-editor";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Grille d'évaluation détaillée, distincte de "Ma Note" — combine des
 // critères sur le livre en lui-même (intrigue, personnages, écriture,
@@ -62,6 +67,8 @@ export default function BookDetailPage() {
   const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
+  const { adminMode } = useAdminMode();
+  const [showMasterEditor, setShowMasterEditor] = useState(false);
 
   const userBookRef = useMemo(() => {
     if (!db || !user || !bookId) return null;
@@ -374,6 +381,21 @@ export default function BookDetailPage() {
         )}
       </div>
 
+      {adminMode && masterBook && (
+        <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-5 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+            <div>
+              <p className="font-headline italic text-lg leading-tight">Mode administrateur</p>
+              <p className="text-xs opacity-60 italic">Modifie la fiche partagée (visible par toutes les lectrices), distincte de ta fiche perso ci-dessous.</p>
+            </div>
+          </div>
+          <Button onClick={() => setShowMasterEditor(true)} className="rounded-2xl bg-primary h-12 px-6 font-headline italic shrink-0">
+            <Pencil className="h-4 w-4 mr-2" /> Éditer la fiche partagée
+          </Button>
+        </div>
+      )}
+
       <Tabs defaultValue="overview">
             <TabsList className="bg-transparent border-b h-14 justify-start p-0 gap-12 mb-10 rounded-none w-full">
               <TabsTrigger value="overview" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">L'Œuvre</TabsTrigger>
@@ -684,6 +706,25 @@ export default function BookDetailPage() {
                </div>
             </TabsContent>
           </Tabs>
+
+      {adminMode && (
+        <Dialog open={showMasterEditor} onOpenChange={setShowMasterEditor}>
+          <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+            <ScrollArea className="max-h-[90vh] p-10">
+              {masterBook && (
+                <MasterBookEditor
+                  book={masterBook}
+                  onClose={() => setShowMasterEditor(false)}
+                  onSaved={(saved) => {
+                    setMasterBook((prev) => ({ ...(prev as any), ...saved }));
+                    setShowMasterEditor(false);
+                  }}
+                />
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

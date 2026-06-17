@@ -1,15 +1,16 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
-import { useFirestore } from "@/firebase";
+import { useState, useEffect, useRef } from "react";
+import { useFirestore, useStorage, useUser } from "@/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Pencil, X, Save, Sparkles } from "lucide-react";
+import { Loader2, Pencil, X, Save, Sparkles, Upload } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { cn, slugify, cleanIsbnValue } from "@/lib/utils";
@@ -39,9 +40,36 @@ export function MasterBookEditor({
   onSaved?: (savedBook: any) => void;
 }) {
   const db = useFirestore();
+  const storage = useStorage();
+  const { user } = useUser();
   const { toast } = useToast();
   const [form, setForm] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Téléverse une couverture depuis l'appareil vers Firebase Storage
+  // (dossier partagé masterBooks/covers), puis stocke l'URL publique
+  // obtenue dans le champ cover. Permet d'ajouter une image sans avoir à
+  // coller un lien web — comme demandé.
+  const handleCoverFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !user) return;
+    setIsUploading(true);
+    try {
+      const path = `masterBooks/covers/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+      const sRef = storageRef(storage, path);
+      await uploadBytes(sRef, file);
+      const url = await getDownloadURL(sRef);
+      setForm((p: any) => ({ ...p, cover: url }));
+      toast({ title: "Couverture importée" });
+    } catch (err) {
+      console.error("Cover Upload Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'importation", description: "L'image n'a pas pu être envoyée." });
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   useEffect(() => {
     setForm({
@@ -133,8 +161,19 @@ export function MasterBookEditor({
           <div className="relative h-64 rounded-2xl overflow-hidden bg-primary/5 shadow-inner">
             <BookCover src={form.cover} alt={form.title || "Couverture"} className="object-cover" />
           </div>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleCoverFile} />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="w-full h-11 rounded-xl border-primary/20 bg-white/40 text-primary/70 italic text-sm"
+          >
+            {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+            Importer une image
+          </Button>
           <Input
-            placeholder="URL de la couverture"
+            placeholder="ou colle une URL d'image"
             value={form.cover || ""}
             onChange={(e) => setForm((p: any) => ({ ...p, cover: e.target.value }))}
             className="text-xs italic bg-white/40 rounded-xl border-none shadow-inner h-11"

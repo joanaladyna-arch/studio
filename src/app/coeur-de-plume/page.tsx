@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
+import { useAdminMode } from "@/components/admin-mode";
 import { collection, query, where, doc, getDoc } from "firebase/firestore";
 import { cn, ADMIN_EMAILS } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +19,8 @@ export default function CoeurDePlumePage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const { adminMode } = useAdminMode();
+  const isAdmin = adminMode;
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
 

@@ -24,12 +24,14 @@ import { MasterBookEditor } from "@/components/master-book-editor";
 import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS } from "@/lib/utils";
+import { useAdminMode } from "@/components/admin-mode";
 
 export default function AddBookPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const { adminMode } = useAdminMode();
+  const isAdmin = adminMode;
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
 

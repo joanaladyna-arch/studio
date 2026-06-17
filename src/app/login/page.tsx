@@ -6,6 +6,8 @@ import { useAuth, useFirestore, useUser } from "@/firebase";
 import { 
   signInWithEmailAndPassword, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider, 
   OAuthProvider,
   sendPasswordResetEmail
@@ -35,6 +37,28 @@ export default function LoginPage() {
       router.replace("/");
     }
   }, [user, authLoading, router]);
+
+  // Récupère le résultat d'une connexion par redirection (Google/Apple sur
+  // mobile, où les popups sont souvent bloquées). Au retour sur la page
+  // après la redirection vers Google/Apple, ce résultat contient
+  // l'utilisateur connecté : on synchronise son profil et on entre dans
+  // l'app. Échoue silencieusement si aucune redirection n'est en cours.
+  useEffect(() => {
+    if (!auth) return;
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result?.user) {
+          const provider = result.providerId?.includes("apple") ? "apple.com" : "google.com";
+          syncUserProfile(result.user, provider);
+          router.replace("/");
+        }
+      })
+      .catch((error: any) => {
+        if (error?.code && error.code !== "auth/no-auth-event") {
+          toast({ variant: "destructive", title: "Erreur de connexion", description: error.message });
+        }
+      });
+  }, [auth]);
 
   const syncUserProfile = async (firebaseUser: any, provider: string) => {
     if (!db) return;
@@ -79,6 +103,23 @@ export default function LoginPage() {
       toast({ title: "Connexion réussie", description: "Bienvenue sur votre carnet de lecture." });
       router.replace("/");
     } catch (error: any) {
+      // Sur mobile, les popups sont souvent bloquées par le navigateur :
+      // on bascule alors sur la connexion par redirection, qui fonctionne
+      // partout. Le retour est géré par le useEffect getRedirectResult.
+      if (
+        error?.code === "auth/popup-blocked" ||
+        error?.code === "auth/popup-closed-by-user" ||
+        error?.code === "auth/cancelled-popup-request" ||
+        error?.code === "auth/operation-not-supported-in-this-environment"
+      ) {
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectError: any) {
+          toast({ variant: "destructive", title: "Erreur Google", description: redirectError.message });
+          return;
+        }
+      }
       toast({ variant: "destructive", title: "Erreur Google", description: error.message });
     }
   };
@@ -94,6 +135,20 @@ export default function LoginPage() {
       toast({ title: "Connexion réussie", description: "Bienvenue sur votre carnet de lecture." });
       router.replace("/");
     } catch (error: any) {
+      if (
+        error?.code === "auth/popup-blocked" ||
+        error?.code === "auth/popup-closed-by-user" ||
+        error?.code === "auth/cancelled-popup-request" ||
+        error?.code === "auth/operation-not-supported-in-this-environment"
+      ) {
+        try {
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectError: any) {
+          toast({ variant: "destructive", title: "Erreur Apple", description: redirectError.message });
+          return;
+        }
+      }
       toast({ variant: "destructive", title: "Erreur Apple", description: error.message });
     }
   };

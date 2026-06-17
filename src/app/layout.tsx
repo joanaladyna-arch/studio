@@ -8,6 +8,8 @@ import { SplashScreen } from "@/components/splash-screen";
 import { FirebaseClientProvider } from "@/firebase/client-provider";
 import { Navigation } from "@/components/navigation";
 import { AuthGuard } from "@/components/auth-guard";
+import { AdminModeProvider } from "@/components/admin-mode";
+import { AdminModeBar } from "@/components/admin-mode-bar";
 
 export default function RootLayout({
   children,
@@ -56,10 +58,13 @@ export default function RootLayout({
             <SplashScreen onFinish={handleSplashFinish} />
           ) : (
             <AuthGuard>
-              <Navigation />
-              <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-32 md:pt-28 md:pb-16 w-full">
-                {children}
-              </main>
+              <AdminModeProvider>
+                <Navigation />
+                <AdminModeBar />
+                <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-32 md:pt-28 md:pb-16 w-full">
+                  {children}
+                </main>
+              </AdminModeProvider>
             </AuthGuard>
           )}
           <Toaster />
