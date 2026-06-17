@@ -25,7 +25,7 @@ import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -236,7 +236,7 @@ export default function AdminPage() {
         }
 
         const isbn13 = cleanIsbnValue(getField(row, "isbn13", "isbn"));
-        const bookId = isbn13 || slugify(`${title}-${authorStr}`);
+        const bookId = isbn13 || stableBookKey(title.toString(), authorStr.toString());
 
         // 1. Création/Mise à jour MasterBook. On lit d'abord la fiche
         // existante : une réimport Excel ne doit JAMAIS écraser par du

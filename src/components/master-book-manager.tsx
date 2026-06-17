@@ -9,9 +9,10 @@ import { Input } from "@/components/ui/input";
 import { BookCover } from "@/components/book-cover";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { AuthorEditor } from "@/components/author-editor";
+import { BookDuplicatesManager } from "@/components/book-duplicates-manager";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Pencil, Plus, Loader2, BookPlus, UserCog } from "lucide-react";
+import { Search, Pencil, Plus, Loader2, BookPlus, UserCog, Copy } from "lucide-react";
 
 /**
  * Outils admin de gestion du catalogue, affichés sur la Bibliothèque en
@@ -25,6 +26,7 @@ export function MasterBookManager() {
   const [search, setSearch] = useState("");
   const [editingBook, setEditingBook] = useState<any | null>(null);
   const [showAuthorEditor, setShowAuthorEditor] = useState(false);
+  const [showDuplicatesManager, setShowDuplicatesManager] = useState(false);
 
   const loadAll = async () => {
     if (!db || cache) return;
@@ -60,6 +62,9 @@ export function MasterBookManager() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="font-headline italic text-2xl flex items-center gap-3"><BookPlus className="h-6 w-6 text-primary" /> Catalogue (admin)</h2>
         <div className="flex gap-2">
+          <Button onClick={() => setShowDuplicatesManager(true)} variant="outline" className="rounded-2xl h-11 px-4 border-primary/20 bg-white/40 text-primary italic font-headline text-sm">
+            <Copy className="mr-2 h-4 w-4" /> Doublons
+          </Button>
           <Button onClick={() => setShowAuthorEditor(true)} variant="outline" className="rounded-2xl h-11 px-4 border-primary/20 bg-white/40 text-primary italic font-headline text-sm">
             <UserCog className="mr-2 h-4 w-4" /> Éditer un auteur
           </Button>
@@ -111,6 +116,14 @@ export function MasterBookManager() {
         <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
           <ScrollArea className="max-h-[90vh] p-10">
             {showAuthorEditor && <AuthorEditor onClose={() => setShowAuthorEditor(false)} />}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDuplicatesManager} onOpenChange={setShowDuplicatesManager}>
+        <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+          <ScrollArea className="max-h-[90vh] p-10">
+            {showDuplicatesManager && <BookDuplicatesManager />}
           </ScrollArea>
         </DialogContent>
       </Dialog>

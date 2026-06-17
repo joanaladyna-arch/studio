@@ -24,7 +24,7 @@ import { MasterBookEditor } from "@/components/master-book-editor";
 import { IsbnImporter } from "@/components/isbn-importer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 
 export default function AddBookPage() {
@@ -292,28 +292,49 @@ export default function AddBookPage() {
     try {
       let masterBookId = pendingBook.id;
 
-      // 1. Si source est API, on crée le document dans masterBooks avec
-      // toutes les informations bibliographiques disponibles (livre, auteur, édition)
+      // 1. Si source est API, on crée — ou on RETROUVE — le document dans
+      // masterBooks. Avant, un identifiant aléatoire était généré à
+      // chaque ajout, ce qui créait une fiche en double dès que le même
+      // livre était retrouvé une seconde fois avec une légère variation
+      // de titre/auteur (ponctuation, casse, mention BnF "auteur du
+      // texte"...). Désormais l'identifiant est déterministe (l'ISBN
+      // nettoyé en priorité, sinon une clé stable basée sur titre+auteur
+      // normalisés) : un même livre retombe systématiquement sur la même
+      // fiche, qu'on le retrouve via Google Books, la BnF, ou un import
+      // ultérieur. Si la fiche existe déjà, on ne l'écrase jamais — on ne
+      // complète que les champs encore vides (même logique que la
+      // protection anti-écrasement de l'import Excel).
       if (pendingBook.source === "api") {
-        const masterRef = doc(collection(db, "masterBooks"));
-        masterBookId = masterRef.id;
+        const cleanedIsbn = cleanIsbnValue(pendingBook.isbn);
+        masterBookId = cleanedIsbn || stableBookKey(pendingBook.title, pendingBook.author);
+        const masterRef = doc(db, "masterBooks", masterBookId);
+        const existingSnap = await getDoc(masterRef);
+        const existing: any = existingSnap.exists() ? existingSnap.data() : {};
+        const keepText = (incoming: any, current: any) => {
+          const v = (incoming ?? "").toString().trim();
+          return v ? v : (current ?? "");
+        };
+        const keepArr = (incoming: any, current: any) =>
+          Array.isArray(incoming) && incoming.length ? incoming : (Array.isArray(current) ? current : []);
+        const keepNum = (incoming: any, current: any) => (incoming > 0 ? incoming : (current ?? 0));
+
         await setDoc(masterRef, {
-          title: pendingBook.title || "Titre inconnu",
-          subtitle: pendingBook.subtitle || "",
-          author: pendingBook.author || "Auteur inconnu",
-          cover: pendingBook.cover || "",
-          isbn13: pendingBook.isbn || "",
-          isbn10: pendingBook.isbn10 || "",
-          description: pendingBook.description || "",
-          publisher: pendingBook.publisher || "",
-          translator: pendingBook.translator || "",
-          pageCount: pendingBook.pages || 0,
-          language: pendingBook.language || "",
-          publishedDate: pendingBook.publishedDate || "",
-          genres: toArray<string>(pendingBook.genres),
+          title: keepText(pendingBook.title, existing.title) || "Titre inconnu",
+          subtitle: keepText(pendingBook.subtitle, existing.subtitle),
+          author: keepText(pendingBook.author, existing.author) || "Auteur inconnu",
+          cover: keepText(pendingBook.cover, existing.cover),
+          isbn13: keepText(cleanedIsbn, existing.isbn13),
+          isbn10: keepText(pendingBook.isbn10, existing.isbn10),
+          description: keepText(pendingBook.description, existing.description),
+          publisher: keepText(pendingBook.publisher, existing.publisher),
+          translator: keepText(pendingBook.translator, existing.translator),
+          pageCount: keepNum(pendingBook.pages, existing.pageCount),
+          language: keepText(pendingBook.language, existing.language),
+          publishedDate: keepText(pendingBook.publishedDate, existing.publishedDate),
+          genres: keepArr(toArray<string>(pendingBook.genres), existing.genres),
           updatedAt: serverTimestamp(),
-          source: "discovered"
-        });
+          source: existing.source || "discovered"
+        }, { merge: true });
       }
 
       // 2. Ajout à la bibliothèque personnelle. On copie les genres ici

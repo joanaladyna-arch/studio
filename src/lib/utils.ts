@@ -122,6 +122,39 @@ export function authorKey(name: string | null | undefined): string {
 }
 
 /**
+ * Identifiant de fiche STABLE pour un livre sans ISBN (utilisé en
+ * dernier recours seulement, l'ISBN restant prioritaire) — pensé pour
+ * que de légères variations de saisie ("Lakestone - tome 1", "Lakestone.
+ * Tome 1", "Lakestone. Tome 1 / Sarah Rivens") génèrent le MÊME
+ * identifiant au lieu de créer une fiche en double à chaque import.
+ * Contrairement à un simple slugify(titre-auteur), celui-ci :
+ *  - nettoie le nom d'auteur (retire les mentions "Auteur du texte" etc.
+ *    insérées par les imports BnF) ;
+ *  - retire un éventuel suffixe "/ {auteur}" ajouté en double dans le
+ *    titre ;
+ *  - ignore la ponctuation, mais CONSERVE les numéros de tome/volume,
+ *    pour ne jamais confondre deux tomes différents d'une même série.
+ */
+export function stableBookKey(title: string | null | undefined, author?: string | null): string {
+  let t = (title || "").toString();
+  const cleanedAuthor = cleanAuthorName(author);
+  if (cleanedAuthor) {
+    const a = cleanedAuthor.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    t = t.replace(/\s*\/\s*([^/]+)$/, (m, name) => {
+      const cand = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+      return cand === a ? "" : m;
+    });
+  }
+  const normalizedTitle = t
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(tome|volume|vol)\b/g, " ")
+    .replace(/[^a-z0-9]/g, "");
+  const normalizedAuthor = authorKey(cleanedAuthor);
+  return `${normalizedTitle}-${normalizedAuthor}`;
+}
+
+/**
  * Nettoyage défensif, appliqué à l'AFFICHAGE, des artefacts catalographiques
  * qui ont pu être enregistrés dans Firestore avant la correction de
  * l'extraction BnF (mention de responsabilité dupliquée dans le titre,

@@ -108,7 +108,28 @@ export default function BookDetailPage() {
     if (!db || !mid) return;
     setMasterLoading(true);
     try {
-      const mSnap = await getDoc(doc(db, "masterBooks", mid));
+      let resolvedId = mid;
+      let mSnap = await getDoc(doc(db, "masterBooks", resolvedId));
+      // Si cette fiche a été fusionnée dans une autre (admin → doublons),
+      // on suit la redirection enregistrée pour afficher la fiche
+      // conservée — sans jamais avoir à modifier la bibliothèque
+      // personnelle de qui que ce soit pour cela.
+      if (!mSnap.exists()) {
+        try {
+          const mergesSnap = await getDoc(doc(db, "config", "bookMerges"));
+          const map: Record<string, string> = mergesSnap.exists() ? (mergesSnap.data() as any)?.map || {} : {};
+          let hops = 0;
+          while (map[resolvedId] && hops < 5) {
+            resolvedId = map[resolvedId];
+            hops++;
+          }
+          if (resolvedId !== mid) {
+            mSnap = await getDoc(doc(db, "masterBooks", resolvedId));
+          }
+        } catch (redirectErr) {
+          console.error("Book Merge Redirect Error:", redirectErr);
+        }
+      }
       if (mSnap.exists()) {
         setMasterBook({ id: mSnap.id, ...mSnap.data() } as MasterBook);
       } else {
