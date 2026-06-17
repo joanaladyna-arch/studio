@@ -117,16 +117,35 @@ export default function AuthorPage() {
       setLoading(true);
       setAuthorPhotoFailed(false);
       try {
+        // 1. Fiche auteur manuelle (admin) en priorité : si une bio/photo a
+        // été saisie à la main, elle prime sur Open Library. On la cherche
+        // par slug insensible à l'ordre du nom.
+        let manualBio = "";
+        let manualPhoto = "";
+        if (db) {
+          try {
+            const authorDoc = await getDoc(doc(db, "authors", authorSlug));
+            if (authorDoc.exists()) {
+              const ad: any = authorDoc.data();
+              if (ad.manualBio && ad.bio) manualBio = ad.bio;
+              if (ad.manualPhoto && ad.photo) manualPhoto = ad.photo;
+            }
+          } catch (e) {
+            console.error("Manual author fiche error:", e);
+          }
+        }
+        if (manualBio) setAuthorBio(manualBio);
+        if (manualPhoto) setAuthorPhoto(manualPhoto);
+
         const olRes = await fetchWithTimeout(`https://openlibrary.org/search/authors.json?q=${encodeURIComponent(authorName)}`, {}, 8000);
         const olData = await olRes.json();
         if (olData.docs?.[0]?.key) {
            try {
              const bioRes = await fetchWithTimeout(`https://openlibrary.org/authors/${olData.docs[0].key}.json`, {}, 8000);
              const bioData = await bioRes.json();
-             setAuthorBio(typeof bioData.bio === 'string' ? bioData.bio : bioData.bio?.value || "Biographie en cours d'écriture...");
-             // Format correct selon la Covers API d'Open Library : /a/olid/{OLID}-L.jpg
-             // (le champ utilisé précédemment, .id, n'existe pas dans cette réponse).
-             setAuthorPhoto(`https://covers.openlibrary.org/a/olid/${olData.docs[0].key}-L.jpg`);
+             // On ne remplace par Open Library QUE si rien n'a été saisi à la main.
+             if (!manualBio) setAuthorBio(typeof bioData.bio === 'string' ? bioData.bio : bioData.bio?.value || "Biographie en cours d'écriture...");
+             if (!manualPhoto) setAuthorPhoto(`https://covers.openlibrary.org/a/olid/${olData.docs[0].key}-L.jpg`);
            } catch (bioErr) {
              console.error("Author Bio Error:", bioErr);
              // On continue sans biographie plutôt que de bloquer toute la page

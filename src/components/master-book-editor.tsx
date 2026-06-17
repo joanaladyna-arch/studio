@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Pencil, X, Save, Sparkles, Upload } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
+import { useTaxonomy } from "@/hooks/use-taxonomy";
 import { cn, slugify, cleanIsbnValue } from "@/lib/utils";
 
 /**
@@ -43,6 +44,7 @@ export function MasterBookEditor({
   const storage = useStorage();
   const { user } = useUser();
   const { toast } = useToast();
+  const taxonomy = useTaxonomy();
   const [form, setForm] = useState<any>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -240,7 +242,7 @@ export function MasterBookEditor({
       <div className="space-y-4">
         <Label className="italic text-xl font-headline">Genres</Label>
         <div className="flex flex-wrap gap-2">
-          {GENRES_LIST.map((g) => {
+          {taxonomy.genres.map((g) => {
             const isActive = (form.genres || []).includes(g);
             return (
               <button key={g} type="button" onClick={() => toggleTag("genres", g)}
@@ -256,7 +258,7 @@ export function MasterBookEditor({
       <div className="space-y-4">
         <Label className="italic text-xl font-headline">Tropes</Label>
         <div className="flex flex-wrap gap-2">
-          {TROPES_LIST.map((t) => {
+          {taxonomy.tropes.map((t) => {
             const isActive = (form.tropes || []).includes(t);
             return (
               <button key={t} type="button" onClick={() => toggleTag("tropes", t)}
@@ -272,7 +274,7 @@ export function MasterBookEditor({
       <div className="space-y-4">
         <Label className="italic text-xl font-headline">Thèmes principaux</Label>
         <div className="flex flex-wrap gap-2">
-          {THEMES_LIST.map((t) => {
+          {taxonomy.themes.map((t) => {
             const isActive = (form.themes || []).includes(t);
             return (
               <button key={t} type="button" onClick={() => toggleTag("themes", t)}

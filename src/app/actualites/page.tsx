@@ -6,10 +6,13 @@ import { useUser, useFirestore, useDoc } from "@/firebase";
 import { collection, doc, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
 import { Newspaper, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useAdminMode } from "@/components/admin-mode";
+import { ActualitesManager } from "@/components/actualites-manager";
 
 export default function ActualitesPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { adminMode } = useAdminMode();
   const [items, setItems] = useState<any[] | null>(null);
 
   const profileRef = useMemo(() => {
@@ -46,6 +49,12 @@ export default function ActualitesPage() {
         <h1 className="text-6xl font-headline tracking-tight italic">Actualités</h1>
         <p className="text-primary/60 italic font-medium">Les dernières nouvelles de vos auteurs, et du monde littéraire.</p>
       </header>
+
+      {adminMode && (
+        <div className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6">
+          <ActualitesManager />
+        </div>
+      )}
 
       {items === null ? (
         <div className="py-24 text-center flex flex-col items-center gap-6">

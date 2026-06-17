@@ -12,6 +12,9 @@ import { BookOpen, Headset, Save, History, Plus, Star, Sparkles, MessageCircle, 
 import { useToast } from "@/hooks/use-toast";
 import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useAdminMode } from "@/components/admin-mode";
+import { TaxonomyEditor } from "@/components/taxonomy-editor";
+import { Tags } from "lucide-react";
 import { collection, addDoc, orderBy, query, limit, serverTimestamp } from "firebase/firestore";
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -22,6 +25,7 @@ import { BookCover } from "@/components/book-cover";
 export default function JournalPage() {
   const { user } = useUser();
   const db = useFirestore();
+  const { adminMode } = useAdminMode();
   const { toast } = useToast();
   const [readingNotes, setReadingNotes] = useState("");
   const [listeningNotes, setListeningNotes] = useState("");
@@ -84,6 +88,20 @@ export default function JournalPage() {
         <h1 className="text-5xl font-headline italic tracking-tight">Journal de bord</h1>
         <p className="text-primary/60 italic font-medium">Capturez l'essence de vos voyages littéraires.</p>
       </header>
+
+      {adminMode && (
+        <Card className="glass-card border-2 border-primary/20 bg-primary/5 shadow-sm">
+          <CardHeader className="p-8 border-b border-primary/5">
+            <CardTitle className="font-headline text-2xl italic flex items-center gap-3">
+              <Tags className="h-6 w-6 text-primary" /> Gérer genres, tropes & thèmes
+            </CardTitle>
+            <CardDescription className="italic">Ajoute ou masque des entrées pour toute l'app. Masquer une entrée ne retire jamais le tag des livres qui l'ont déjà.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-8">
+            <TaxonomyEditor />
+          </CardContent>
+        </Card>
+      )}
 
       <section className="space-y-6">
         <div className="flex items-center justify-between">

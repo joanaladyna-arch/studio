@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
+import { IsbnImporter } from "@/components/isbn-importer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS } from "@/lib/utils";
@@ -363,6 +364,12 @@ export default function AddBookPage() {
         <h1 className="text-6xl font-headline italic">Nouvelles Pépites</h1>
         <p className="text-primary/60 italic">Recherchez dans la base Plume ou sur le web.</p>
       </header>
+
+      {isAdmin && (
+        <div className="max-w-2xl mx-auto rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6">
+          <IsbnImporter />
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto space-y-4">
         <div className="flex justify-center gap-2">

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
+import { MasterBookManager } from "@/components/master-book-manager";
 import { 
   Search, 
   Plus, 
@@ -274,6 +275,13 @@ export default function LibraryPage() {
       </header>
 
       <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+
+        {isAdmin && (
+          <div className="mb-10">
+            <MasterBookManager />
+          </div>
+        )}
+
         <TabsList className="w-full justify-start overflow-x-auto h-auto bg-transparent border-b border-primary/5 p-0 mb-10 gap-10 no-scrollbar">
           {CATEGORIES.map((cat) => (
             <TabsTrigger 

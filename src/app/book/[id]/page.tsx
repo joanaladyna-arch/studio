@@ -42,6 +42,7 @@ import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LI
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
+import { useTaxonomy } from "@/hooks/use-taxonomy";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -68,6 +69,7 @@ export default function BookDetailPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { adminMode } = useAdminMode();
+  const taxonomy = useTaxonomy();
   const [showMasterEditor, setShowMasterEditor] = useState(false);
 
   const userBookRef = useMemo(() => {
@@ -495,7 +497,7 @@ export default function BookDetailPage() {
                <div className="space-y-4">
                  <Label className="italic text-2xl font-headline">Genres</Label>
                  <div className="flex flex-wrap gap-2">
-                   {GENRES_LIST.map((g) => {
+                   {taxonomy.genres.map((g) => {
                      const isActive = toArray<string>(editedData.genres).includes(g);
                      return (
                        <button
@@ -517,7 +519,7 @@ export default function BookDetailPage() {
                <div className="space-y-4">
                  <Label className="italic text-2xl font-headline">Tropes</Label>
                  <div className="flex flex-wrap gap-2">
-                   {TROPES_LIST.map((t) => {
+                   {taxonomy.tropes.map((t) => {
                      const isActive = toArray<string>(editedData.tropes).includes(t);
                      return (
                        <button
@@ -540,7 +542,7 @@ export default function BookDetailPage() {
                <div className="space-y-4">
                  <Label className="italic text-2xl font-headline">Thèmes principaux</Label>
                  <div className="flex flex-wrap gap-2">
-                   {THEMES_LIST.map((t) => {
+                   {taxonomy.themes.map((t) => {
                      const isActive = toArray<string>((editedData as any).themes).includes(t);
                      return (
                        <button

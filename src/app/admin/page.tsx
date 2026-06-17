@@ -3,50 +3,34 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useUser, useFirestore } from "@/firebase";
-import { collection, doc, setDoc, serverTimestamp, getDoc, getDocs, arrayUnion, deleteDoc } from "firebase/firestore";
+import { collection, doc, setDoc, serverTimestamp, getDoc, getDocs, arrayUnion } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BookCover } from "@/components/book-cover";
-import { MasterBookEditor } from "@/components/master-book-editor";
 import { Switch } from "@/components/ui/switch";
 import { navItems } from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Shield, 
-  Book, 
   Landmark, 
   FileSpreadsheet, 
   Loader2, 
   Upload, 
   CheckCircle2, 
-  AlertCircle,
   Eye,
   FileJson,
-  Search,
-  Pencil,
-  Plus,
-  Save,
-  Newspaper,
-  Trash2,
-  X,
-  Sparkles
+  Save
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, searchBnF, slugify, cleanIsbnValue, authorKey } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
-  
-  const [isbn, setIsbn] = useState("");
-  const [loading, setLoading] = useState(false);
   
   // Excel states
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,138 +94,6 @@ export default function AdminPage() {
   // reste ici (spécifique à l'admin), le formulaire lui-même vit dans le
   // composant partagé <MasterBookEditor>, réutilisé aussi depuis
   // Bibliothèque/Coeur de Plume/Ajouter via un bouton "éditer" contextuel.
-  const [editorQuery, setEditorQuery] = useState("");
-  const [allBooksCache, setAllBooksCache] = useState<any[] | null>(null);
-  const [isLoadingCache, setIsLoadingCache] = useState(false);
-  const [editingBook, setEditingBook] = useState<any | null>(null);
-
-  const loadAllBooks = async () => {
-    if (!db || allBooksCache) return;
-    setIsLoadingCache(true);
-    try {
-      const snap = await getDocs(collection(db, "masterBooks"));
-      setAllBooksCache(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    } catch (err) {
-      console.error("Load MasterBooks Error:", err);
-      toast({ variant: "destructive", title: "Impossible de charger la base" });
-    } finally {
-      setIsLoadingCache(false);
-    }
-  };
-
-  const editorResults = (allBooksCache || []).filter((b) => {
-    if (!editorQuery.trim()) return false;
-    const q = editorQuery.toLowerCase().trim();
-    const qDigitsOnly = editorQuery.replace(/[-\s]/g, "");
-    return (
-      (b.title || "").toLowerCase().includes(q) ||
-      (b.author || "").toLowerCase().includes(q) ||
-      (b.isbn13 || "").includes(qDigitsOnly)
-    );
-  }).slice(0, 15);
-
-  const startNewBook = () => setEditingBook({ id: null, isNew: true });
-  const cancelEditBook = () => setEditingBook(null);
-
-  // Reflète localement la fiche sauvegardée dans le cache de recherche,
-  // sans avoir à recharger toute la base à chaque enregistrement.
-  const handleBookSaved = (saved: any) => {
-    setAllBooksCache((prev) => {
-      if (!prev) return prev;
-      const exists = prev.some((b) => b.id === saved.id);
-      return exists ? prev.map((b) => (b.id === saved.id ? saved : b)) : [saved, ...prev];
-    });
-  };
-
-  // --- Actualités d'auteur ou littéraires (visibles par toutes les
-  // lectrices) — la liaison à un auteur se fait par slug, pour que la
-  // fiche auteur puisse retrouver ses actualités même si le nom est
-  // saisi avec une casse ou des espaces légèrement différents.
-  const [actualites, setActualites] = useState<any[] | null>(null);
-  const [isLoadingActualites, setIsLoadingActualites] = useState(false);
-  const [editingActuality, setEditingActuality] = useState<any | null>(null);
-  const [actualityForm, setActualityForm] = useState<any>({});
-  const [isSavingActuality, setIsSavingActuality] = useState(false);
-
-  const loadActualites = async () => {
-    if (!db || actualites) return;
-    setIsLoadingActualites(true);
-    try {
-      const snap = await getDocs(collection(db, "actualites"));
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      list.sort((a: any, b: any) => (b.publishedAt?.toMillis?.() || 0) - (a.publishedAt?.toMillis?.() || 0));
-      setActualites(list);
-    } catch (err) {
-      console.error("Load Actualites Error:", err);
-      toast({ variant: "destructive", title: "Impossible de charger les actualités" });
-    } finally {
-      setIsLoadingActualites(false);
-    }
-  };
-
-  const startNewActuality = () => {
-    setEditingActuality({ isNew: true });
-    setActualityForm({ title: "", authorName: "", content: "", cover: "" });
-  };
-
-  const startEditActuality = (item: any) => {
-    setEditingActuality(item);
-    setActualityForm({ title: item.title || "", authorName: item.authorName || "", content: item.content || "", cover: item.cover || "" });
-  };
-
-  const cancelEditActuality = () => {
-    setEditingActuality(null);
-    setActualityForm({});
-  };
-
-  const saveActuality = async () => {
-    if (!db || !editingActuality) return;
-    if (!actualityForm.title?.trim() || !actualityForm.content?.trim()) {
-      toast({ variant: "destructive", title: "Titre et contenu sont obligatoires" });
-      return;
-    }
-    setIsSavingActuality(true);
-    try {
-      const docId = editingActuality.isNew ? doc(collection(db, "actualites")).id : editingActuality.id;
-      const ref = doc(db, "actualites", docId);
-      const authorName = actualityForm.authorName?.trim() || "";
-      const dataToSave = {
-        title: actualityForm.title.trim(),
-        content: actualityForm.content.trim(),
-        authorName,
-        authorSlug: authorName ? authorKey(authorName) : "",
-        cover: actualityForm.cover?.trim() || "",
-        publishedAt: editingActuality.isNew ? serverTimestamp() : (editingActuality.publishedAt || serverTimestamp()),
-        updatedAt: serverTimestamp(),
-      };
-      await setDoc(ref, dataToSave, { merge: true });
-      const saved = { id: docId, ...dataToSave };
-      setActualites((prev) => {
-        const list = prev || [];
-        const exists = list.some((a) => a.id === docId);
-        return exists ? list.map((a) => (a.id === docId ? saved : a)) : [saved, ...list];
-      });
-      toast({ title: editingActuality.isNew ? "Actualité publiée" : "Actualité mise à jour" });
-      cancelEditActuality();
-    } catch (err) {
-      console.error("Save Actuality Error:", err);
-      toast({ variant: "destructive", title: "Erreur d'enregistrement" });
-    } finally {
-      setIsSavingActuality(false);
-    }
-  };
-
-  const deleteActuality = async (id: string) => {
-    if (!db) return;
-    try {
-      await deleteDoc(doc(db, "actualites", id));
-      setActualites((prev) => (prev || []).filter((a) => a.id !== id));
-      toast({ title: "Actualité supprimée" });
-    } catch (err) {
-      console.error("Delete Actuality Error:", err);
-      toast({ variant: "destructive", title: "Erreur de suppression" });
-    }
-  };
 
   const cleanGenres = async () => {
     if (!db) return;
@@ -278,7 +130,6 @@ export default function AdminPage() {
         }
       }
       setCleanResults({ cleaned });
-      setAllBooksCache(null); // le cache de l'éditeur est invalidé, à recharger
       toast({ title: "Nettoyage terminé", description: `${cleaned} fiche(s) nettoyée(s) (doublons et espaces retirés).` });
     } catch (err) {
       console.error("Clean Genres Error:", err);
@@ -598,79 +449,6 @@ export default function AdminPage() {
     }
   };
 
-  const importByIsbn = async () => {
-    const cleanIsbn = cleanIsbnValue(isbn);
-    if (!cleanIsbn || !db) return;
-    setLoading(true);
-    try {
-      const docId = slugify(cleanIsbn);
-      const masterRef = doc(db, "masterBooks", docId);
-
-      // On vérifie d'abord si ce livre existe déjà dans la base Plume —
-      // sans ça, ressaisir un ISBN déjà importé (et peut-être déjà
-      // enrichi à la main via "Éditer un livre") écraserait ce travail
-      // avec les données brutes de Google Books.
-      const existingSnap = await getDoc(masterRef);
-      if (existingSnap.exists()) {
-        toast({ title: "Déjà dans la base", description: `${existingSnap.data()?.title || "Ce livre"} existe déjà — utilise "Éditer un livre" pour le compléter sans rien perdre.` });
-        setLoading(false);
-        return;
-      }
-
-      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(cleanIsbn)}`;
-      const res = await fetchWithTimeout(gUrl, {}, 8000);
-      const data = await res.json();
-      const info = data.items?.[0]?.volumeInfo;
-
-      if (info) {
-        await setDoc(masterRef, {
-          title: info.title || "Titre inconnu",
-          author: info.authors ? info.authors.join(", ") : "Inconnu",
-          cover: info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
-          isbn13: cleanIsbn,
-          description: info.description || "",
-          publisher: info.publisher || "",
-          pageCount: info.pageCount || 0,
-          updatedAt: serverTimestamp(),
-          source: "admin-isbn-import"
-        }, { merge: true });
-        toast({ title: "Livre importé", description: `${info.title || "Le livre"} a été ajouté à la base centrale (Google Books).` });
-        setIsbn("");
-        return;
-      }
-
-      // Google Books référence mal les petites maisons françaises
-      // (romance/dark romance indé) — on retombe sur la BnF, exhaustive
-      // pour tout ce qui a un dépôt légal français, avant de déclarer
-      // l'ISBN introuvable.
-      const bnfResults = await searchBnF(cleanIsbn, "isbn");
-      const bnfBook = bnfResults[0];
-
-      if (bnfBook) {
-        await setDoc(masterRef, {
-          title: bnfBook.title || "Titre inconnu",
-          author: bnfBook.author || "Inconnu",
-          translator: bnfBook.translator || "",
-          cover: "",
-          isbn13: cleanIsbn,
-          publisher: bnfBook.publisher || "",
-          language: bnfBook.language || "",
-          publishedDate: bnfBook.publishedDate || "",
-          updatedAt: serverTimestamp(),
-          source: "admin-isbn-import-bnf"
-        }, { merge: true });
-        toast({ title: "Livre importé (BnF)", description: `${bnfBook.title} a été ajouté. La BnF ne fournit pas de couverture : pense à l'ajouter via "Éditer un livre" ci-dessous.` });
-        setIsbn("");
-      } else {
-        toast({ variant: "destructive", title: "ISBN introuvable", description: "Ni Google Books ni la BnF n'ont ce livre. Tu peux le créer manuellement via \"Éditer un livre\" plus bas." });
-      }
-    } catch (err) {
-      console.error("Import ISBN Error:", err);
-      toast({ variant: "destructive", title: "Erreur d'importation" });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-12 animate-paper pb-24 max-w-7xl mx-auto px-4">
@@ -790,68 +568,6 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* MASTER BOOK EDITOR SECTION */}
-        <Card className="glass-card border-none bg-white/60 shadow-xl">
-          <CardHeader className="p-10 border-b border-primary/5">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="space-y-2">
-                <CardTitle className="font-headline text-3xl italic flex items-center gap-3">
-                  <Pencil className="h-8 w-8 text-primary" /> Éditer une fiche livre
-                </CardTitle>
-                <CardDescription className="italic">Complète ou corrige n'importe quel champ — couverture, résumé, genres, tropes, thèmes... Contrairement à la fiche personnelle d'une lectrice, ceci modifie la base partagée Plume.</CardDescription>
-              </div>
-              <Button onClick={startNewBook} variant="outline" className="rounded-2xl h-12 px-6 border-primary/20 bg-white/40 text-primary italic font-headline">
-                <Plus className="mr-2 h-4 w-4" /> Nouvelle fiche
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-10 space-y-8">
-            {!editingBook && (
-              <div className="space-y-6">
-                <div className="relative">
-                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 opacity-30" />
-                  <Input
-                    placeholder="Cherche un livre par titre, auteur ou ISBN..."
-                    value={editorQuery}
-                    onFocus={loadAllBooks}
-                    onChange={(e) => setEditorQuery(e.target.value)}
-                    className="h-14 pl-14 italic bg-white/40 rounded-2xl border-none shadow-inner"
-                  />
-                  {isLoadingCache && <Loader2 className="absolute right-5 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin opacity-40" />}
-                </div>
-
-                {editorQuery.trim() && (
-                  <div className="rounded-2xl border border-primary/5 bg-white/40 divide-y divide-primary/5 overflow-hidden">
-                    {editorResults.length === 0 && !isLoadingCache && (
-                      <p className="p-6 text-sm italic opacity-50 text-center">Aucun résultat dans la base partagée pour "{editorQuery}".</p>
-                    )}
-                    {editorResults.map((b) => (
-                      <button
-                        key={b.id}
-                        onClick={() => setEditingBook(b)}
-                        className="w-full flex items-center gap-4 p-4 hover:bg-primary/5 transition-colors text-left"
-                      >
-                        <div className="relative h-16 w-12 rounded-lg overflow-hidden flex-shrink-0 bg-primary/5">
-                          <BookCover src={b.cover} alt={b.title} className="object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-headline italic truncate">{b.title}</p>
-                          <p className="text-xs opacity-50 truncate">{b.author} {b.publisher ? `· ${b.publisher}` : ""}</p>
-                        </div>
-                        <Pencil className="h-4 w-4 opacity-30 flex-shrink-0" />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {editingBook && (
-              <MasterBookEditor book={editingBook} onClose={cancelEditBook} onSaved={handleBookSaved} />
-            )}
-          </CardContent>
-        </Card>
-
         {/* NAVIGATION MANAGEMENT SECTION */}
         <Card className="glass-card border-none bg-white/60 shadow-xl">
           <CardHeader className="p-10 border-b border-primary/5">
@@ -892,109 +608,8 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* ACTUALITES MANAGEMENT SECTION */}
-        <Card className="glass-card border-none bg-white/60 shadow-xl">
-          <CardHeader className="p-10 border-b border-primary/5">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="space-y-2">
-                <CardTitle className="font-headline text-3xl italic flex items-center gap-3">
-                  <Newspaper className="h-8 w-8 text-primary" /> Actualités d'auteur ou littéraires
-                </CardTitle>
-                <CardDescription className="italic">Visibles par toutes les lectrices — sur la page Actualités, et sur la fiche de l'auteur concerné s'il y en a un.</CardDescription>
-              </div>
-              <Button onClick={() => { loadActualites(); startNewActuality(); }} variant="outline" className="rounded-2xl h-12 px-6 border-primary/20 bg-white/40 text-primary italic font-headline">
-                <Plus className="mr-2 h-4 w-4" /> Nouvelle actualité
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-10 space-y-6">
-            {!editingActuality && (
-              <div className="space-y-4">
-                {actualites === null && (
-                  <Button variant="ghost" onClick={loadActualites} disabled={isLoadingActualites} className="w-full h-14 rounded-2xl italic font-headline text-lg border border-primary/10">
-                    {isLoadingActualites ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Charger les actualités
-                  </Button>
-                )}
-                {actualites !== null && actualites.length === 0 && (
-                  <p className="text-sm italic opacity-50 text-center py-6">Aucune actualité publiée pour le moment.</p>
-                )}
-                {actualites !== null && actualites.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/40">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-headline italic truncate">{item.title}</p>
-                      <p className="text-xs opacity-50 truncate">{item.authorName || "Actualité littéraire générale"}</p>
-                    </div>
-                    <button onClick={() => startEditActuality(item)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform">
-                      <Pencil className="h-4 w-4" />
-                    </button>
-                    <button onClick={() => deleteActuality(item.id)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-destructive hover:scale-110 transition-transform">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {editingActuality && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-top-4 duration-500">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-headline italic flex items-center gap-3">
-                    {editingActuality.isNew ? <Sparkles className="h-5 w-5 text-primary" /> : <Pencil className="h-5 w-5 text-primary" />}
-                    {editingActuality.isNew ? "Nouvelle actualité" : "Modification"}
-                  </h3>
-                  <Button variant="ghost" size="sm" onClick={cancelEditActuality} className="rounded-xl">
-                    <X className="h-4 w-4 mr-2" /> Annuler
-                  </Button>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Titre *</Label>
-                  <Input value={actualityForm.title || ""} onChange={(e) => setActualityForm((p: any) => ({ ...p, title: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Auteur concerné (laisser vide si actualité littéraire générale)</Label>
-                  <Input value={actualityForm.authorName || ""} onChange={(e) => setActualityForm((p: any) => ({ ...p, authorName: e.target.value }))} placeholder="Ex : Rina Kent" className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Image (optionnel)</Label>
-                  <Input value={actualityForm.cover || ""} onChange={(e) => setActualityForm((p: any) => ({ ...p, cover: e.target.value }))} placeholder="URL de l'image" className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Contenu *</Label>
-                  <Textarea value={actualityForm.content || ""} onChange={(e) => setActualityForm((p: any) => ({ ...p, content: e.target.value }))} className="min-h-40 italic bg-white/40 rounded-2xl border-none shadow-inner" />
-                </div>
-                <Button onClick={saveActuality} disabled={isSavingActuality} className="w-full h-14 rounded-2xl bg-primary italic font-headline text-xl shadow-xl shadow-primary/10 transition-transform active:scale-95">
-                  {isSavingActuality ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Save className="mr-3 h-5 w-5" />} Publier
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* ISBN SINGLE IMPORT SECTION */}
-        <div className="grid md:grid-cols-2 gap-10">
-          <Card className="glass-card border-none bg-white/60 shadow-lg">
-            <CardHeader className="p-10 border-b border-primary/5">
-              <CardTitle className="font-headline text-2xl italic flex items-center gap-3">
-                <Book className="h-6 w-6 text-primary" /> Import Unique MasterBook
-              </CardTitle>
-              <CardDescription className="italic text-xs">Google Books, puis BnF en repli si introuvable.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-10 space-y-6">
-              <div className="space-y-4">
-                <label className="text-[10px] font-bold uppercase tracking-widest opacity-60">ISBN 13</label>
-                <Input 
-                  placeholder="9782..." 
-                  value={isbn} 
-                  onChange={(e) => setIsbn(e.target.value)}
-                  className="h-14 italic bg-white/40 rounded-2xl border-none shadow-inner"
-                />
-              </div>
-              <Button onClick={importByIsbn} disabled={loading} className="w-full h-14 bg-primary rounded-2xl italic text-xl shadow-xl shadow-primary/10 transition-transform active:scale-95">
-                {loading ? <Loader2 className="animate-spin" /> : "Importer ce livre"}
-              </Button>
-            </CardContent>
-          </Card>
-
+        {/* MAINTENANCE SECTION */}
+        <div className="grid gap-10">
           <Card className="glass-card border-none bg-white/60 shadow-lg">
             <CardHeader className="p-10 border-b border-primary/5">
               <CardTitle className="font-headline text-2xl italic flex items-center gap-3">
