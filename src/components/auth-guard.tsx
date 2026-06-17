@@ -5,7 +5,7 @@ import { useUser } from "@/firebase";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 
-const publicRoutes = ["/login", "/signup"];
+const publicRoutes = ["/login", "/signup", "/welcome"];
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
@@ -15,8 +15,20 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading) {
       if (!user && !publicRoutes.includes(pathname)) {
-        console.log("LECTORIA AuthGuard: Pas d'utilisateur, redirection vers /login");
-        router.replace("/login");
+        let alreadyWelcomed = true;
+        try {
+          alreadyWelcomed = localStorage.getItem("lectoria-welcomed") === "true";
+        } catch {
+          // Stockage indisponible — on suppose déjà accueillie pour ne
+          // jamais bloquer l'accès à la connexion dans ce cas.
+        }
+        if (!alreadyWelcomed) {
+          console.log("LECTORIA AuthGuard: Première visite, redirection vers /welcome");
+          router.replace("/welcome");
+        } else {
+          console.log("LECTORIA AuthGuard: Pas d'utilisateur, redirection vers /login");
+          router.replace("/login");
+        }
       } else if (user && publicRoutes.includes(pathname)) {
         console.log("LECTORIA AuthGuard: Utilisateur déjà connecté, redirection vers /");
         router.replace("/");
