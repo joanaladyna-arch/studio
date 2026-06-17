@@ -2,9 +2,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, ShieldCheck, Newspaper } from "lucide-react";
+import { Home, Library, PenTool, User, Heart, LogOut, PlusCircle, ShieldCheck, Newspaper } from "lucide-react";
 import { cn, ADMIN_EMAILS } from "@/lib/utils";
 import { useAuth, useUser, useFirestore } from "@/firebase";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
@@ -115,8 +116,8 @@ export function Navigation() {
     <>
       <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-8 px-10 shadow-sm">
         <div className="flex items-center gap-3 mr-10 cursor-pointer group" onClick={() => router.push("/")}>
-          <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-             <Feather className="h-6 w-6 text-primary" />
+          <div className="relative h-10 w-10 rounded-full overflow-hidden group-hover:scale-110 transition-transform">
+             <Image src="/brand/logo-lectoria.png" alt="" fill className="object-cover" unoptimized />
           </div>
           <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">LECTORIA</span>
         </div>
