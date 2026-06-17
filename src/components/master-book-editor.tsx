@@ -14,7 +14,7 @@ import { Loader2, Pencil, X, Save, Sparkles, Upload } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { useTaxonomy } from "@/hooks/use-taxonomy";
-import { cn, slugify, cleanIsbnValue } from "@/lib/utils";
+import { cn, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
 
 /**
  * Éditeur complet d'une fiche MasterBook (base partagée Plume) — couvre
@@ -87,7 +87,7 @@ export function MasterBookEditor({
       pageCount: book?.pageCount || "",
       volume: book?.volume || "",
       cover: book?.cover || "",
-      description: book?.description || "",
+      description: cleanDescriptionHtml(book?.description) || "",
       genres: Array.isArray(book?.genres) ? book.genres : [],
       tropes: Array.isArray(book?.tropes) ? book.tropes : [],
       themes: Array.isArray(book?.themes) ? book.themes : [],

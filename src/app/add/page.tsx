@@ -24,7 +24,7 @@ import { MasterBookEditor } from "@/components/master-book-editor";
 import { IsbnImporter } from "@/components/isbn-importer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 
 export default function AddBookPage() {
@@ -128,7 +128,7 @@ export default function AddBookPage() {
               cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
               isbn: isbn,
               isbn10: isbn10,
-              description: info.description || "",
+              description: cleanDescriptionHtml(info.description),
               publisher: info.publisher || "",
               pages: info.pageCount || 0,
               language: info.language || "",

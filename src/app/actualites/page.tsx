@@ -67,13 +67,8 @@ export default function ActualitesPage() {
       ) : (
         <div className="space-y-8">
           {items.map((item) => (
-            <article key={item.id} className="glass-card rounded-[2rem] overflow-hidden border-none shadow-sm bg-white/60">
-              {item.cover && (
-                <div className="w-full aspect-[16/9] bg-secondary/5 relative overflow-hidden">
-                  <img src={item.cover} alt={item.title} className="w-full h-full object-cover" />
-                </div>
-              )}
-              <div className="p-8 space-y-3">
+            <article key={item.id} className="glass-card rounded-[2rem] overflow-hidden border-none shadow-sm bg-white/60 flex flex-col sm:flex-row gap-6 p-8">
+              <div className="flex-1 min-w-0 space-y-3 order-2 sm:order-1">
                 {item.authorName ? (
                   <Link href={`/author/${encodeURIComponent(item.authorName)}`} className="text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:text-primary transition-colors">
                     {item.authorName}
@@ -89,6 +84,11 @@ export default function ActualitesPage() {
                   </p>
                 )}
               </div>
+              {item.cover && (
+                <div className="w-full sm:w-40 h-48 sm:h-auto flex-shrink-0 order-1 sm:order-2 flex items-center justify-center bg-secondary/5 rounded-2xl">
+                  <img src={item.cover} alt={item.title} className="max-h-full max-w-full object-contain rounded-xl shadow-md" />
+                </div>
+              )}
             </article>
           ))}
         </div>

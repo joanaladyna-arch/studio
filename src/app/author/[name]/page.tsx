@@ -18,7 +18,8 @@ import {
   Heart,
   Bell,
   BellRing,
-  Newspaper
+  Newspaper,
+  Pencil
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -31,13 +32,18 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, authorKey } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml } from "@/lib/utils";
+import { useAdminMode } from "@/components/admin-mode";
+import { AuthorEditor } from "@/components/author-editor";
 
 export default function AuthorPage() {
   const params = useParams();
   const authorName = decodeURIComponent(params.name as string);
   const authorSlug = useMemo(() => authorKey(authorName), [authorName]);
   const { user } = useUser();
+  const { adminMode } = useAdminMode();
+  const [showAuthorEditor, setShowAuthorEditor] = useState(false);
+  const [authorDocId, setAuthorDocId] = useState<string | null>(null);
   const db = useFirestore();
   const { toast } = useToast();
   const [results, setResults] = useState<any[]>([]);
@@ -175,7 +181,7 @@ export default function AuthorPage() {
                 publisher: info.publisher,
                 cover: info.imageLinks?.thumbnail?.replace("http://", "https://"),
                 pages: info.pageCount || 0,
-                description: info.description || "",
+                description: cleanDescriptionHtml(info.description),
                 publicationDate: info.publishedDate,
                 genres: info.categories || [],
                 language: "Français",
@@ -375,23 +381,52 @@ export default function AuthorPage() {
             <p className="text-muted-foreground italic text-lg leading-relaxed line-clamp-4">
                {authorBio || "Exploration de la bibliographie complète en cours..."}
             </p>
-            {user && (
-              <Button
-                onClick={toggleFollow}
-                disabled={isFollowLoading}
-                variant="outline"
-                className={cn(
-                  "rounded-2xl h-12 px-6 italic font-headline transition-all",
-                  isFollowing ? "bg-primary text-white border-primary shadow-lg" : "border-primary/20 text-primary/70 bg-white/40 hover:bg-white/60"
-                )}
-              >
-                {isFollowLoading ? <Loader2 className="h-4 w-4 mr-3 animate-spin" /> : isFollowing ? <BellRing className="h-4 w-4 mr-3" /> : <Bell className="h-4 w-4 mr-3" />}
-                {isFollowing ? "Auteur suivi" : "Suivre cet auteur"}
-              </Button>
-            )}
+            <div className="flex items-center gap-3 flex-wrap">
+              {user && (
+                <Button
+                  onClick={toggleFollow}
+                  disabled={isFollowLoading}
+                  variant="outline"
+                  className={cn(
+                    "rounded-2xl h-12 px-6 italic font-headline transition-all",
+                    isFollowing ? "bg-primary text-white border-primary shadow-lg" : "border-primary/20 text-primary/70 bg-white/40 hover:bg-white/60"
+                  )}
+                >
+                  {isFollowLoading ? <Loader2 className="h-4 w-4 mr-3 animate-spin" /> : isFollowing ? <BellRing className="h-4 w-4 mr-3" /> : <Bell className="h-4 w-4 mr-3" />}
+                  {isFollowing ? "Auteur suivi" : "Suivre cet auteur"}
+                </Button>
+              )}
+              {adminMode && (
+                <Button
+                  onClick={() => setShowAuthorEditor(true)}
+                  variant="outline"
+                  className="rounded-2xl h-12 px-6 italic font-headline border-primary/20 bg-primary/5 text-primary"
+                >
+                  <Pencil className="h-4 w-4 mr-3" /> Modifier la biographie
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </header>
+
+      {adminMode && (
+        <Dialog open={showAuthorEditor} onOpenChange={setShowAuthorEditor}>
+          <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+            <ScrollArea className="max-h-[90vh] p-10">
+              <AuthorEditor
+                onClose={() => setShowAuthorEditor(false)}
+                initialAuthorId={authorSlug}
+                initialAuthorName={authorName}
+                onSaved={(saved) => {
+                  if (saved.bio) setAuthorBio(saved.bio);
+                  if (saved.photo) { setAuthorPhoto(saved.photo); setAuthorPhotoFailed(false); }
+                }}
+              />
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {actualites.length > 0 && (
         <div className="space-y-6 max-w-3xl">
@@ -399,9 +434,16 @@ export default function AuthorPage() {
             <Newspaper className="h-5 w-5 text-primary/50" /> Actualités
           </h2>
           {actualites.map((item) => (
-            <div key={item.id} className="glass-card rounded-[2rem] p-8 bg-white/50 border-none shadow-sm space-y-2">
-              <h3 className="text-xl font-headline italic">{item.title}</h3>
-              <p className="text-muted-foreground italic leading-relaxed whitespace-pre-line">{item.content}</p>
+            <div key={item.id} className="glass-card rounded-[2rem] p-8 bg-white/50 border-none shadow-sm flex flex-col sm:flex-row gap-6">
+              <div className="flex-1 min-w-0 space-y-2">
+                <h3 className="text-xl font-headline italic">{item.title}</h3>
+                <p className="text-muted-foreground italic leading-relaxed whitespace-pre-line">{item.content}</p>
+              </div>
+              {item.cover && (
+                <div className="w-full sm:w-36 h-44 sm:h-auto flex-shrink-0 flex items-center justify-center bg-secondary/5 rounded-2xl">
+                  <img src={item.cover} alt={item.title} className="max-h-full max-w-full object-contain rounded-xl shadow-md" />
+                </div>
+              )}
             </div>
           ))}
         </div>

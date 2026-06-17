@@ -134,6 +134,27 @@ export function cleanBookTitle(title?: string | null): string {
   return title.split(" / ")[0].split(" ; ")[0].trim();
 }
 
+/**
+ * Nettoie une description provenant d'une API externe (Google Books
+ * notamment) qui contient parfois du HTML basique au lieu de texte brut
+ * — <br>, <b>, <i>, <p>... Sans ce nettoyage, ces balises s'affichent
+ * littéralement dans les résumés (ex. "<br /><br />Texte...") au lieu de
+ * créer de vrais retours à la ligne. Les <br> et <p> deviennent des
+ * retours à la ligne réels ; les autres balises sont retirées.
+ */
+export function cleanDescriptionHtml(desc?: string | null): string {
+  if (!desc) return "";
+  return desc
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export function cleanAuthorName(author?: string | null): string {
   if (!author) return author || "";
   return author

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Book, Loader2 } from "lucide-react";
-import { fetchWithTimeout, searchBnF, slugify, cleanIsbnValue } from "@/lib/utils";
+import { fetchWithTimeout, searchBnF, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
 
 /**
  * Import d'un livre dans la base partagée par son ISBN, pensé pour être
@@ -48,7 +48,7 @@ export function IsbnImporter() {
           author: info.authors ? info.authors.join(", ") : "Inconnu",
           cover: info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
           isbn13: cleanIsbn,
-          description: info.description || "",
+          description: cleanDescriptionHtml(info.description),
           publisher: info.publisher || "",
           pageCount: info.pageCount || 0,
           updatedAt: serverTimestamp(),

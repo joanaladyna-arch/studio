@@ -37,7 +37,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn, toArray, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
+import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey } from "@/lib/utils";
 import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
@@ -86,6 +86,22 @@ export default function BookDetailPage() {
   const [newCoverUrl, setNewCoverUrl] = useState("");
   const [ratingGridOpen, setRatingGridOpen] = useState(false);
   const [isFetchingLink, setIsFetchingLink] = useState(false);
+  const [authorPhoto, setAuthorPhoto] = useState<string | null>(null);
+
+  // Petite photo de l'auteur près de son nom, si elle a été renseignée à
+  // la main via la fiche auteur (mode admin). Échoue toujours
+  // silencieusement : l'absence de photo ne doit jamais bloquer
+  // l'affichage de la fiche livre elle-même.
+  useEffect(() => {
+    const authorName = masterBook?.author || userBook?.author;
+    if (!db || !authorName) { setAuthorPhoto(null); return; }
+    getDoc(doc(db, "authors", authorKey(authorName)))
+      .then((snap) => {
+        const photo = snap.exists() ? (snap.data() as any)?.photo : null;
+        setAuthorPhoto(photo || null);
+      })
+      .catch(() => setAuthorPhoto(null));
+  }, [db, masterBook?.author, userBook?.author]);
 
   // Récupération des données Master
   const fetchMasterData = useCallback(async (mid: string) => {
@@ -374,8 +390,13 @@ export default function BookDetailPage() {
         </h1>
         <Link
           href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
-          className="text-3xl font-headline text-primary italic hover:underline inline-block"
+          className="text-3xl font-headline text-primary italic hover:underline inline-flex items-center gap-3"
         >
+          {authorPhoto && (
+            <span className="relative h-9 w-9 rounded-full overflow-hidden shadow-sm flex-shrink-0 inline-block">
+              <Image src={authorPhoto} alt="" fill className="object-cover" />
+            </span>
+          )}
           {cleanAuthorName(masterBook?.author || userBook.author)}
         </Link>
         {masterBook?.translator && (
@@ -457,7 +478,7 @@ export default function BookDetailPage() {
                <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm space-y-4">
                  <h4 className="font-headline text-2xl italic opacity-40">Résumé de la pépite</h4>
                  <Textarea
-                   value={(editedData as any).description ?? masterBook?.description ?? ""}
+                   value={(editedData as any).description ?? cleanDescriptionHtml(masterBook?.description) ?? ""}
                    onChange={(e) => setEditedData({ ...editedData, description: e.target.value } as any)}
                    placeholder="Cette œuvre attend que vous en décriviez l'essence."
                    className="italic text-lg leading-relaxed text-muted-foreground bg-transparent border-none focus-visible:ring-1 focus-visible:ring-primary/20 resize-none min-h-[140px] p-0"

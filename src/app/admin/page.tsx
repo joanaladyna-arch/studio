@@ -25,7 +25,7 @@ import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -409,13 +409,13 @@ export default function AdminPage() {
           if (isbn) {
             const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`, {}, 8000);
             const json = await res.json();
-            description = json.items?.[0]?.volumeInfo?.description || "";
+            description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }
           if (!description && title) {
             const q = author ? `${title} ${author}` : title;
             const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}`, {}, 8000);
             const json = await res.json();
-            description = json.items?.[0]?.volumeInfo?.description || "";
+            description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }
         } catch (err) {
           console.error("Recherche résumé échouée:", title, err);

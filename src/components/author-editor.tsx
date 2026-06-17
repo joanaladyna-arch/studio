@@ -28,7 +28,21 @@ import { cn, slugify, authorKey } from "@/lib/utils";
  * d'ordre pointent vers la même fiche.
  */
 
-export function AuthorEditor({ onClose }: { onClose: () => void }) {
+export function AuthorEditor({
+  onClose,
+  onSaved,
+  initialAuthorId,
+  initialAuthorName,
+}: {
+  onClose: () => void;
+  /** Appelé après un enregistrement réussi, avec la fiche à jour. */
+  onSaved?: (author: any) => void;
+  /** Si fourni, l'éditeur saute directement en mode édition pour cet
+   * auteur (slug `authors/{id}`) au lieu d'afficher d'abord la recherche
+   * — utile quand on sait déjà de qui il s'agit (ex. depuis sa fiche). */
+  initialAuthorId?: string;
+  initialAuthorName?: string;
+}) {
   const db = useFirestore();
   const storage = useStorage();
   const { user } = useUser();
@@ -49,7 +63,17 @@ export function AuthorEditor({ onClose }: { onClose: () => void }) {
     if (!db) return;
     setLoadingCache(true);
     getDocs(collection(db, "authors"))
-      .then((snap) => setAuthorsCache(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+      .then((snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setAuthorsCache(list);
+        // Saut direct en édition si on connaît déjà l'auteur concerné.
+        if (initialAuthorId) {
+          const found = list.find((a: any) => a.id === initialAuthorId);
+          const author = found || { id: initialAuthorId, name: initialAuthorName || initialAuthorId };
+          setEditing(author);
+          setForm({ name: (author as any).name || "", bio: (author as any).bio || "", photo: (author as any).photo || "" });
+        }
+      })
       .catch((err) => { console.error("Load Authors Error:", err); setAuthorsCache([]); })
       .finally(() => setLoadingCache(false));
   }, [db]);
@@ -105,9 +129,15 @@ export function AuthorEditor({ onClose }: { onClose: () => void }) {
         updatedAt: serverTimestamp(),
       };
       await setDoc(ref, dataToSave, { merge: true });
-      setAuthorsCache((prev) => (prev || []).map((a) => (a.id === editing.id ? { ...a, ...dataToSave } : a)));
+      const saved = { id: editing.id, ...editing, ...dataToSave };
+      setAuthorsCache((prev) => (prev || []).map((a) => (a.id === editing.id ? saved : a)));
       toast({ title: "Fiche auteur enregistrée" });
-      setEditing(null);
+      onSaved?.(saved);
+      if (initialAuthorId) {
+        onClose();
+      } else {
+        setEditing(null);
+      }
     } catch (err) {
       console.error("Save Author Error:", err);
       toast({ variant: "destructive", title: "Erreur d'enregistrement" });
@@ -189,7 +219,7 @@ export function AuthorEditor({ onClose }: { onClose: () => void }) {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h3 className="text-xl font-headline italic flex items-center gap-3"><Pencil className="h-5 w-5 text-primary" /> {editing.name}</h3>
-        <Button variant="ghost" size="sm" onClick={() => setEditing(null)} className="rounded-xl"><X className="h-4 w-4 mr-2" /> Retour</Button>
+        <Button variant="ghost" size="sm" onClick={() => (initialAuthorId ? onClose() : setEditing(null))} className="rounded-xl"><X className="h-4 w-4 mr-2" /> {initialAuthorId ? "Fermer" : "Retour"}</Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-6 items-start">
