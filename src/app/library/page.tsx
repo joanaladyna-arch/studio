@@ -79,6 +79,8 @@ export interface UserBook {
   releaseDateUS?: string;
   releaseDateFR?: string;
   releaseDateUE?: string;
+  description?: string;
+  referenceLink?: string;
   detailedRatings?: {
     intrigue?: number;
     personnages?: number;
@@ -129,7 +131,12 @@ export const THEMES_LIST = [
   "Manipulation", "Jalousie", "Liberté", "Sacrifice", "Loyauté",
   "Addiction", "Santé mentale", "Reconstruction de soi", "Littérature française",
   "Politique", "Religion et foi", "Mythologie et légendes", "Milieu artistique",
-  "Milieu médical", "Adapté au cinéma", "Adapté en série/film"
+  "Milieu médical", "Adapté au cinéma", "Adapté en série/film", "Sport",
+  "Voyage", "Confiance en soi", "Mariage", "Divorce", "Maternité et parentalité",
+  "Richesse et pouvoir économique", "Différence culturelle", "Féminisme",
+  "Nostalgie", "Destin", "Corruption", "Abus de pouvoir", "Harcèlement",
+  "Narcotrafic", "Prison et incarcération", "Période historique", "Huis clos",
+  "Course contre le temps"
 ];
 
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {

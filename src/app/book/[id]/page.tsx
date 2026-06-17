@@ -380,9 +380,31 @@ export default function BookDetailPage() {
                    </div>
                  </div>
                </div>
-               <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm">
-                 <h4 className="font-headline text-2xl italic mb-6 opacity-40">Résumé de la pépite</h4>
-                 <p className="italic text-lg leading-relaxed text-muted-foreground">{masterBook?.description || "Cette œuvre attend que vous en décriviez l'essence."}</p>
+               <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm space-y-4">
+                 <h4 className="font-headline text-2xl italic opacity-40">Résumé de la pépite</h4>
+                 <Textarea
+                   value={(editedData as any).description ?? masterBook?.description ?? ""}
+                   onChange={(e) => setEditedData({ ...editedData, description: e.target.value } as any)}
+                   placeholder="Cette œuvre attend que vous en décriviez l'essence."
+                   className="italic text-lg leading-relaxed text-muted-foreground bg-transparent border-none focus-visible:ring-1 focus-visible:ring-primary/20 resize-none min-h-[140px] p-0"
+                 />
+               </div>
+               <div className="space-y-3 max-w-md">
+                 <Label className="italic text-xl font-headline flex items-center gap-2">
+                   <LinkIcon className="h-4 w-4" /> Lien de référence
+                 </Label>
+                 <Input
+                   value={(editedData as any).referenceLink || ""}
+                   onChange={(e) => setEditedData({ ...editedData, referenceLink: e.target.value } as any)}
+                   placeholder="https://..."
+                   className="h-11 rounded-xl bg-white/40 border-none italic"
+                 />
+                 {(editedData as any).referenceLink && (
+                   <a href={(editedData as any).referenceLink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline italic break-all">
+                     {(editedData as any).referenceLink}
+                   </a>
+                 )}
+                 <p className="text-[10px] text-muted-foreground italic">Page d'achat, fiche Goodreads, interview de l'auteur... tout lien utile à garder sous la main.</p>
                </div>
                <div className="space-y-4">
                  <Label className="italic text-2xl font-headline">Genres</Label>
@@ -430,7 +452,7 @@ export default function BookDetailPage() {
                </div>
 
                <div className="space-y-4">
-                 <Label className="italic text-2xl font-headline text-amber-600">Thèmes principaux</Label>
+                 <Label className="italic text-2xl font-headline">Thèmes principaux</Label>
                  <div className="flex flex-wrap gap-2">
                    {THEMES_LIST.map((t) => {
                      const isActive = toArray<string>((editedData as any).themes).includes(t);
@@ -441,7 +463,7 @@ export default function BookDetailPage() {
                          onClick={() => toggleTag("themes", t)}
                          className={cn(
                            "rounded-full border text-xs px-4 py-1.5 italic transition-all",
-                           isActive ? "bg-amber-500 text-white border-amber-500 shadow-sm" : "border-amber-400/30 text-amber-700/70 bg-amber-50/40 hover:bg-amber-50"
+                           isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60"
                          )}
                        >
                          {t}

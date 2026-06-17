@@ -75,14 +75,20 @@ export default function Home() {
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
 
-    const monthlyRead = readBooks.filter(b => {
+    // Seuls les livres pour lesquels l'utilisatrice a confirmé qu'ils
+    // comptent (case cochée à l'ajout) alimentent les objectifs — un
+    // livre déjà lu par le passé, ajouté seulement pour archive, ne doit
+    // jamais gonfler artificiellement les objectifs en cours.
+    const goalEligibleBooks = readBooks.filter(b => (b as any).countTowardGoals !== false);
+
+    const monthlyRead = goalEligibleBooks.filter(b => {
       if (!b.dateAdded) return false;
       const d = b.dateAdded.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
-    const pagesRead = readBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
-    const audioHours = readBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.pagesRead) || 0) / 50 : 0), 0);
+    const pagesRead = goalEligibleBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
+    const audioHours = goalEligibleBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.pagesRead) || 0) / 50 : 0), 0);
 
     const goals = {
       annual: profile?.annualGoal || 24,
@@ -92,12 +98,12 @@ export default function Home() {
     };
 
     return {
-      annualCount: readBooks.length,
+      annualCount: goalEligibleBooks.length,
       monthlyCount: monthlyRead.length,
       pagesCount: pagesRead,
       audioCount: Math.round(audioHours),
       goals,
-      annualProgress: Math.min(100, Math.round((readBooks.length / goals.annual) * 100)),
+      annualProgress: Math.min(100, Math.round((goalEligibleBooks.length / goals.annual) * 100)),
       monthlyProgress: Math.min(100, Math.round((monthlyRead.length / goals.monthly) * 100)),
       pagesProgress: Math.min(100, Math.round((pagesRead / (goals.pages || 1)) * 100)),
       audioProgress: Math.min(100, Math.round((audioHours / (goals.audio || 1)) * 100))

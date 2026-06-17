@@ -96,8 +96,15 @@ export default function ProfilePage() {
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     const palBooks = allBooks.filter(b => b.status === 'pal');
     
-    const pagesRead = readBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
-    const audioHours = readBooks.reduce((acc, b) => {
+    // Seuls les livres pour lesquels l'utilisatrice a confirmé qu'ils
+    // comptent (case cochée à l'ajout) alimentent les objectifs — readCount
+    // reste lui non filtré, car il alimente le titre de lectrice et les
+    // badges, qui reflètent l'historique complet, pas seulement la
+    // période d'objectif en cours.
+    const goalEligibleBooks = readBooks.filter(b => (b as any).countTowardGoals !== false);
+
+    const pagesRead = goalEligibleBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
+    const audioHours = goalEligibleBooks.reduce((acc, b) => {
       const isAudio = ['audio', 'audible', 'audiolib'].includes(b.format || '');
       return acc + (isAudio ? (Number(b.pagesRead) || 0) / 50 : 0);
     }, 0);
@@ -105,7 +112,7 @@ export default function ProfilePage() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const monthlyRead = readBooks.filter(b => {
+    const monthlyRead = goalEligibleBooks.filter(b => {
       if (!b.dateAdded) return false;
       const d = b.dateAdded.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded);
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -131,12 +138,13 @@ export default function ProfilePage() {
 
     return {
       readCount: readBooks.length,
+      annualReadCount: goalEligibleBooks.length,
       monthlyReadCount: monthlyRead.length,
       palBooks,
       pagesRead,
       audioHours: Math.round(audioHours),
       goals,
-      annualProgress: Math.min(100, Math.round((readBooks.length / (goals.annual || 1)) * 100)),
+      annualProgress: Math.min(100, Math.round((goalEligibleBooks.length / (goals.annual || 1)) * 100)),
       monthlyProgress: Math.min(100, Math.round((monthlyRead.length / (goals.monthly || 1)) * 100)),
       pagesProgress: Math.min(100, Math.round((pagesRead / (goals.pages || 1)) * 100)),
       audioProgress: Math.min(100, Math.round((audioHours / (goals.audio || 1)) * 100)),
@@ -242,7 +250,7 @@ export default function ProfilePage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {[
-            { label: "Annuel", icon: Trophy, value: `${stats.readCount} / ${stats.goals.annual}`, progress: stats.annualProgress, color: "text-amber-500", bg: "bg-amber-50" },
+            { label: "Annuel", icon: Trophy, value: `${stats.annualReadCount} / ${stats.goals.annual}`, progress: stats.annualProgress, color: "text-amber-500", bg: "bg-amber-50" },
             { label: "Mensuel", icon: Target, value: `${stats.monthlyReadCount} / ${stats.goals.monthly}`, progress: stats.monthlyProgress, color: "text-blue-500", bg: "bg-blue-50" },
             { label: "Pages", icon: FileText, value: `${stats.pagesRead.toLocaleString()}`, progress: stats.pagesProgress, color: "text-emerald-500", bg: "bg-emerald-50" },
             { label: "Audio", icon: Headphones, value: `${stats.audioHours}h`, progress: stats.audioProgress, color: "text-purple-400", bg: "bg-purple-50" }
@@ -364,6 +372,18 @@ export default function ProfilePage() {
             <p className="italic font-headline text-xl">Votre étagère PAL est encore vide.</p>
           </div>
         )}
+      </section>
+
+      <section className="space-y-10 pt-10">
+        <div className="flex items-center justify-between">
+          <h2 className="text-4xl font-headline italic flex items-center gap-4">
+            <Heart className="h-8 w-8 text-primary/40" /> Cœur de Plume
+          </h2>
+          <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
+            <Link href="/coeur-de-plume">Voir l'écrin complet <ChevronRight className="ml-2 h-5 w-5" /></Link>
+          </Button>
+        </div>
+        <p className="text-muted-foreground italic px-2">Retrouvez vos coups de cœur Diamant et Royale, classés par rang, dans l'écrin Cœur de Plume.</p>
       </section>
     </div>
   );

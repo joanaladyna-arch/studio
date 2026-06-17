@@ -18,6 +18,7 @@ import { useUser, useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn, fetchWithTimeout, toArray, searchBnF } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ export default function AddBookPage() {
   const [pendingBook, setPendingBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
   const [selectedFormat, setSelectedFormat] = useState<BookFormat>("papier");
+  const [countTowardGoals, setCountTowardGoals] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
 
   const searchBooks = async (e: React.FormEvent) => {
@@ -260,6 +262,7 @@ export default function AddBookPage() {
         status: selectedStatus,
         format: selectedFormat,
         dateAdded: serverTimestamp(),
+        countTowardGoals: (selectedStatus === "read" || selectedStatus === "reread") ? countTowardGoals : true,
       };
 
       await addDoc(collection(db, "users", user.uid, "books"), userBookData);
@@ -396,6 +399,20 @@ export default function AddBookPage() {
                   ))}
                 </div>
               </div>
+              {(selectedStatus === "read" || selectedStatus === "reread") && (
+                <div className="flex items-start gap-3 p-5 rounded-2xl bg-secondary/10 border border-secondary/20">
+                  <Checkbox
+                    id="count-goals"
+                    checked={countTowardGoals}
+                    onCheckedChange={(v) => setCountTowardGoals(v === true)}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="count-goals" className="text-sm italic leading-relaxed cursor-pointer">
+                    Compter ce livre dans mes objectifs de lecture (hebdomadaire, mensuel, annuel).
+                    <span className="block text-[10px] text-muted-foreground not-italic mt-1">Décochez si c'est une ancienne lecture que vous ajoutez à votre bibliothèque, pour ne pas fausser vos objectifs en cours.</span>
+                  </label>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="p-10 border-t bg-white/60">
