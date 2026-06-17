@@ -90,7 +90,7 @@ export default function AuthorPage() {
         // Chatterley...) que Google Books référence mal n'apparaissent
         // jamais sur la fiche de leur auteur. Le dépôt légal rend le
         // catalogue de la BnF exhaustif pour tout livre publié en France.
-        const [googleSettled, masterSettled, bnfSettled] = await Promise.allSettled([
+        const [googleSettled, masterSettled, bnfSettled, appleSettled] = await Promise.allSettled([
           (async () => {
             const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
             const response = await fetchWithTimeout(url, {}, 8000);
@@ -160,6 +160,26 @@ export default function AuthorPage() {
               source: "bnf",
             }));
           })(),
+          (async () => {
+            const res = await fetchWithTimeout(`/api/itunes-search?q=${encodeURIComponent(authorName)}`, {}, 8000);
+            if (!res.ok) return [];
+            const data = await res.json();
+            return (data.results || []).map((b: any) => ({
+              id: b.id,
+              title: b.title,
+              subtitle: "",
+              author: b.author || authorName,
+              publisher: "",
+              cover: b.cover || undefined,
+              pages: 0,
+              description: b.description || "",
+              publicationDate: b.publishedDate,
+              genres: toArray<string>(b.genres),
+              language: b.language || "",
+              isbn: "N/A",
+              source: "apple",
+            }));
+          })(),
         ]);
 
         const bnfResults = bnfSettled.status === "fulfilled" ? bnfSettled.value : [];
@@ -177,7 +197,13 @@ export default function AuthorPage() {
           !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase()) &&
           !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (g.title || "").toLowerCase())
         );
-        setResults([...masterResults, ...dedupedBnf, ...dedupedGoogle]);
+        const appleResults = appleSettled.status === "fulfilled" ? appleSettled.value : [];
+        const dedupedApple = appleResults.filter((a: any) =>
+          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (a.title || "").toLowerCase()) &&
+          !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (a.title || "").toLowerCase()) &&
+          !dedupedGoogle.some((g: any) => (g.title || "").toLowerCase() === (a.title || "").toLowerCase())
+        );
+        setResults([...masterResults, ...dedupedBnf, ...dedupedGoogle, ...dedupedApple]);
       } catch (e) {
         console.error(e);
       } finally {

@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
 import Image from "next/image";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
@@ -297,6 +298,21 @@ export default function BookDetailPage() {
                  </Button>
                ))}
              </div>
+             {editedData.status === "progress" && (
+               <div className="space-y-3 pt-2">
+                 <div className="flex items-center justify-between">
+                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Progression</Label>
+                   <span className="text-primary font-headline italic text-lg">{(editedData as any).progress ?? 0}%</span>
+                 </div>
+                 <Slider
+                   value={[(editedData as any).progress ?? 0]}
+                   min={0}
+                   max={100}
+                   step={5}
+                   onValueChange={(v) => setEditedData({ ...editedData, progress: v[0] } as any)}
+                 />
+               </div>
+             )}
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">

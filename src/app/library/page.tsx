@@ -82,6 +82,7 @@ export interface UserBook {
   releaseDateUE?: string;
   description?: string;
   referenceLink?: string;
+  progress?: number;
   detailedRatings?: {
     intrigue?: number;
     personnages?: number;

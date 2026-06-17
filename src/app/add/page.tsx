@@ -72,7 +72,7 @@ export default function AddBookPage() {
       // y compris les petites maisons (BMR, Nox, Chatterley...) que
       // Google Books manque souvent.
       const bnfType = isIsbnQuery ? "isbn" : searchMode === "publisher" ? "publisher" : "general";
-      const [masterSettled, googleSettled, bnfSettled] = await Promise.allSettled([
+      const [masterSettled, googleSettled, bnfSettled, appleSettled] = await Promise.allSettled([
         (async () => {
           const masterRef = collection(db, "masterBooks");
           // Recherche par préfixe sur le champ pertinent selon le mode
@@ -134,6 +134,34 @@ export default function AddBookPage() {
             source: "api"
           }));
         })(),
+        (async () => {
+          // Recherche par défaut, sauf en mode éditeur où l'iTunes
+          // Search API n'a pas d'équivalent (pas de filtre par maison
+          // d'édition côté Apple Books) — la requête générale reste
+          // alors préférable à une absence totale de résultat.
+          const appleUrl = isIsbnQuery
+            ? `/api/itunes-search?q=${encodeURIComponent(cleanedDigits)}&isbn=1`
+            : `/api/itunes-search?q=${encodeURIComponent(searchVal)}`;
+          const res = await fetchWithTimeout(appleUrl, {}, 8000);
+          if (!res.ok) return [];
+          const data = await res.json();
+          return (data.results || []).map((b: any) => ({
+            id: b.id,
+            title: b.title || "Titre inconnu",
+            subtitle: "",
+            author: b.author || "Auteur inconnu",
+            cover: b.cover || undefined,
+            isbn: "N/A",
+            isbn10: "",
+            description: b.description || "",
+            publisher: "",
+            pages: 0,
+            language: b.language || "",
+            publishedDate: b.publishedDate || "",
+            genres: toArray<string>(b.genres),
+            source: "api"
+          }));
+        })(),
       ]);
 
       if (masterSettled.status === "fulfilled") {
@@ -166,6 +194,21 @@ export default function AddBookPage() {
       } else {
         console.error("BnF Error:", bnfSettled.reason);
         // On continue même si la BnF échoue ou expire : source bonus, pas bloquante
+      }
+
+      if (appleSettled.status === "fulfilled") {
+        // Apple Books ne renvoie pas d'ISBN fiable pour les ebooks : le
+        // dédoublonnage se fait donc uniquement par titre+auteur, comme
+        // pour la BnF.
+        const newAppleResults = appleSettled.value.filter((b: any) =>
+          !allResults.find(m =>
+            (m.title || "").toLowerCase() === (b.title || "").toLowerCase() && (m.author || "").toLowerCase() === (b.author || "").toLowerCase()
+          )
+        );
+        allResults = [...allResults, ...newAppleResults];
+      } else {
+        console.error("Apple Books Error:", appleSettled.reason);
+        // On continue même si Apple Books échoue ou expire : source bonus, pas bloquante
       }
 
       // 3. Fallback Open Library (si toujours peu de résultats, timeout 8s également)
