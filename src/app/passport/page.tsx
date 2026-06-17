@@ -12,7 +12,7 @@ const TITLES = [
   { name: "Exploratrice Littéraire", icon: Search, color: "bg-blue-100 text-blue-600", desc: "Avoir cherché 50 livres" },
   { name: "Reine de la Romance", icon: Heart, color: "bg-rose-100 text-rose-600", desc: "10 romances classées Diamant" },
   { name: "Maîtresse des Dragons", icon: Flame, color: "bg-orange-100 text-orange-600", desc: "5 sagas fantasy complétées" },
-  { name: "Lectrice Royale", icon: Crown, color: "bg-amber-100 text-amber-600", desc: "Abonnement Plume Royale" },
+  { name: "Lectrice Royale", icon: Crown, color: "bg-amber-100 text-amber-600", desc: "Avoir classé un livre Plume Royale" },
   { name: "BookTok Addict", icon: Trophy, color: "bg-purple-100 text-purple-600", desc: "5 fiches partagées" },
   { name: "Voyageuse des Mondes", icon: Map, color: "bg-emerald-100 text-emerald-600", desc: "Livres de 5 continents différents" },
   { name: "Chasseuse de Pépites", icon: Star, color: "bg-yellow-100 text-yellow-600", desc: "Avoir déterré un livre oublié" },

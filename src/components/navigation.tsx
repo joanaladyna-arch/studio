@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, Crown, ShieldCheck } from "lucide-react";
+import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, ShieldCheck } from "lucide-react";
 import { cn, ADMIN_EMAILS } from "@/lib/utils";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -26,13 +26,11 @@ export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // "Abonnement" est visible pour tout le monde (page des 3 formules).
   // "Admin" n'apparaît que pour le(s) email(s) autorisé(s) — la page
   // /admin existe mais ne doit être visible que pour Joana.
   const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
   const allNavItems = [
     ...navItems,
-    { href: "/subscription", label: "Abonnement", icon: Crown },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 

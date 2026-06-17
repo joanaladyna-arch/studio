@@ -2,7 +2,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { Navigation } from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star, Landmark } from "lucide-react";

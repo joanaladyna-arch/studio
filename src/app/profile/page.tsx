@@ -17,6 +17,7 @@ import {
   Crown, 
   Sparkles, 
   Trophy,
+  BarChart3,
   Headphones, 
   LogOut,
   Camera,
@@ -225,8 +226,11 @@ export default function ProfilePage() {
         </div>
         <div className="flex flex-col gap-4 w-full md:w-auto">
             <EditProfileDialog profile={profile} />
-            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-amber-600 hover:bg-amber-50 font-headline italic text-lg transition-colors">
-                <Link href="/subscription"><Crown className="h-5 w-5 mr-3" /> Abonnement</Link>
+            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+                <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
+            </Button>
+            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+                <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Statistiques détaillées</Link>
             </Button>
             {user?.email && ADMIN_EMAILS.includes(user.email) && (
               <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">

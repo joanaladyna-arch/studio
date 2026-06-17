@@ -16,13 +16,13 @@ import {
   Loader2,
   Camera,
   Link as LinkIcon,
+  Magnet,
   Upload,
   Share2,
   Flame,
   ClipboardList
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import Image from "next/image";
 import Link from "next/link";
@@ -76,7 +76,6 @@ export default function BookDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [newCoverUrl, setNewCoverUrl] = useState("");
   const [ratingGridOpen, setRatingGridOpen] = useState(false);
-  const [fetchInfoFromLink, setFetchInfoFromLink] = useState(false);
   const [isFetchingLink, setIsFetchingLink] = useState(false);
 
   // Récupération des données Master
@@ -134,7 +133,7 @@ export default function BookDetailPage() {
   // couverture déjà renseignés.
   const handleFetchLinkInfo = async () => {
     const link = (editedData as any).referenceLink;
-    if (!link || !fetchInfoFromLink) return;
+    if (!link) return;
     setIsFetchingLink(true);
     try {
       const res = await fetch(`/api/fetch-link-preview?url=${encodeURIComponent(link)}`);
@@ -451,21 +450,19 @@ export default function BookDetailPage() {
                      placeholder="https://..."
                      className="h-11 rounded-xl bg-white/40 border-none italic"
                    />
-                   <Button onClick={handleFetchLinkInfo} disabled={isFetchingLink || !fetchInfoFromLink || !(editedData as any).referenceLink} variant="secondary" className="h-11 px-4 rounded-xl italic shrink-0">
-                     {isFetchingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : "OK"}
+                   <Button
+                     onClick={handleFetchLinkInfo}
+                     disabled={isFetchingLink || !(editedData as any).referenceLink}
+                     variant="secondary"
+                     title="Capturer le résumé et la couverture depuis ce lien"
+                     className="h-11 px-4 rounded-xl shrink-0"
+                   >
+                     {isFetchingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Magnet className="h-4 w-4" />}
                    </Button>
                  </div>
-                 <div className="flex items-start gap-3">
-                   <Checkbox
-                     id="fetch-link-info"
-                     checked={fetchInfoFromLink}
-                     onCheckedChange={(v) => setFetchInfoFromLink(v === true)}
-                     className="mt-0.5"
-                   />
-                   <label htmlFor="fetch-link-info" className="text-xs italic text-muted-foreground cursor-pointer leading-relaxed">
-                     Récupérer les infos du livre depuis ce lien : si coché, "OK" va chercher un résumé et une couverture sur cette page (sans écraser ce qui est déjà renseigné).
-                   </label>
-                 </div>
+                 <p className="text-xs italic text-muted-foreground leading-relaxed">
+                   L'aimant capture le résumé et la couverture sur cette page (sans jamais écraser ce qui est déjà renseigné).
+                 </p>
                  {(editedData as any).referenceLink && (
                    <a href={(editedData as any).referenceLink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline italic break-all">
                      {(editedData as any).referenceLink}

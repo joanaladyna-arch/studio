@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup, 
   GoogleAuthProvider, 
+  OAuthProvider,
   sendPasswordResetEmail
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Feather, Mail, Lock, Chrome, ArrowRight } from "lucide-react";
+import { Feather, Mail, Lock, Chrome, Apple, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -79,6 +80,21 @@ export default function LoginPage() {
       router.replace("/");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erreur Google", description: error.message });
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    if (!auth) return;
+    const provider = new OAuthProvider("apple.com");
+    provider.addScope("email");
+    provider.addScope("name");
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await syncUserProfile(result.user, "apple.com");
+      toast({ title: "Connexion réussie", description: "Bienvenue sur votre carnet de lecture." });
+      router.replace("/");
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Erreur Apple", description: error.message });
     }
   };
 
@@ -172,6 +188,13 @@ export default function LoginPage() {
                 onClick={handleGoogleLogin}
               >
                 <Chrome className="mr-2 h-4 w-4" /> Continuer avec Google
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full h-12 rounded-2xl border-primary/10 hover:bg-primary/5 italic mt-3"
+                onClick={handleAppleLogin}
+              >
+                <Apple className="mr-2 h-4 w-4" /> Continuer avec Apple
               </Button>
             </>
           )}
