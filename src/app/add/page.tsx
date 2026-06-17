@@ -295,13 +295,20 @@ export default function AddBookPage() {
       // 2. Ajout à la bibliothèque personnelle. On copie les genres ici
       // aussi (en plus du masterBook) : les badges/médailles du profil
       // se basent sur le champ "genres" du livre utilisateur, pas du
-      // masterBook, sans quoi ils ne se débloqueraient jamais.
+      // masterBook, sans quoi ils ne se débloqueraient jamais. On copie
+      // aussi résumé/tropes/thèmes/éditeur quand le master les a déjà
+      // (curation admin) : sans ça, le travail de complétion des fiches
+      // ne profiterait jamais aux lectrices qui ajoutent le livre.
       const userBookData = {
         masterBookId,
         title: pendingBook.title || "Titre inconnu",
         author: pendingBook.author || "Auteur inconnu",
         cover: pendingBook.cover || "",
         genres: toArray<string>(pendingBook.genres),
+        tropes: toArray<string>(pendingBook.tropes),
+        themes: toArray<string>(pendingBook.themes),
+        description: pendingBook.description || "",
+        volume: pendingBook.volume || "",
         status: selectedStatus,
         format: selectedFormat,
         dateAdded: serverTimestamp(),

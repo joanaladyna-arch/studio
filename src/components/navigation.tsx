@@ -1,36 +1,70 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Library, PenTool, User, Heart, Feather, LogOut, PlusCircle, ShieldCheck } from "lucide-react";
 import { cn, ADMIN_EMAILS } from "@/lib/utils";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useFirestore } from "@/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 
-const navItems = [
-  { href: "/", label: "Accueil", icon: Home },
-  { href: "/library", label: "Bibliothèque", icon: Library },
-  { href: "/add", label: "Ajouter", icon: PlusCircle },
-  { href: "/coeur-de-plume", label: "De Plume", icon: Heart },
-  { href: "/journal", label: "Journal", icon: PenTool },
-  { href: "/profile", label: "Profil", icon: User },
+// "id" est la clé stable utilisée pour stocker les personnalisations
+// (nom, visibilité) dans Firestore — séparée du href, qui lui ne change
+// jamais puisqu'il pointe vers une page réelle du code.
+export const navItems = [
+  { id: "home", href: "/", label: "Accueil", icon: Home },
+  { id: "library", href: "/library", label: "Bibliothèque", icon: Library },
+  { id: "add", href: "/add", label: "Ajouter", icon: PlusCircle },
+  { id: "coeur-de-plume", href: "/coeur-de-plume", label: "De Plume", icon: Heart },
+  { id: "journal", href: "/journal", label: "Journal", icon: PenTool },
+  { id: "profile", href: "/profile", label: "Profil", icon: User },
 ];
+
+type NavOverride = { label?: string; visible?: boolean };
 
 export function Navigation() {
   const pathname = usePathname();
   const auth = useAuth();
   const { user } = useUser();
+  const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const [overrides, setOverrides] = useState<Record<string, NavOverride>>({});
+
+  // Lu une seule fois au montage (la Navigation reste montée tout au long
+  // de la navigation côté client grâce au layout racine) : pas besoin de
+  // re-lire à chaque changement de page.
+  useEffect(() => {
+    if (!db) return;
+    getDoc(doc(db, "config", "navigation"))
+      .then((snap) => {
+        if (snap.exists()) setOverrides(snap.data()?.items || {});
+      })
+      .catch(() => {
+        // Échec silencieux : on garde simplement les noms/visibilités
+        // par défaut, jamais bloquant pour la navigation elle-même.
+      });
+  }, [db]);
 
   // "Admin" n'apparaît que pour le(s) email(s) autorisé(s) — la page
-  // /admin existe mais ne doit être visible que pour Joana.
+  // /admin existe mais ne doit être visible que pour Joana. Elle n'est
+  // volontairement pas personnalisable ici, pour éviter de se couper
+  // accidentellement l'accès à l'écran qui permet justement de gérer
+  // cette personnalisation.
   const isAdmin = !!(user?.email && ADMIN_EMAILS.includes(user.email));
+  const visibleNavItems = navItems
+    .map((item) => ({
+      ...item,
+      label: overrides[item.id]?.label?.trim() || item.label,
+      visible: overrides[item.id]?.visible !== false,
+    }))
+    .filter((item) => item.visible);
   const allNavItems = [
-    ...navItems,
+    ...visibleNavItems,
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: ShieldCheck }] : []),
   ];
 
@@ -90,7 +124,7 @@ export function Navigation() {
       </nav>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 py-3 flex justify-around items-center md:hidden h-24 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (

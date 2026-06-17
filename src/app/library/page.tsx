@@ -57,6 +57,7 @@ export interface MasterBook {
   isbn13?: string;
   genres?: string[];
   tropes?: string[];
+  themes?: string[];
   volume?: string;
 }
 
