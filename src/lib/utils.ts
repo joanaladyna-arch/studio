@@ -98,7 +98,17 @@ export function slugify(text: string): string {
  * un doublon silencieux à la prochaine tentative d'ajout du même livre.
  */
 export function cleanIsbnValue(v: string | null | undefined): string {
-  return (v || "").toString().replace(/[-\s]/g, "").trim();
+  const cleaned = (v || "").toString().replace(/[-\s]/g, "").trim();
+  // Certaines sources (recherche BnF notamment) utilisent le texte "N/A"
+  // comme valeur par défaut en l'absence d'ISBN. Cette chaîne contient un
+  // caractère "/" qui, si elle est utilisée telle quelle comme identifiant
+  // de document Firestore, casse la construction du chemin ("masterBooks
+  // /N/A" est alors lu comme 3 segments séparés au lieu d'un identifiant
+  // unique) — d'où le blocage "Invalid document reference" à l'ajout.
+  // On la traite donc comme une absence d'ISBN, exactement comme une
+  // chaîne vide.
+  if (/^n\/?a$/i.test(cleaned)) return "";
+  return cleaned;
 }
 
 /**

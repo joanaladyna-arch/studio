@@ -118,7 +118,7 @@ export default function AddBookPage() {
           return data.items.map((item: any) => {
             const info = item.volumeInfo || {};
             const isbn = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier ||
-                         info.industryIdentifiers?.find((id: any) => id.type === "ISBN_10")?.identifier || "N/A";
+                         info.industryIdentifiers?.find((id: any) => id.type === "ISBN_10")?.identifier || "";
             const isbn10 = info.industryIdentifiers?.find((id: any) => id.type === "ISBN_10")?.identifier || "";
             return {
               id: item.id,
@@ -147,7 +147,7 @@ export default function AddBookPage() {
             author: b.author || "Auteur inconnu",
             translator: b.translator || "",
             cover: b.cover || undefined,
-            isbn: b.isbn || "N/A",
+            isbn: b.isbn || "",
             isbn10: "",
             description: "",
             publisher: b.publisher || "",
@@ -175,7 +175,7 @@ export default function AddBookPage() {
             subtitle: "",
             author: b.author || "Auteur inconnu",
             cover: b.cover || undefined,
-            isbn: "N/A",
+            isbn: "",
             isbn10: "",
             description: b.description || "",
             publisher: "",
@@ -253,7 +253,7 @@ export default function AddBookPage() {
                 title: doc.title || "Titre inconnu",
                 author: doc.author_name ? doc.author_name.join(", ") : "Inconnu",
                 cover: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-M.jpg` : null,
-                isbn: doc.isbn?.[0] || "N/A",
+                isbn: doc.isbn?.[0] || "",
                 pages: doc.number_of_pages_median || 0,
                 publishedDate: doc.first_publish_year ? String(doc.first_publish_year) : "",
                 language: doc.language?.[0] || "",

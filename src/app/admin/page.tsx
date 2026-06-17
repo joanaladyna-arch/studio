@@ -25,7 +25,7 @@ import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -302,7 +302,7 @@ export default function AdminPage() {
         // au lieu de ne stocker que son nom.
         const actualAuthors = bookData.author.split(",").map((s: string) => s.trim()).filter(Boolean);
         for (const authName of actualAuthors) {
-          const authId = slugify(authName);
+          const authId = authorKey(authName);
           await setDoc(doc(db, "authors", authId), {
             name: authName,
             slug: authId,
@@ -350,7 +350,7 @@ export default function AdminPage() {
         if (!authorStr) continue;
         const authorNames = authorStr.split(",").map((s: string) => s.trim()).filter(Boolean);
         for (const authName of authorNames) {
-          const authId = slugify(authName);
+          const authId = authorKey(authName);
           if (!authId) continue;
           try {
             await setDoc(doc(db, "authors", authId), {

@@ -32,7 +32,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 import { AuthorEditor } from "@/components/author-editor";
 
@@ -187,7 +187,7 @@ export default function AuthorPage() {
                 language: "Français",
                 isbn: info.industryIdentifiers?.find((id: any) => id.type === "ISBN_13")?.identifier ||
                       info.industryIdentifiers?.[0]?.identifier ||
-                      "N/A",
+                      "",
               };
             });
           })(),
@@ -211,7 +211,7 @@ export default function AuthorPage() {
                 publicationDate: data.publishedDate,
                 genres: data.genres || [],
                 language: data.language || "Français",
-                isbn: data.isbn13 || data.isbn || "N/A",
+                isbn: data.isbn13 || data.isbn || "",
                 source: "master",
               };
             });
@@ -231,7 +231,7 @@ export default function AuthorPage() {
               publicationDate: b.publicationDate,
               genres: toArray<string>(b.genres),
               language: b.language || "Français",
-              isbn: b.isbn || "N/A",
+              isbn: b.isbn || "",
               source: "bnf",
             }));
           })(),
@@ -251,7 +251,7 @@ export default function AuthorPage() {
               publicationDate: b.publishedDate,
               genres: toArray<string>(b.genres),
               language: b.language || "",
-              isbn: "N/A",
+              isbn: "",
               source: "apple",
             }));
           })(),
@@ -303,28 +303,43 @@ export default function AuthorPage() {
     try {
       // Si le livre vient déjà de la base Plume (masterBooks), on réutilise
       // sa fiche existante au lieu d'en recréer une en double. Sinon
-      // (résultat Google Books), on crée la fiche bibliographique complète
-      // — sans ça, la fiche détail du livre n'affiche pas l'éditeur, l'ISBN
-      // ou le résumé pour les livres ajoutés depuis la page auteur.
+      // (résultat Google Books/BnF/Open Library), on calcule un
+      // identifiant STABLE (ISBN nettoyé, ou clé titre+auteur normalisée)
+      // au lieu d'un identifiant aléatoire — pour que ce même livre,
+      // retrouvé une autre fois avec une légère variation de saisie,
+      // retombe sur la même fiche au lieu d'en créer une en double. Si la
+      // fiche existe déjà sous cet identifiant, on ne l'écrase jamais :
+      // on ne complète que les champs encore vides.
       let masterBookId = pendingBook.masterBookId;
       if (!masterBookId) {
-        const masterRef = doc(collection(db, "masterBooks"));
-        masterBookId = masterRef.id;
+        const cleanedIsbn = cleanIsbnValue(pendingBook.isbn);
+        masterBookId = cleanedIsbn || stableBookKey(pendingBook.title, pendingBook.author || authorName);
+        const masterRef = doc(db, "masterBooks", masterBookId);
+        const existingSnap = await getDoc(masterRef);
+        const existing: any = existingSnap.exists() ? existingSnap.data() : {};
+        const keepText = (incoming: any, current: any) => {
+          const v = (incoming ?? "").toString().trim();
+          return v ? v : (current ?? "");
+        };
+        const keepArr = (incoming: any, current: any) =>
+          Array.isArray(incoming) && incoming.length ? incoming : (Array.isArray(current) ? current : []);
+        const keepNum = (incoming: any, current: any) => (incoming > 0 ? incoming : (current ?? 0));
+
         await setDoc(masterRef, {
-          title: pendingBook.title || "Titre inconnu",
-          subtitle: pendingBook.subtitle || "",
-          author: pendingBook.author || authorName,
-          cover: pendingBook.cover || "",
-          isbn13: pendingBook.isbn || "",
-          description: pendingBook.description || "",
-          publisher: pendingBook.publisher || "",
-          translator: pendingBook.translator || "",
-          pageCount: pendingBook.pages || 0,
-          publishedDate: pendingBook.publicationDate || "",
-          genres: toArray<string>(pendingBook.genres),
+          title: keepText(pendingBook.title, existing.title) || "Titre inconnu",
+          subtitle: keepText(pendingBook.subtitle, existing.subtitle),
+          author: keepText(pendingBook.author || authorName, existing.author),
+          cover: keepText(pendingBook.cover, existing.cover),
+          isbn13: keepText(cleanedIsbn, existing.isbn13),
+          description: keepText(pendingBook.description, existing.description),
+          publisher: keepText(pendingBook.publisher, existing.publisher),
+          translator: keepText(pendingBook.translator, existing.translator),
+          pageCount: keepNum(pendingBook.pages, existing.pageCount),
+          publishedDate: keepText(pendingBook.publicationDate, existing.publishedDate),
+          genres: keepArr(toArray<string>(pendingBook.genres), existing.genres),
           updatedAt: serverTimestamp(),
-          source: "discovered"
-        });
+          source: existing.source || "discovered"
+        }, { merge: true });
       }
 
       const booksRef = collection(db, "users", user.uid, "books");

@@ -1,18 +1,19 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { RANKS, RankType } from "@/app/library/page";
-import { Diamond, Crown, Sparkles, Heart, Pencil, Loader2 } from "lucide-react";
+import { Diamond, Crown, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
-import { collection, query, where, doc, getDoc } from "firebase/firestore";
-import { cn, ADMIN_EMAILS } from "@/lib/utils";
+import { collection, query, where, doc, getDoc, getDocs } from "firebase/firestore";
+import { cn, ADMIN_EMAILS, authorKey } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
 import Link from "next/link";
 
 export default function CoeurDePlumePage() {
@@ -23,6 +24,55 @@ export default function CoeurDePlumePage() {
   const isAdmin = adminMode;
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
+  const [activeView, setActiveView] = useState<"lectures" | "auteurs">("lectures");
+  const [followedAuthors, setFollowedAuthors] = useState<{ slug: string; name: string; photo: string | null }[] | null>(null);
+
+  // Auteurs suivis par la lectrice (champ followedAuthors sur son propre
+  // profil), enrichis de leur nom affiché et de leur photo si elle a été
+  // renseignée via la fiche auteur (mode admin). Échoue toujours
+  // silencieusement : l'absence de photo n'empêche jamais d'afficher la
+  // carte de l'auteur (juste avec une icône par défaut à la place).
+  useEffect(() => {
+    if (!db || !user || activeView !== "auteurs" || followedAuthors !== null) return;
+    (async () => {
+      try {
+        const profileSnap = await getDoc(doc(db, "users", user.uid));
+        const slugs: string[] = profileSnap.data()?.followedAuthors || [];
+        if (slugs.length === 0) { setFollowedAuthors([]); return; }
+        const authorsSnap = await getDocs(collection(db, "authors"));
+        const bySlug: Record<string, any> = {};
+        authorsSnap.docs.forEach((d) => { bySlug[d.id] = d.data(); });
+
+        // Filet de sécurité : si la fiche authors/{slug} n'existe pas
+        // encore (jamais synchronisée ni éditée), on retrouve un nom
+        // lisible en cherchant un livre du catalogue partagé dont
+        // l'auteur correspond à ce même slug, plutôt que d'afficher le
+        // slug technique brut (ex. "kent-rina") à la lectrice.
+        const missingSlugs = slugs.filter((s) => !bySlug[s]?.name);
+        let fallbackNames: Record<string, string> = {};
+        if (missingSlugs.length > 0) {
+          const booksSnap = await getDocs(collection(db, "masterBooks"));
+          booksSnap.docs.forEach((d) => {
+            const author = (d.data() as any)?.author;
+            if (!author) return;
+            const key = authorKey(author);
+            if (missingSlugs.includes(key) && !fallbackNames[key]) fallbackNames[key] = author;
+          });
+        }
+
+        const list = slugs.map((slug) => ({
+          slug,
+          name: bySlug[slug]?.name || fallbackNames[slug] || slug,
+          photo: bySlug[slug]?.photo || null,
+        }));
+        list.sort((a, b) => a.name.localeCompare(b.name));
+        setFollowedAuthors(list);
+      } catch (err) {
+        console.error("Load Followed Authors Error:", err);
+        setFollowedAuthors([]);
+      }
+    })();
+  }, [db, user, activeView, followedAuthors]);
 
   const openMasterEditor = async (masterBookId?: string) => {
     if (!db || !masterBookId) return;
@@ -75,6 +125,67 @@ export default function CoeurDePlumePage() {
         </p>
       </header>
 
+      <div className="flex justify-center gap-3">
+        <button
+          onClick={() => setActiveView("lectures")}
+          className={cn(
+            "h-12 px-6 rounded-2xl italic font-headline text-sm transition-all flex items-center gap-2",
+            activeView === "lectures" ? "bg-primary text-white shadow-lg" : "bg-white/40 text-primary/60 hover:bg-white/60"
+          )}
+        >
+          <Heart className="h-4 w-4" /> Lectures classées
+        </button>
+        <button
+          onClick={() => setActiveView("auteurs")}
+          className={cn(
+            "h-12 px-6 rounded-2xl italic font-headline text-sm transition-all flex items-center gap-2",
+            activeView === "auteurs" ? "bg-primary text-white shadow-lg" : "bg-white/40 text-primary/60 hover:bg-white/60"
+          )}
+        >
+          <BookHeart className="h-4 w-4" /> Auteurs coup de cœur
+        </button>
+      </div>
+
+      {activeView === "auteurs" && (
+        <div className="max-w-4xl mx-auto px-4 pb-12">
+          {followedAuthors === null ? (
+            <div className="py-24 text-center italic text-muted-foreground">Ouverture de l'écrin...</div>
+          ) : followedAuthors.length === 0 ? (
+            <div className="py-24 text-center space-y-6">
+              <BookHeart className="h-16 w-16 mx-auto text-primary/10" />
+              <p className="text-muted-foreground italic text-lg">
+                Tu ne suis encore aucun auteur.<br />
+                Va sur la fiche d'un auteur que tu aimes et clique sur "Suivre cet auteur" pour le retrouver ici.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+              {followedAuthors.map((author) => (
+                <Link
+                  key={author.slug}
+                  href={`/author/${encodeURIComponent(author.name)}`}
+                  className="group flex flex-col items-center gap-3 text-center"
+                >
+                  <div className="relative h-28 w-28 rounded-full overflow-hidden shadow-lg ring-4 ring-white bg-primary/5 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+                    {author.photo ? (
+                      <Image src={author.photo} alt={author.name} fill className="object-cover" />
+                    ) : (
+                      <UserIcon className="h-10 w-10 text-primary/20" />
+                    )}
+                    <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary shadow-md flex items-center justify-center">
+                      <Heart className="h-4 w-4 text-white fill-white" />
+                    </div>
+                  </div>
+                  <p className="font-headline italic text-sm leading-tight">{author.name}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeView === "lectures" && (
+      <>
       {loading ? (
         <div className="py-24 text-center italic text-muted-foreground">Ouverture de l'écrin...</div>
       ) : Object.keys(booksByRank).length > 0 ? (
@@ -181,6 +292,8 @@ export default function CoeurDePlumePage() {
           </div>
         </div>
       </section>
+      </>
+      )}
 
       {isAdmin && (
         <Dialog open={!!editingMasterBook} onOpenChange={(open) => !open && setEditingMasterBook(null)}>
