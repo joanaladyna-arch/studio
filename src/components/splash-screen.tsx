@@ -5,9 +5,10 @@ import Image from "next/image";
 
 /**
  * Écran de lancement, affiché une seule fois par session (cf. layout.tsx,
- * via sessionStorage). Affiche le logo officiel Lectoria (livre, plume,
- * et nom déjà intégrés dans l'image fournie — on ne duplique donc plus
- * le texte séparément, pour éviter toute redondance visuelle).
+ * via sessionStorage). Affiche le logo officiel Lectoria. Le carré rose
+ * du logo est volontairement "fondu" dans le fond crème de l'écran via
+ * un masque radial — ses bords s'estompent en transparence plutôt que
+ * de former un bloc net, pour une apparition plus douce et intégrée.
  * Séquence volontairement courte (~1.6s) : un démarrage premium se
  * ressent rapide, pas comme un générique.
  */
@@ -26,16 +27,22 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
     };
   }, [onFinish]);
 
+  const fadeMask = {
+    maskImage: "radial-gradient(circle, black 55%, transparent 85%)",
+    WebkitMaskImage: "radial-gradient(circle, black 55%, transparent 85%)",
+  };
+
   return (
     <div
-      className={`fixed inset-0 z-[100] bg-[#fdfaf8] flex flex-col items-center justify-center overflow-hidden transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[100] bg-[#fdfaf8] flex flex-col items-center justify-center overflow-hidden transition-opacity duration-700 ${
         stage >= 2 ? "opacity-0" : "opacity-100"
       }`}
     >
       <div
-        className={`relative w-64 h-64 transition-all duration-700 ease-out ${
-          stage >= 1 ? "scale-100 opacity-100" : "scale-90 opacity-0"
+        className={`relative w-72 h-72 transition-opacity duration-[1400ms] ease-out ${
+          stage >= 1 ? "opacity-100" : "opacity-0"
         }`}
+        style={fadeMask}
       >
         <Image src="/brand/logo-lectoria.png" alt="Lectoria" fill className="object-contain" priority unoptimized />
       </div>

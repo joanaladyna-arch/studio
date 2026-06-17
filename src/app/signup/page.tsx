@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Feather, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -73,8 +74,8 @@ export default function SignupPage() {
     <div className="min-h-[80vh] flex items-center justify-center p-4 animate-in fade-in duration-1000">
       <Card className="glass-card w-full max-w-md border-none shadow-2xl">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-            <Feather className="h-6 w-6" />
+          <div className="relative mx-auto h-14 w-14 rounded-full overflow-hidden">
+            <Image src="/brand/logo-lectoria.png" alt="" fill className="object-cover" unoptimized />
           </div>
           <CardTitle className="text-3xl font-headline italic">Commencer l'aventure</CardTitle>
           <CardDescription className="italic">Créez votre journal de lecture personnel.</CardDescription>
