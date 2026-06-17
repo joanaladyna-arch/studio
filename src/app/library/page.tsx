@@ -23,7 +23,8 @@ import {
   Medal,
   Feather,
   Meh,
-  Frown
+  Frown,
+  Heart
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -35,7 +36,7 @@ import { collection } from "firebase/firestore";
 import Link from "next/link";
 
 export type RankType = 'diamant' | 'royale' | 'doree' | 'argentee' | 'simple' | 'froissee' | 'brisee' | 'dnf';
-export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread";
+export type BookStatus = "pal" | "progress" | "read" | "dnf" | "pause" | "reread" | "envie";
 export type BookFormat = "papier" | "ebook" | "kindle" | "kobo" | "audio" | "audible" | "audiolib" | "autre";
 
 export interface MasterBook {
@@ -157,6 +158,7 @@ export const STATUSES: Record<BookStatus, { label: string, icon: any, color: str
   dnf: { label: "DNF", icon: DoorOpen, color: "bg-rose-400" },
   pause: { label: "Pause", icon: Pause, color: "bg-amber-400" },
   reread: { label: "Relecture", icon: RefreshCw, color: "bg-purple-400" },
+  envie: { label: "Envie", icon: Heart, color: "bg-pink-400" },
 };
 
 // Grades de prestige "Plume" (du meilleur au moins bon). Utilisés par la
@@ -189,6 +191,7 @@ const CATEGORIES = [
   { id: "pal", label: "PAL" },
   { id: "progress", label: "EN COURS" },
   { id: "read", label: "LU" },
+  { id: "envie", label: "ENVIE" },
   { id: "dnf", label: "DNF" },
 ];
 

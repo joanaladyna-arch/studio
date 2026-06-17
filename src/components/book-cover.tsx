@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { Feather } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,9 +8,9 @@ import { cn } from "@/lib/utils";
 /**
  * Affiche la couverture d'un livre, ou — quand aucune couverture n'a été
  * trouvée par la recherche (base Plume, Google Books, Open Library, BnF,
- * toutes interrogées avant d'arriver ici) — un repli sur le logo Plume
- * (icône Feather sur fond doux) plutôt que sur une photo aléatoire sans
- * rapport avec un livre.
+ * toutes interrogées avant d'arriver ici) ou que le lien fourni est mort
+ * ou invalide — un repli sur le logo Plume (icône Feather sur fond doux)
+ * plutôt que sur une photo aléatoire sans rapport avec un livre.
  *
  * S'utilise comme un <Image fill /> classique : le parent direct doit
  * être positionné en relative.
@@ -23,8 +24,10 @@ export function BookCover({
   alt: string;
   className?: string;
 }) {
-  if (src) {
-    return <Image src={src} alt={alt} fill className={className} />;
+  const [failed, setFailed] = useState(false);
+
+  if (src && !failed) {
+    return <Image src={src} alt={alt} fill className={className} onError={() => setFailed(true)} unoptimized />;
   }
   return (
     <div

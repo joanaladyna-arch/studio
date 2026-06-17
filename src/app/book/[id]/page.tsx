@@ -22,6 +22,7 @@ import {
   ClipboardList
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import Image from "next/image";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
@@ -74,6 +75,8 @@ export default function BookDetailPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [newCoverUrl, setNewCoverUrl] = useState("");
   const [ratingGridOpen, setRatingGridOpen] = useState(false);
+  const [fetchInfoFromLink, setFetchInfoFromLink] = useState(false);
+  const [isFetchingLink, setIsFetchingLink] = useState(false);
 
   // Récupération des données Master
   const fetchMasterData = useCallback(async (mid: string) => {
@@ -124,6 +127,38 @@ export default function BookDetailPage() {
   // Ajoute/retire un genre ou un trope de la liste personnelle de
   // l'utilisatrice pour ce livre — ces champs alimentent directement le
   // calcul des badges/médailles sur la page profil.
+  // Va chercher un résumé et une image sur la page pointée par le lien
+  // de référence (balises Open Graph) — uniquement si l'utilisatrice a
+  // explicitement coché la case, et sans jamais écraser un résumé ou une
+  // couverture déjà renseignés.
+  const handleFetchLinkInfo = async () => {
+    const link = (editedData as any).referenceLink;
+    if (!link || !fetchInfoFromLink) return;
+    setIsFetchingLink(true);
+    try {
+      const res = await fetch(`/api/fetch-link-preview?url=${encodeURIComponent(link)}`);
+      const data = await res.json();
+      if (data.error) {
+        toast({ variant: "destructive", title: "Récupération impossible", description: data.error });
+        return;
+      }
+      const updates: any = {};
+      if (data.description && !(editedData as any).description) updates.description = data.description;
+      if (data.image && !editedData.cover) updates.cover = data.image;
+
+      if (Object.keys(updates).length === 0) {
+        toast({ title: "Rien à compléter", description: "Le résumé et la couverture sont déjà renseignés, ou cette page ne fournit pas ces informations." });
+      } else {
+        setEditedData({ ...editedData, ...updates });
+        toast({ title: "Informations récupérées", description: `${Object.keys(updates).map(k => k === "description" ? "Résumé" : "Couverture").join(" et ")} complété(e). N'oubliez pas d'enregistrer.` });
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de contacter cette page." });
+    } finally {
+      setIsFetchingLink(false);
+    }
+  };
+
   const toggleTag = (field: "genres" | "tropes" | "themes", value: string) => {
     const current = toArray<string>((editedData as any)[field]);
     const updated = current.includes(value)
@@ -393,12 +428,28 @@ export default function BookDetailPage() {
                  <Label className="italic text-xl font-headline flex items-center gap-2">
                    <LinkIcon className="h-4 w-4" /> Lien de référence
                  </Label>
-                 <Input
-                   value={(editedData as any).referenceLink || ""}
-                   onChange={(e) => setEditedData({ ...editedData, referenceLink: e.target.value } as any)}
-                   placeholder="https://..."
-                   className="h-11 rounded-xl bg-white/40 border-none italic"
-                 />
+                 <div className="flex gap-2">
+                   <Input
+                     value={(editedData as any).referenceLink || ""}
+                     onChange={(e) => setEditedData({ ...editedData, referenceLink: e.target.value } as any)}
+                     placeholder="https://..."
+                     className="h-11 rounded-xl bg-white/40 border-none italic"
+                   />
+                   <Button onClick={handleFetchLinkInfo} disabled={isFetchingLink || !fetchInfoFromLink || !(editedData as any).referenceLink} variant="secondary" className="h-11 px-4 rounded-xl italic shrink-0">
+                     {isFetchingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : "OK"}
+                   </Button>
+                 </div>
+                 <div className="flex items-start gap-3">
+                   <Checkbox
+                     id="fetch-link-info"
+                     checked={fetchInfoFromLink}
+                     onCheckedChange={(v) => setFetchInfoFromLink(v === true)}
+                     className="mt-0.5"
+                   />
+                   <label htmlFor="fetch-link-info" className="text-xs italic text-muted-foreground cursor-pointer leading-relaxed">
+                     Récupérer les infos du livre depuis ce lien : si coché, "OK" va chercher un résumé et une couverture sur cette page (sans écraser ce qui est déjà renseigné).
+                   </label>
+                 </div>
                  {(editedData as any).referenceLink && (
                    <a href={(editedData as any).referenceLink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline italic break-all">
                      {(editedData as any).referenceLink}

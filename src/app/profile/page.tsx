@@ -95,6 +95,7 @@ export default function ProfilePage() {
     const allBooks = toArray<Book>(booksRaw);
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     const palBooks = allBooks.filter(b => b.status === 'pal');
+    const wishlistBooks = allBooks.filter(b => b.status === 'envie');
     
     // Seuls les livres pour lesquels l'utilisatrice a confirmé qu'ils
     // comptent (case cochée à l'ajout) alimentent les objectifs — readCount
@@ -141,6 +142,7 @@ export default function ProfilePage() {
       annualReadCount: goalEligibleBooks.length,
       monthlyReadCount: monthlyRead.length,
       palBooks,
+      wishlistBooks,
       pagesRead,
       audioHours: Math.round(audioHours),
       goals,
@@ -377,13 +379,38 @@ export default function ProfilePage() {
       <section className="space-y-10 pt-10">
         <div className="flex items-center justify-between">
           <h2 className="text-4xl font-headline italic flex items-center gap-4">
-            <Heart className="h-8 w-8 text-primary/40" /> Cœur de Plume
+            <Heart className="h-8 w-8 text-primary/40" /> Ma Liste Plume
           </h2>
           <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
-            <Link href="/coeur-de-plume">Voir l'écrin complet <ChevronRight className="ml-2 h-5 w-5" /></Link>
+            <Link href="/library">Voir tout <ChevronRight className="ml-2 h-5 w-5" /></Link>
           </Button>
         </div>
-        <p className="text-muted-foreground italic px-2">Retrouvez vos coups de cœur Diamant et Royale, classés par rang, dans l'écrin Cœur de Plume.</p>
+        {stats.wishlistBooks.length > 0 ? (
+          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
+            {stats.wishlistBooks.slice(0, 14).map((book: any, i: number) => (
+              <Link
+                key={book.id}
+                href={`/book/${book.id}`}
+                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
+                style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
+              >
+                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+              </Link>
+            ))}
+            {stats.wishlistBooks.length > 14 && (
+              <Link
+                href="/library"
+                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl border-2 border-dashed border-primary/20 bg-white/40 flex items-center justify-center -ml-7 text-primary/60 font-bold text-sm italic hover:bg-white/70 transition-colors"
+              >
+                +{stats.wishlistBooks.length - 14}
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div className="w-full text-center py-16 opacity-40">
+            <p className="italic font-headline text-xl">Les livres à acheter ou à lire plus tard s'empileront ici — choisissez "Envie" en les ajoutant.</p>
+          </div>
+        )}
       </section>
     </div>
   );
