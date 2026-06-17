@@ -205,3 +205,25 @@ export function cleanAuthorName(author?: string | null): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+/**
+ * Vérifie qu'un livre appartient VRAIMENT à un auteur donné, avant de
+ * l'afficher sur sa fiche. Les sources externes (Google Books surtout,
+ * via son opérateur "inauthor:", mais aussi la recherche Apple Books qui
+ * n'est même pas filtrée par auteur) renvoient parfois des livres qui ne
+ * sont pas réellement de cet auteur — homonymes, mentions du nom dans
+ * une description, erreurs de leur propre indexation. On ne fait donc
+ * jamais confiance au filtrage d'une API externe : ce garde-fou compare,
+ * après nettoyage des mentions BnF ("Auteur du texte"...) et
+ * indépendamment de l'ordre des mots, chaque auteur du champ (qui peut
+ * en contenir plusieurs pour un livre co-écrit) à l'auteur recherché, et
+ * n'accepte le livre que s'il y a une correspondance EXACTE — jamais une
+ * simple ressemblance.
+ */
+export function isAuthorMatch(resultAuthor: string | null | undefined, targetAuthor: string | null | undefined): boolean {
+  if (!resultAuthor || !targetAuthor) return false;
+  const targetKey = authorKey(cleanAuthorName(targetAuthor));
+  if (!targetKey) return false;
+  const candidates = resultAuthor.split(/,|&|;|\bet\b/i).map((s) => s.trim()).filter(Boolean);
+  return candidates.some((c) => authorKey(cleanAuthorName(c)) === targetKey);
+}

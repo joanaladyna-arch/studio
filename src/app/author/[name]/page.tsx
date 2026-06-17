@@ -32,7 +32,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 import { AuthorEditor } from "@/components/author-editor";
 
@@ -56,6 +56,7 @@ export default function AuthorPage() {
   const [actualites, setActualites] = useState<any[]>([]);
 
   const [pendingBook, setPendingBook] = useState<any | null>(null);
+  const [previewBook, setPreviewBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
   const [selectedFormat, setSelectedFormat] = useState<BookFormat>("papier");
   const [isAdding, setIsAdding] = useState(false);
@@ -257,10 +258,13 @@ export default function AuthorPage() {
           })(),
         ]);
 
-        const bnfResults = bnfSettled.status === "fulfilled" ? bnfSettled.value : [];
+        const bnfResults = (bnfSettled.status === "fulfilled" ? bnfSettled.value : [])
+          .filter((b: any) => isAuthorMatch(b.author, authorName));
 
-        const googleResults = googleSettled.status === "fulfilled" ? googleSettled.value : [];
-        const masterResults = masterSettled.status === "fulfilled" ? masterSettled.value : [];
+        const googleResults = (googleSettled.status === "fulfilled" ? googleSettled.value : [])
+          .filter((g: any) => isAuthorMatch(g.author, authorName));
+        const masterResults = (masterSettled.status === "fulfilled" ? masterSettled.value : [])
+          .filter((m: any) => isAuthorMatch(m.author, authorName));
         // La base Plume (masterBooks) est prioritaire, suivie de la BnF
         // (plus fiable que Google Books pour les éditeurs français) :
         // on évite les doublons en excluant de chaque source suivante
@@ -272,7 +276,8 @@ export default function AuthorPage() {
           !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase()) &&
           !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (g.title || "").toLowerCase())
         );
-        const appleResults = appleSettled.status === "fulfilled" ? appleSettled.value : [];
+        const appleResults = (appleSettled.status === "fulfilled" ? appleSettled.value : [])
+          .filter((a: any) => isAuthorMatch(a.author, authorName));
         const dedupedApple = appleResults.filter((a: any) =>
           !masterResults.some((m: any) => (m.title || "").toLowerCase() === (a.title || "").toLowerCase()) &&
           !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (a.title || "").toLowerCase()) &&
@@ -482,9 +487,19 @@ export default function AuthorPage() {
                 <Card key={book.id} className="glass-card overflow-hidden border-none group shadow-sm hover:shadow-2xl transition-all duration-700">
                   <CardContent className="p-0 flex flex-col sm:flex-row">
                     <div className="relative w-full sm:w-44 aspect-[2/3] shrink-0 overflow-hidden bg-secondary/5 flex items-center justify-center p-4">
-                      <div className="relative w-full h-full">
-                        <BookCover src={book.cover} alt={book.title} className="object-contain transition-transform duration-700 group-hover:scale-110" />
-                      </div>
+                      {existingBook ? (
+                        <Link href={`/book/${existingBook.id}`} className="relative w-full h-full block">
+                          <BookCover src={book.cover} alt={book.title} className="object-contain transition-transform duration-700 group-hover:scale-110" />
+                        </Link>
+                      ) : book.source === 'master' ? (
+                        <Link href={`/master-book/${book.id}`} className="relative w-full h-full block">
+                          <BookCover src={book.cover} alt={book.title} className="object-contain transition-transform duration-700 group-hover:scale-110" />
+                        </Link>
+                      ) : (
+                        <button onClick={() => setPreviewBook(book)} className="relative w-full h-full block">
+                          <BookCover src={book.cover} alt={book.title} className="object-contain transition-transform duration-700 group-hover:scale-110" />
+                        </button>
+                      )}
                     </div>
                     <div className="p-8 flex flex-col flex-1 justify-between gap-6">
                       <div className="space-y-3">
@@ -519,6 +534,39 @@ export default function AuthorPage() {
           </div>
         </div>
       )}
+
+      <Dialog open={!!previewBook} onOpenChange={(open) => !open && setPreviewBook(null)}>
+        <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+          <ScrollArea className="max-h-[90vh] p-10">
+            {previewBook && (
+              <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row gap-8">
+                  <div className="relative w-40 aspect-[2/3] rounded-2xl overflow-hidden shadow-lg mx-auto sm:mx-0 shrink-0 bg-secondary/5">
+                    <BookCover src={previewBook.cover} alt={previewBook.title} className="object-cover" />
+                  </div>
+                  <div className="space-y-2 text-center sm:text-left">
+                    <h2 className="text-3xl font-headline italic leading-tight">{previewBook.title}</h2>
+                    <p className="text-sm text-muted-foreground font-bold uppercase">{previewBook.author || authorName}</p>
+                    {previewBook.publisher && <p className="text-xs text-primary/50 italic">{previewBook.publisher}</p>}
+                  </div>
+                </div>
+                <div className="p-6 rounded-2xl bg-primary/5 space-y-2">
+                  <h3 className="font-headline italic opacity-50">Résumé</h3>
+                  <p className="text-sm italic text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {cleanDescriptionHtml(previewBook.description) || "Pas encore de résumé pour cette pépite."}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => { handleOpenAddDialog(previewBook); setPreviewBook(null); }}
+                  className="w-full h-14 rounded-2xl bg-primary italic font-headline text-lg"
+                >
+                  <Plus className="mr-2 h-5 w-5" /> Ajouter à ma bibliothèque
+                </Button>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {/* FIXED AND SCROLLABLE MODAL FOR ADDING BOOKS */}
       <Dialog open={!!pendingBook} onOpenChange={() => setPendingBook(null)}>

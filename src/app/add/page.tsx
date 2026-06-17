@@ -12,6 +12,7 @@ import {
   Pencil
 } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +57,7 @@ export default function AddBookPage() {
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [pendingBook, setPendingBook] = useState<any | null>(null);
+  const [previewBook, setPreviewBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
   const [selectedFormat, setSelectedFormat] = useState<BookFormat>("papier");
   const [countTowardGoals, setCountTowardGoals] = useState(true);
@@ -435,7 +437,15 @@ export default function AddBookPage() {
           <Card key={book.id} className="glass-card overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-0 flex flex-col sm:flex-row">
               <div className="relative w-32 aspect-[2/3] bg-secondary/5 shrink-0">
-                <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                {book.source === 'master' ? (
+                  <Link href={`/master-book/${book.id}`} className="block w-full h-full">
+                    <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                  </Link>
+                ) : (
+                  <button onClick={() => setPreviewBook(book)} className="block w-full h-full">
+                    <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                  </button>
+                )}
               </div>
               <div className="p-6 flex flex-1 items-center justify-between gap-4">
                 <div className="space-y-1">
@@ -532,6 +542,39 @@ export default function AddBookPage() {
               {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans ma liste Plume" : "Confirmer l'ajout")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewBook} onOpenChange={(open) => !open && setPreviewBook(null)}>
+        <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+          <ScrollArea className="max-h-[90vh] p-10">
+            {previewBook && (
+              <div className="space-y-8">
+                <div className="flex flex-col sm:flex-row gap-8">
+                  <div className="relative w-40 aspect-[2/3] rounded-2xl overflow-hidden shadow-lg mx-auto sm:mx-0 shrink-0 bg-secondary/5">
+                    <BookCover src={previewBook.cover} alt={previewBook.title} className="object-cover" />
+                  </div>
+                  <div className="space-y-2 text-center sm:text-left">
+                    <h2 className="text-3xl font-headline italic leading-tight">{previewBook.title}</h2>
+                    <p className="text-sm text-muted-foreground font-bold uppercase">{previewBook.author}</p>
+                    {previewBook.publisher && <p className="text-xs text-primary/50 italic">{previewBook.publisher}</p>}
+                  </div>
+                </div>
+                <div className="p-6 rounded-2xl bg-primary/5 space-y-2">
+                  <h3 className="font-headline italic opacity-50">Résumé</h3>
+                  <p className="text-sm italic text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {cleanDescriptionHtml(previewBook.description) || "Pas encore de résumé pour cette pépite."}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => { setPendingBook(previewBook); setPreviewBook(null); }}
+                  className="w-full h-14 rounded-2xl bg-primary italic font-headline text-lg"
+                >
+                  <Plus className="mr-2 h-5 w-5" /> Ajouter à ma bibliothèque
+                </Button>
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
