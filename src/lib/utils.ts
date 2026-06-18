@@ -165,40 +165,59 @@ export function stableBookKey(title: string | null | undefined, author?: string 
 }
 
 /**
- * Extrait le numéro de tome/volume d'un titre, pour ordonner les tomes
- * d'une même saga (Tome 1, Tome 2, Tome 3...). Reconnaît "Tome", "T",
- * "Vol"/"Volume", avec ou sans point/espace/n°. Un bonus numéroté
- * ("Bonus 2") se classe juste après son tome ; un bonus sans numéro se
- * classe en toute fin de saga. Sans numéro détecté, renvoie 0 — utile
- * pour un tome 1 jamais explicitement numéroté, ou une œuvre seule.
+ * Extrait le numéro de tome/volume d'un livre, pour ordonner les tomes
+ * d'une même saga (Tome 1, Tome 2, Tome 3...). Priorité au champ
+ * "Tome/Volume" rempli à la main sur la fiche — fiable à 100 % et
+ * permet de corriger n'importe quel cas sans dépendre du texte du
+ * titre (utile par exemple pour une saga sans numérotation dans les
+ * titres eux-mêmes, type Flora Stark). À défaut, on lit le titre :
+ * "Tome", "T", "Vol"/"Volume" suivi d'un nombre, ou un numéro tout nu
+ * en fin de titre ("Campus Agency 2") limité à 2 chiffres pour ne pas
+ * confondre une année ou un code avec un numéro de tome. Un bonus
+ * numéroté ("Bonus 2") se classe juste après son tome ; un bonus sans
+ * numéro se classe en toute fin de saga. Sans numéro détecté, renvoie
+ * 0 — utile pour un tome 1 jamais explicitement numéroté.
  */
-export function extractTomeRank(title: string | null | undefined): number {
-  const text = (title || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+export function extractTomeRank(book: { title?: string | null; volume?: string | null }): number {
+  const volMatch = (book.volume || "").toString().replace(",", ".").match(/\d+(?:\.\d+)?/);
+  if (volMatch) return parseFloat(volMatch[0]);
+
+  const text = (book.title || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/\bbonus\b/.test(text)) {
     const bonusMatch = text.match(/bonus\D{0,6}(\d+(?:[.,]\d+)?)/);
     if (bonusMatch) return parseFloat(bonusMatch[1].replace(",", ".")) + 0.5;
     return Infinity;
   }
-  const match = text.match(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*(\d+(?:[.,]\d+)?)\b/);
-  if (match) return parseFloat(match[1].replace(",", "."));
+  const explicitMatch = text.match(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*(\d+(?:[.,]\d+)?)\b/);
+  if (explicitMatch) return parseFloat(explicitMatch[1].replace(",", "."));
+  const bareMatch = text.match(/\s(\d{1,2})\s*$/);
+  if (bareMatch) return parseInt(bareMatch[1], 10);
   return 0;
 }
 
 /**
- * Identifiant de SAGA : titre de base (numéro de tome retiré, ainsi que
- * tout ce qui le suit — sous-titre propre à ce tome) + auteur. Sert à
- * regrouper les tomes d'une même série, contrairement à stableBookKey
- * qui CONSERVE le numéro pour distinguer des fiches individuelles.
+ * Identifiant de SAGA. Priorité au champ "Saga" rempli à la main sur
+ * la fiche : permet de lier ensemble des titres qui n'ont rien en
+ * commun textuellement (ex : "Redemption", "Resilience", "Insatiable"
+ * et "Intouchable" en tapant "Flora Stark" sur les quatre). À défaut,
+ * on détecte automatiquement à partir du titre de base (numéro de
+ * tome retiré, ainsi que tout ce qui le suit) + auteur — contrairement
+ * à stableBookKey qui CONSERVE le numéro pour distinguer des fiches
+ * individuelles.
  */
-export function seriesKey(title: string | null | undefined, author?: string | null): string {
-  const base = (title || "")
+export function seriesKey(book: { title?: string | null; author?: string | null; saga?: string | null }): string {
+  if ((book.saga || "").toString().trim()) {
+    return `manual-${slugify(book.saga as string)}`;
+  }
+  const base = (book.title || "")
     .toString()
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/\bbonus\b.*$/, "")
     .replace(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*\d+(?:[.,]\d+)?\b.*$/, "")
+    .replace(/\s\d{1,2}\s*$/, "")
     .replace(/[^a-z0-9]/g, "");
-  return `${base}-${authorKey(author)}`;
+  return `${base}-${authorKey(book.author)}`;
 }
 
 /**
@@ -208,18 +227,40 @@ export function seriesKey(title: string | null | undefined, author?: string | nu
  * indépendantes telle qu'elle était dans la liste d'origine — on
  * réorganise localement, sans tout rebattre.
  */
-export function sortBySaga<T extends { title?: string; author?: string }>(books: T[]): T[] {
+export function sortBySaga<T extends { title?: string; author?: string; volume?: string; saga?: string }>(books: T[]): T[] {
   const order: string[] = [];
   const groups: Record<string, T[]> = {};
   books.forEach((b) => {
-    const key = seriesKey(b.title, b.author);
+    const key = seriesKey(b);
     if (!groups[key]) { groups[key] = []; order.push(key); }
     groups[key].push(b);
   });
   return order.flatMap((key) =>
-    groups[key].slice().sort((a, b) => extractTomeRank(a.title) - extractTomeRank(b.title))
+    groups[key].slice().sort((a, b) => extractTomeRank(a) - extractTomeRank(b))
   );
 }
+
+/**
+ * Regroupe les livres par auteur (ordre alphabétique sur le nom
+ * affiché), et trie chaque groupe par saga/tome comme sortBySaga — un
+ * second mode d'affichage complémentaire pour retrouver d'un coup
+ * toutes les œuvres d'une même auteure.
+ */
+export function sortByAuthor<T extends { title?: string; author?: string; volume?: string; saga?: string }>(books: T[]): T[] {
+  const groups: Record<string, T[]> = {};
+  books.forEach((b) => {
+    const key = authorKey(b.author);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(b);
+  });
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const nameA = cleanAuthorName(groups[a][0]?.author) || "";
+    const nameB = cleanAuthorName(groups[b][0]?.author) || "";
+    return nameA.localeCompare(nameB, "fr");
+  });
+  return sortedKeys.flatMap((key) => sortBySaga(groups[key]));
+}
+
 
 
 /**

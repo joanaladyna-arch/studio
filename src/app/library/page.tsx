@@ -29,13 +29,15 @@ import {
   Meh,
   Frown,
   Heart,
-  Pencil
+  Pencil,
+  UserRound,
+  Layers
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga } from "@/lib/utils";
+import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { collection, doc, getDoc } from "firebase/firestore";
@@ -66,6 +68,7 @@ export interface MasterBook {
   tropes?: string[];
   themes?: string[];
   volume?: string;
+  saga?: string;
 }
 
 export interface UserBook {
@@ -84,6 +87,7 @@ export interface UserBook {
   tropes?: string[];
   themes?: string[];
   volume?: string;
+  saga?: string;
   spicyLevel?: number;
   releaseDateUS?: string;
   releaseDateFR?: string;
@@ -211,6 +215,7 @@ export default function LibraryPage() {
   const { adminMode } = useAdminMode();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortMode, setSortMode] = useState<"saga" | "author">("saga");
   const isAdmin = adminMode;
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
@@ -247,8 +252,8 @@ export default function LibraryPage() {
       if (activeTab === "all") return matchesSearch;
       return b.status === activeTab && matchesSearch;
     });
-    return sortBySaga(matched);
-  }, [userBooks, activeTab, searchQuery]);
+    return sortMode === "author" ? sortByAuthor(matched) : sortBySaga(matched);
+  }, [userBooks, activeTab, searchQuery, sortMode]);
 
   return (
     <div className="space-y-10 animate-paper pb-32">
@@ -272,6 +277,19 @@ export default function LibraryPage() {
           <Button asChild className="rounded-2xl bg-primary h-14 px-8 shadow-xl font-headline italic text-xl">
             <Link href="/add"><Plus className="mr-2 h-6 w-6" /> Ajouter</Link>
           </Button>
+        </div>
+
+        <div className="flex justify-center">
+          <button
+            onClick={() => setSortMode(sortMode === "author" ? "saga" : "author")}
+            className={cn(
+              "inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
+              sortMode === "author" ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
+            )}
+          >
+            {sortMode === "author" ? <Layers className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
+            {sortMode === "author" ? "Revenir au tri par saga" : "Classer par auteur"}
+          </button>
         </div>
       </header>
 

@@ -553,15 +553,27 @@ export default function BookDetailPage() {
                    </div>
                  </DialogContent>
                </Dialog>
-               <div className="space-y-3 max-w-xs">
-                 <Label className="italic text-xl font-headline">Tome / Volume</Label>
-                 <Input
-                   value={(editedData as any).volume || ""}
-                   onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)}
-                   placeholder="ex : Tome 1"
-                   className="h-11 rounded-xl bg-white/40 border-none italic"
-                 />
-                 <p className="text-[10px] text-muted-foreground italic">Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</p>
+               <div className="grid sm:grid-cols-2 gap-6 max-w-xl">
+                 <div className="space-y-3">
+                   <Label className="italic text-xl font-headline">Tome / Volume</Label>
+                   <Input
+                     value={(editedData as any).volume || ""}
+                     onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)}
+                     placeholder="ex : Tome 1"
+                     className="h-11 rounded-xl bg-white/40 border-none italic"
+                   />
+                   <p className="text-[10px] text-muted-foreground italic">Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</p>
+                 </div>
+                 <div className="space-y-3">
+                   <Label className="italic text-xl font-headline">Saga (facultatif)</Label>
+                   <Input
+                     value={(editedData as any).saga || ""}
+                     onChange={(e) => setEditedData({ ...editedData, saga: e.target.value } as any)}
+                     placeholder="ex : Legacy of God"
+                     className="h-11 rounded-xl bg-white/40 border-none italic"
+                   />
+                   <p className="text-[10px] text-muted-foreground italic">Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</p>
+                 </div>
                </div>
 
                <div className="space-y-3">

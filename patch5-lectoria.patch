@@ -1,0 +1,244 @@
+diff --git a/src/app/book/[id]/page.tsx b/src/app/book/[id]/page.tsx
+index 795fc4a..598613c 100644
+--- a/src/app/book/[id]/page.tsx
++++ b/src/app/book/[id]/page.tsx
+@@ -553,15 +553,27 @@ export default function BookDetailPage() {
+                    </div>
+                  </DialogContent>
+                </Dialog>
+-               <div className="space-y-3 max-w-xs">
+-                 <Label className="italic text-xl font-headline">Tome / Volume</Label>
+-                 <Input
+-                   value={(editedData as any).volume || ""}
+-                   onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)}
+-                   placeholder="ex : Tome 1"
+-                   className="h-11 rounded-xl bg-white/40 border-none italic"
+-                 />
+-                 <p className="text-[10px] text-muted-foreground italic">Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</p>
++               <div className="grid sm:grid-cols-2 gap-6 max-w-xl">
++                 <div className="space-y-3">
++                   <Label className="italic text-xl font-headline">Tome / Volume</Label>
++                   <Input
++                     value={(editedData as any).volume || ""}
++                     onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)}
++                     placeholder="ex : Tome 1"
++                     className="h-11 rounded-xl bg-white/40 border-none italic"
++                   />
++                   <p className="text-[10px] text-muted-foreground italic">Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</p>
++                 </div>
++                 <div className="space-y-3">
++                   <Label className="italic text-xl font-headline">Saga (facultatif)</Label>
++                   <Input
++                     value={(editedData as any).saga || ""}
++                     onChange={(e) => setEditedData({ ...editedData, saga: e.target.value } as any)}
++                     placeholder="ex : Legacy of God"
++                     className="h-11 rounded-xl bg-white/40 border-none italic"
++                   />
++                   <p className="text-[10px] text-muted-foreground italic">Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</p>
++                 </div>
+                </div>
+ 
+                <div className="space-y-3">
+diff --git a/src/app/library/page.tsx b/src/app/library/page.tsx
+index 8f7957d..79918a2 100644
+--- a/src/app/library/page.tsx
++++ b/src/app/library/page.tsx
+@@ -29,13 +29,15 @@ import {
+   Meh,
+   Frown,
+   Heart,
+-  Pencil
++  Pencil,
++  UserRound,
++  Layers
+ } from "lucide-react";
+ import Image from "next/image";
+ import { BookCover } from "@/components/book-cover";
+ import { Badge } from "@/components/ui/badge";
+ import { Button } from "@/components/ui/button";
+-import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga } from "@/lib/utils";
++import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor } from "@/lib/utils";
+ import { useCollection, useUser, useFirestore } from "@/firebase";
+ import { useAdminMode } from "@/components/admin-mode";
+ import { collection, doc, getDoc } from "firebase/firestore";
+@@ -66,6 +68,7 @@ export interface MasterBook {
+   tropes?: string[];
+   themes?: string[];
+   volume?: string;
++  saga?: string;
+ }
+ 
+ export interface UserBook {
+@@ -84,6 +87,7 @@ export interface UserBook {
+   tropes?: string[];
+   themes?: string[];
+   volume?: string;
++  saga?: string;
+   spicyLevel?: number;
+   releaseDateUS?: string;
+   releaseDateFR?: string;
+@@ -211,6 +215,7 @@ export default function LibraryPage() {
+   const { adminMode } = useAdminMode();
+   const [activeTab, setActiveTab] = useState("all");
+   const [searchQuery, setSearchQuery] = useState("");
++  const [sortMode, setSortMode] = useState<"saga" | "author">("saga");
+   const isAdmin = adminMode;
+   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
+   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
+@@ -247,8 +252,8 @@ export default function LibraryPage() {
+       if (activeTab === "all") return matchesSearch;
+       return b.status === activeTab && matchesSearch;
+     });
+-    return sortBySaga(matched);
+-  }, [userBooks, activeTab, searchQuery]);
++    return sortMode === "author" ? sortByAuthor(matched) : sortBySaga(matched);
++  }, [userBooks, activeTab, searchQuery, sortMode]);
+ 
+   return (
+     <div className="space-y-10 animate-paper pb-32">
+@@ -273,6 +278,19 @@ export default function LibraryPage() {
+             <Link href="/add"><Plus className="mr-2 h-6 w-6" /> Ajouter</Link>
+           </Button>
+         </div>
++
++        <div className="flex justify-center">
++          <button
++            onClick={() => setSortMode(sortMode === "author" ? "saga" : "author")}
++            className={cn(
++              "inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
++              sortMode === "author" ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
++            )}
++          >
++            {sortMode === "author" ? <Layers className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
++            {sortMode === "author" ? "Revenir au tri par saga" : "Classer par auteur"}
++          </button>
++        </div>
+       </header>
+ 
+       <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+diff --git a/src/lib/utils.ts b/src/lib/utils.ts
+index 6936c8c..f166785 100644
+--- a/src/lib/utils.ts
++++ b/src/lib/utils.ts
+@@ -165,40 +165,59 @@ export function stableBookKey(title: string | null | undefined, author?: string
+ }
+ 
+ /**
+- * Extrait le numéro de tome/volume d'un titre, pour ordonner les tomes
+- * d'une même saga (Tome 1, Tome 2, Tome 3...). Reconnaît "Tome", "T",
+- * "Vol"/"Volume", avec ou sans point/espace/n°. Un bonus numéroté
+- * ("Bonus 2") se classe juste après son tome ; un bonus sans numéro se
+- * classe en toute fin de saga. Sans numéro détecté, renvoie 0 — utile
+- * pour un tome 1 jamais explicitement numéroté, ou une œuvre seule.
++ * Extrait le numéro de tome/volume d'un livre, pour ordonner les tomes
++ * d'une même saga (Tome 1, Tome 2, Tome 3...). Priorité au champ
++ * "Tome/Volume" rempli à la main sur la fiche — fiable à 100 % et
++ * permet de corriger n'importe quel cas sans dépendre du texte du
++ * titre (utile par exemple pour une saga sans numérotation dans les
++ * titres eux-mêmes, type Flora Stark). À défaut, on lit le titre :
++ * "Tome", "T", "Vol"/"Volume" suivi d'un nombre, ou un numéro tout nu
++ * en fin de titre ("Campus Agency 2") limité à 2 chiffres pour ne pas
++ * confondre une année ou un code avec un numéro de tome. Un bonus
++ * numéroté ("Bonus 2") se classe juste après son tome ; un bonus sans
++ * numéro se classe en toute fin de saga. Sans numéro détecté, renvoie
++ * 0 — utile pour un tome 1 jamais explicitement numéroté.
+  */
+-export function extractTomeRank(title: string | null | undefined): number {
+-  const text = (title || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
++export function extractTomeRank(book: { title?: string | null; volume?: string | null }): number {
++  const volMatch = (book.volume || "").toString().replace(",", ".").match(/\d+(?:\.\d+)?/);
++  if (volMatch) return parseFloat(volMatch[0]);
++
++  const text = (book.title || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+   if (/\bbonus\b/.test(text)) {
+     const bonusMatch = text.match(/bonus\D{0,6}(\d+(?:[.,]\d+)?)/);
+     if (bonusMatch) return parseFloat(bonusMatch[1].replace(",", ".")) + 0.5;
+     return Infinity;
+   }
+-  const match = text.match(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*(\d+(?:[.,]\d+)?)\b/);
+-  if (match) return parseFloat(match[1].replace(",", "."));
++  const explicitMatch = text.match(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*(\d+(?:[.,]\d+)?)\b/);
++  if (explicitMatch) return parseFloat(explicitMatch[1].replace(",", "."));
++  const bareMatch = text.match(/\s(\d{1,2})\s*$/);
++  if (bareMatch) return parseInt(bareMatch[1], 10);
+   return 0;
+ }
+ 
+ /**
+- * Identifiant de SAGA : titre de base (numéro de tome retiré, ainsi que
+- * tout ce qui le suit — sous-titre propre à ce tome) + auteur. Sert à
+- * regrouper les tomes d'une même série, contrairement à stableBookKey
+- * qui CONSERVE le numéro pour distinguer des fiches individuelles.
++ * Identifiant de SAGA. Priorité au champ "Saga" rempli à la main sur
++ * la fiche : permet de lier ensemble des titres qui n'ont rien en
++ * commun textuellement (ex : "Redemption", "Resilience", "Insatiable"
++ * et "Intouchable" en tapant "Flora Stark" sur les quatre). À défaut,
++ * on détecte automatiquement à partir du titre de base (numéro de
++ * tome retiré, ainsi que tout ce qui le suit) + auteur — contrairement
++ * à stableBookKey qui CONSERVE le numéro pour distinguer des fiches
++ * individuelles.
+  */
+-export function seriesKey(title: string | null | undefined, author?: string | null): string {
+-  const base = (title || "")
++export function seriesKey(book: { title?: string | null; author?: string | null; saga?: string | null }): string {
++  if ((book.saga || "").toString().trim()) {
++    return `manual-${slugify(book.saga as string)}`;
++  }
++  const base = (book.title || "")
+     .toString()
+     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+     .toLowerCase()
+     .replace(/\bbonus\b.*$/, "")
+     .replace(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*\d+(?:[.,]\d+)?\b.*$/, "")
++    .replace(/\s\d{1,2}\s*$/, "")
+     .replace(/[^a-z0-9]/g, "");
+-  return `${base}-${authorKey(author)}`;
++  return `${base}-${authorKey(book.author)}`;
+ }
+ 
+ /**
+@@ -208,19 +227,41 @@ export function seriesKey(title: string | null | undefined, author?: string | nu
+  * indépendantes telle qu'elle était dans la liste d'origine — on
+  * réorganise localement, sans tout rebattre.
+  */
+-export function sortBySaga<T extends { title?: string; author?: string }>(books: T[]): T[] {
++export function sortBySaga<T extends { title?: string; author?: string; volume?: string; saga?: string }>(books: T[]): T[] {
+   const order: string[] = [];
+   const groups: Record<string, T[]> = {};
+   books.forEach((b) => {
+-    const key = seriesKey(b.title, b.author);
++    const key = seriesKey(b);
+     if (!groups[key]) { groups[key] = []; order.push(key); }
+     groups[key].push(b);
+   });
+   return order.flatMap((key) =>
+-    groups[key].slice().sort((a, b) => extractTomeRank(a.title) - extractTomeRank(b.title))
++    groups[key].slice().sort((a, b) => extractTomeRank(a) - extractTomeRank(b))
+   );
+ }
+ 
++/**
++ * Regroupe les livres par auteur (ordre alphabétique sur le nom
++ * affiché), et trie chaque groupe par saga/tome comme sortBySaga — un
++ * second mode d'affichage complémentaire pour retrouver d'un coup
++ * toutes les œuvres d'une même auteure.
++ */
++export function sortByAuthor<T extends { title?: string; author?: string; volume?: string; saga?: string }>(books: T[]): T[] {
++  const groups: Record<string, T[]> = {};
++  books.forEach((b) => {
++    const key = authorKey(b.author);
++    if (!groups[key]) groups[key] = [];
++    groups[key].push(b);
++  });
++  const sortedKeys = Object.keys(groups).sort((a, b) => {
++    const nameA = cleanAuthorName(groups[a][0]?.author) || "";
++    const nameB = cleanAuthorName(groups[b][0]?.author) || "";
++    return nameA.localeCompare(nameB, "fr");
++  });
++  return sortedKeys.flatMap((key) => sortBySaga(groups[key]));
++}
++
++
+ 
+ /**
+  * Nettoyage défensif, appliqué à l'AFFICHAGE, des artefacts catalographiques
