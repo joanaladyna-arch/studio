@@ -230,7 +230,7 @@ export default function ProfilePage() {
                 <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
             </Button>
             <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
-                <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Statistiques détaillées</Link>
+                <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Bilan de lecture</Link>
             </Button>
             {user?.email && ADMIN_EMAILS.includes(user.email) && (
               <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
@@ -383,7 +383,7 @@ export default function ProfilePage() {
       <section className="space-y-10 pt-10">
         <div className="flex items-center justify-between">
           <h2 className="text-4xl font-headline italic flex items-center gap-4">
-            <Heart className="h-8 w-8 text-primary/40" /> Mes Coups de Cœur
+            <Heart className="h-8 w-8 text-primary/40" /> Mes Envies
           </h2>
           <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
             <Link href="/library">Voir tout <ChevronRight className="ml-2 h-5 w-5" /></Link>

@@ -63,7 +63,7 @@ export default function StatsPage() {
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-24">
       <header className="text-center space-y-2 pt-8">
-        <h1 className="text-5xl font-headline italic">Mes statistiques</h1>
+        <h1 className="text-5xl font-headline italic">Bilan de lecture</h1>
         <p className="text-primary/60 italic font-medium">L'analyse douce de votre voyage littéraire.</p>
       </header>
 

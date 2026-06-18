@@ -17,12 +17,15 @@ import {
   FileText,
   Calendar,
   Headphones,
-  TrendingUp
+  TrendingUp,
+  Bell,
+  Quote,
+  Star
 } from "lucide-react";
 import Image from 'next/image';
 import Link from 'next/link';
 import { BookCover } from '@/components/book-cover';
-import { cleanBookTitle, cleanAuthorName } from '@/lib/utils';
+import { cleanBookTitle, cleanAuthorName, cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -59,6 +62,33 @@ export default function Home() {
   }, [db, user]);
 
   const { data: allBooks = [] } = useCollection(allBooksQuery);
+
+  // Cloche "actualité" : compte les actualités publiées après la dernière
+  // visite de la page /actualites (lastSeenActualityAt), toutes confondues
+  // (pas seulement les auteurs suivis) — c'est une notification générale,
+  // pas le badge ciblé déjà existant dans la barre de navigation.
+  const actualitesQuery = useMemo(() => {
+    if (!db) return null;
+    return collection(db, 'actualites');
+  }, [db]);
+  const { data: allActualites = [] } = useCollection(actualitesQuery);
+  const unseenActualitesCount = useMemo(() => {
+    const lastSeenMillis = profile?.lastSeenActualityAt?.toMillis?.() || 0;
+    return allActualites.filter((a: any) => (a.publishedAt?.toMillis?.() || 0) > lastSeenMillis).length;
+  }, [allActualites, profile]);
+
+  // Dernier avis rédigé, pour le mettre en avant en bas de l'accueil —
+  // basé sur la date d'ajout du livre concerné, faute de date dédiée à
+  // la rédaction de l'avis lui-même dans le modèle de données actuel.
+  const lastReviewedBook = useMemo(() => {
+    return allBooks
+      .filter((b: any) => (b.review || '').toString().trim())
+      .sort((a: any, b: any) => {
+        const da = a.dateAdded?.toMillis?.() || 0;
+        const db2 = b.dateAdded?.toMillis?.() || 0;
+        return db2 - da;
+      })[0] || null;
+  }, [allBooks]);
 
   const readBooks = useMemo(() => {
     return allBooks
@@ -136,7 +166,19 @@ export default function Home() {
           </div>
         </div>
         
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center">
+          <Link
+            href="/actualites"
+            className="relative h-16 w-16 rounded-2xl border border-primary/10 bg-white/60 hover:bg-white shadow-sm flex items-center justify-center transition-colors shrink-0"
+            title="Actualités"
+          >
+            <Bell className="h-6 w-6 text-primary/70" />
+            {unseenActualitesCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                {unseenActualitesCount > 9 ? "9+" : unseenActualitesCount}
+              </span>
+            )}
+          </Link>
           <Button asChild variant="outline" className="rounded-2xl border-primary/10 hover:bg-white h-16 px-10 font-headline italic text-xl shadow-sm">
             <Link href="/journal">Mon Journal</Link>
           </Button>
@@ -146,68 +188,34 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="space-y-8">
-        <h2 className="text-4xl font-headline flex items-center gap-4 italic px-2">
-          <Target className="h-8 w-8 text-primary/40" /> Mes Objectifs
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Annuel</p>
-                <h3 className="text-3xl font-headline italic">{stats.annualCount} / {stats.goals.annual}</h3>
-              </div>
-              <Trophy className="h-8 w-8 text-amber-500 animate-float" />
-            </div>
-            <div className="space-y-3">
-              <Progress value={stats.annualProgress} className="h-2 bg-primary/5" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{stats.annualProgress}% complété</p>
-            </div>
-          </Card>
-
-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Mensuel</p>
-                <h3 className="text-3xl font-headline italic">{stats.monthlyCount} / {stats.goals.monthly}</h3>
-              </div>
-              <Calendar className="h-8 w-8 text-blue-400" />
-            </div>
-            <div className="space-y-3">
-              <Progress value={stats.monthlyProgress} className="h-2 bg-blue-50" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400/60">{stats.monthlyProgress}% ce mois</p>
-            </div>
-          </Card>
-
-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Pages</p>
-                <h3 className="text-3xl font-headline italic">{stats.pagesCount.toLocaleString()}</h3>
-              </div>
-              <FileText className="h-8 w-8 text-emerald-500" />
-            </div>
-            <div className="space-y-3">
-              <Progress value={stats.pagesProgress} className="h-2 bg-emerald-50" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/60">Objectif {stats.goals.pages.toLocaleString()}</p>
-            </div>
-          </Card>
-
-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
-            <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Audio</p>
-                <h3 className="text-3xl font-headline italic">{stats.audioCount}h</h3>
-              </div>
-              <Headphones className="h-8 w-8 text-purple-400" />
-            </div>
-            <div className="space-y-3">
-              <Progress value={stats.audioProgress} className="h-2 bg-purple-50" />
-              <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400/60">Objectif {stats.goals.audio}h</p>
-            </div>
-          </Card>
+      <section className="space-y-4">
+        <div className="flex items-center justify-between px-2">
+          <h2 className="text-2xl font-headline flex items-center gap-3 italic">
+            <Target className="h-6 w-6 text-primary/40" /> Objectif de lecture
+          </h2>
+          <Link href="/stats" className="text-[10px] font-bold uppercase tracking-widest text-primary/50 hover:text-primary transition-colors">
+            Détails
+          </Link>
         </div>
+        <Card className="glass-card p-6 border-none bg-white/60">
+          <div className="flex flex-wrap items-center gap-6">
+            <Trophy className="h-7 w-7 text-amber-500 shrink-0" />
+            <div className="flex-1 min-w-[160px] space-y-2">
+              <div className="flex justify-between items-baseline">
+                <h3 className="text-xl font-headline italic">{stats.annualCount} / {stats.goals.annual} <span className="text-xs font-sans not-italic opacity-50">livres cette année</span></h3>
+                <span className="text-xs font-bold text-primary/60">{stats.annualProgress}%</span>
+              </div>
+              <Progress value={stats.annualProgress} className="h-2 bg-primary/5" />
+            </div>
+            <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
+              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-blue-400" /> {stats.monthlyCount}/{stats.goals.monthly} ce mois</span>
+              <span className="hidden sm:flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-emerald-500" /> {stats.pagesCount.toLocaleString()} pages</span>
+              <span className="hidden sm:flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5 text-purple-400" /> {stats.audioCount}h</span>
+            </div>
+          </div>
+        </Card>
       </section>
+
 
       <section className="space-y-8">
         <div className="flex justify-between items-center px-2">
@@ -335,6 +343,38 @@ export default function Home() {
           </div>
         </section>
       </div>
+
+      {lastReviewedBook && (
+        <section className="space-y-6 pt-4 border-t border-primary/5">
+          <h2 className="text-3xl font-headline flex items-center gap-4 italic px-2">
+            <Quote className="h-7 w-7 text-primary/40" /> Mon dernier avis
+          </h2>
+          <Link href={`/book/${lastReviewedBook.id}`}>
+            <Card className="glass-card border-none bg-white/60 hover:shadow-xl transition-all duration-700 overflow-hidden">
+              <CardContent className="p-8 flex gap-6 items-start">
+                <div className="relative h-28 w-20 shrink-0 rounded-xl overflow-hidden shadow-md">
+                  <BookCover src={lastReviewedBook.cover} alt={lastReviewedBook.title || ""} className="object-cover" />
+                </div>
+                <div className="space-y-2 min-w-0">
+                  <h3 className="font-headline italic text-xl leading-tight">
+                    {cleanBookTitle(lastReviewedBook.title)}{lastReviewedBook.volume ? ` — ${lastReviewedBook.volume}` : ""}
+                  </h3>
+                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">{cleanAuthorName(lastReviewedBook.author)}</p>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star
+                        key={s}
+                        className={cn("h-3 w-3", s <= (lastReviewedBook.rating || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20")}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-sm italic text-muted-foreground leading-relaxed line-clamp-3">"{lastReviewedBook.review}"</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </section>
+      )}
     </div>
   );
 }

@@ -539,7 +539,7 @@ export default function AddBookPage() {
           </div>
           <DialogFooter className="p-10 border-t bg-white/60">
             <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic">
-              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans mes Coups de Cœur" : "Confirmer l'ajout")}
+              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans mes Envies" : "Confirmer l'ajout")}
             </Button>
           </DialogFooter>
         </DialogContent>

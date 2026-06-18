@@ -1,0 +1,562 @@
+diff --git a/src/app/actualites/page.tsx b/src/app/actualites/page.tsx
+index 82121b2..33ed18b 100644
+--- a/src/app/actualites/page.tsx
++++ b/src/app/actualites/page.tsx
+@@ -4,16 +4,23 @@
+ import { useEffect, useMemo, useState } from "react";
+ import { useUser, useFirestore, useDoc } from "@/firebase";
+ import { collection, doc, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
+-import { Newspaper, Loader2 } from "lucide-react";
++import { Newspaper, Loader2, Archive, ChevronDown, ChevronUp } from "lucide-react";
+ import Link from "next/link";
+ import { useAdminMode } from "@/components/admin-mode";
+ import { ActualitesManager } from "@/components/actualites-manager";
+ 
++// Au-delà de ce nombre de jours, une actualité quitte la liste principale
++// et ne reste consultable que dans la section "Archives" — pour que la
++// page reste centrée sur les nouvelles récentes plutôt que de s'allonger
++// indéfiniment au fil des mois.
++const ARCHIVE_AFTER_DAYS = 60;
++
+ export default function ActualitesPage() {
+   const { user } = useUser();
+   const db = useFirestore();
+   const { adminMode } = useAdminMode();
+   const [items, setItems] = useState<any[] | null>(null);
++  const [showArchives, setShowArchives] = useState(false);
+ 
+   const profileRef = useMemo(() => {
+     if (!db || !user) return null;
+@@ -42,6 +49,21 @@ export default function ActualitesPage() {
+     setDoc(profileRef, { lastSeenActualityAt: serverTimestamp() }, { merge: true }).catch(() => {});
+   }, [db, profileRef]);
+ 
++  // Une actualité sans date de publication connue (cas très rare) est
++  // traitée comme récente par défaut, plutôt que de disparaître
++  // silencieusement dans les archives.
++  const { recentItems, archivedItems } = useMemo(() => {
++    const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000;
++    const recent: any[] = [];
++    const archived: any[] = [];
++    (items || []).forEach((item) => {
++      const publishedMillis = item.publishedAt?.toMillis?.();
++      if (publishedMillis !== undefined && publishedMillis < cutoff) archived.push(item);
++      else recent.push(item);
++    });
++    return { recentItems: recent, archivedItems: archived };
++  }, [items]);
++
+   return (
+     <div className="space-y-12 animate-paper pb-32 max-w-3xl mx-auto px-4">
+       <header className="text-center space-y-4 pt-8">
+@@ -65,34 +87,68 @@ export default function ActualitesPage() {
+           <p className="text-muted-foreground italic text-lg">Aucune actualité publiée pour le moment.</p>
+         </div>
+       ) : (
+-        <div className="space-y-8">
+-          {items.map((item) => (
+-            <article key={item.id} className="glass-card rounded-[2rem] overflow-hidden border-none shadow-sm bg-white/60 flex flex-col sm:flex-row gap-6 p-8">
+-              <div className="flex-1 min-w-0 space-y-3 order-2 sm:order-1">
+-                {item.authorName ? (
+-                  <Link href={`/author/${encodeURIComponent(item.authorName)}`} className="text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:text-primary transition-colors">
+-                    {item.authorName}
+-                  </Link>
+-                ) : (
+-                  <span className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Actualité littéraire</span>
+-                )}
+-                <h2 className="text-2xl font-headline italic leading-tight">{item.title}</h2>
+-                <p className="text-muted-foreground italic leading-relaxed whitespace-pre-line">{item.content}</p>
+-                {item.publishedAt?.toDate && (
+-                  <p className="text-[10px] opacity-30 font-bold uppercase tracking-widest pt-2">
+-                    {item.publishedAt.toDate().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+-                  </p>
+-                )}
+-              </div>
+-              {item.cover && (
+-                <div className="w-full sm:w-40 h-48 sm:h-auto flex-shrink-0 order-1 sm:order-2 flex items-center justify-center bg-secondary/5 rounded-2xl">
+-                  <img src={item.cover} alt={item.title} className="max-h-full max-w-full object-contain rounded-xl shadow-md" />
++        <>
++          {recentItems.length > 0 ? (
++            <div className="space-y-8">
++              {recentItems.map((item) => (
++                <ActualiteCard key={item.id} item={item} />
++              ))}
++            </div>
++          ) : (
++            <div className="py-12 text-center space-y-2">
++              <p className="text-muted-foreground italic">Pas de nouvelle actualité dans les {ARCHIVE_AFTER_DAYS} derniers jours.</p>
++            </div>
++          )}
++
++          {archivedItems.length > 0 && (
++            <div className="pt-4">
++              <button
++                onClick={() => setShowArchives((v) => !v)}
++                className="flex items-center gap-3 mx-auto text-primary/60 hover:text-primary transition-colors text-sm font-bold uppercase tracking-widest"
++              >
++                <Archive className="h-4 w-4" />
++                Archives ({archivedItems.length})
++                {showArchives ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
++              </button>
++              {showArchives && (
++                <div className="space-y-8 pt-8 opacity-80">
++                  {archivedItems.map((item) => (
++                    <ActualiteCard key={item.id} item={item} />
++                  ))}
+                 </div>
+               )}
+-            </article>
+-          ))}
+-        </div>
++            </div>
++          )}
++        </>
+       )}
+     </div>
+   );
+ }
++
++function ActualiteCard({ item }: { item: any }) {
++  return (
++    <article className="glass-card rounded-[2rem] overflow-hidden border-none shadow-sm bg-white/60 flex flex-col sm:flex-row gap-6 p-8">
++      <div className="flex-1 min-w-0 space-y-3 order-2 sm:order-1">
++        {item.authorName ? (
++          <Link href={`/author/${encodeURIComponent(item.authorName)}`} className="text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:text-primary transition-colors">
++            {item.authorName}
++          </Link>
++        ) : (
++          <span className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Actualité littéraire</span>
++        )}
++        <h2 className="text-2xl font-headline italic leading-tight">{item.title}</h2>
++        <p className="text-muted-foreground italic leading-relaxed whitespace-pre-line">{item.content}</p>
++        {item.publishedAt?.toDate && (
++          <p className="text-[10px] opacity-30 font-bold uppercase tracking-widest pt-2">
++            {item.publishedAt.toDate().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
++          </p>
++        )}
++      </div>
++      {item.cover && (
++        <div className="w-full sm:w-40 h-48 sm:h-auto flex-shrink-0 order-1 sm:order-2 flex items-center justify-center bg-secondary/5 rounded-2xl">
++          <img src={item.cover} alt={item.title} className="max-h-full max-w-full object-contain rounded-xl shadow-md" />
++        </div>
++      )}
++    </article>
++  );
++}
+diff --git a/src/app/add/page.tsx b/src/app/add/page.tsx
+index 68c81b4..0b12a35 100644
+--- a/src/app/add/page.tsx
++++ b/src/app/add/page.tsx
+@@ -539,7 +539,7 @@ export default function AddBookPage() {
+           </div>
+           <DialogFooter className="p-10 border-t bg-white/60">
+             <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic">
+-              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans mes Coups de Cœur" : "Confirmer l'ajout")}
++              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans mes Envies" : "Confirmer l'ajout")}
+             </Button>
+           </DialogFooter>
+         </DialogContent>
+diff --git a/src/app/journal/page.tsx b/src/app/journal/page.tsx
+index dc6714d..64188da 100644
+--- a/src/app/journal/page.tsx
++++ b/src/app/journal/page.tsx
+@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
+ import { Textarea } from "@/components/ui/textarea";
+ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+-import { BookOpen, Headset, Save, History, Plus, Star, Sparkles, MessageCircle, Quote, PlusCircle } from "lucide-react";
++import { BookOpen, Headset, Save, History, Plus, Star, Sparkles, MessageCircle, Quote, PlusCircle, Share2, Heart } from "lucide-react";
+ import { useToast } from "@/hooks/use-toast";
+ import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
+ import { useUser, useFirestore, useCollection } from "@/firebase";
+@@ -21,6 +21,36 @@ import { FirestorePermissionError } from '@/firebase/errors';
+ import Link from "next/link";
+ import Image from "next/image";
+ import { BookCover } from "@/components/book-cover";
++import { RANKS } from "@/app/library/page";
++
++/**
++ * Partage un livre ou une citation via l'API native du navigateur
++ * (feuille de partage iOS/Android — Instagram, Messages, etc. y
++ * apparaissent automatiquement selon les apps installées). Si l'appareil
++ * ne supporte pas navigator.share (certains navigateurs desktop), on
++ * copie le texte dans le presse-papier à la place et on prévient
++ * l'utilisatrice, plutôt que de laisser le bouton ne rien faire.
++ */
++async function shareText(title: string, text: string, onFallback: () => void) {
++  if (typeof navigator !== "undefined" && (navigator as any).share) {
++    try {
++      await (navigator as any).share({ title, text });
++      return;
++    } catch {
++      // L'utilisatrice a annulé le partage, ou l'appel a échoué — on ne
++      // bascule pas vers le presse-papier dans ce cas pour ne pas donner
++      // l'impression d'une action supplémentaire non désirée.
++      return;
++    }
++  }
++  try {
++    await navigator.clipboard.writeText(text);
++    onFallback();
++  } catch {
++    // Échec silencieux : ni partage natif ni presse-papier disponibles.
++  }
++}
++
+ 
+ export default function JournalPage() {
+   const { user } = useUser();
+@@ -49,6 +79,33 @@ export default function JournalPage() {
+ 
+   const { data: books = [] } = useCollection(booksQuery);
+ 
++  // "Mes recommandations" : les livres auxquels une Palme a été
++  // attribuée (le même classement que l'onglet Coups de Cœur) sont, par
++  // définition, les lectures que la lectrice recommande — pas besoin
++  // d'un système de marquage parallèle.
++  const recommendedBooks = useMemo(() => {
++    return books
++      .filter((b: any) => !!b.plumeRank)
++      .sort((a: any, b: any) => (b.dateAdded?.toMillis?.() || 0) - (a.dateAdded?.toMillis?.() || 0));
++  }, [books]);
++
++  // "Carnet de citations" : agrège la citation favorite de chaque livre
++  // qui en a une, déjà saisie depuis la fiche du livre — aucune nouvelle
++  // donnée à créer, seulement une vue qui les réunit.
++  const quotedBooks = useMemo(() => {
++    return books.filter((b: any) => (b.favoriteQuote || "").toString().trim());
++  }, [books]);
++
++  const shareBook = (book: any) => {
++    const text = `${cleanBookTitle(book.title)}, par ${cleanAuthorName(book.author)} — une pépite de ma bibliothèque Lectoria.`;
++    shareText(book.title, text, () => toast({ title: "Copié", description: "Le texte de partage a été copié dans le presse-papier." }));
++  };
++
++  const shareQuote = (book: any) => {
++    const text = `"${book.favoriteQuote}"\n— ${cleanBookTitle(book.title)}, ${cleanAuthorName(book.author)}`;
++    shareText(book.title, text, () => toast({ title: "Copié", description: "La citation a été copiée dans le presse-papier." }));
++  };
++
+   const handleSaveNote = (type: 'lecture' | 'écoute') => {
+     if (!db || !user) return;
+ 
+@@ -89,6 +146,75 @@ export default function JournalPage() {
+         <p className="text-primary/60 italic font-medium">Capturez l'essence de vos voyages littéraires.</p>
+       </header>
+ 
++      <section className="space-y-6">
++        <h2 className="text-2xl font-headline italic flex items-center gap-3">
++          <Heart className="h-6 w-6 text-primary/40" /> Mes Recommandations
++        </h2>
++        {recommendedBooks.length > 0 ? (
++          <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
++            {recommendedBooks.map((book: any) => {
++              const rank = RANKS[book.plumeRank as keyof typeof RANKS];
++              return (
++                <Card key={book.id} className="glass-card min-w-[220px] border-none shadow-sm shrink-0">
++                  <CardContent className="p-5 space-y-3">
++                    <div className="flex gap-3 items-start">
++                      <div className="relative h-24 w-16 shrink-0 rounded-lg overflow-hidden shadow-sm">
++                        <BookCover src={book.cover} alt={book.title} className="object-cover" />
++                      </div>
++                      <div className="space-y-1 overflow-hidden">
++                        <h4 className="font-headline italic text-sm leading-tight line-clamp-2">{cleanBookTitle(book.title)}</h4>
++                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{cleanAuthorName(book.author)}</p>
++                        {rank && (
++                          <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide opacity-70">
++                            <rank.icon className={cn("h-3 w-3", rank.color)} /> {rank.label}
++                          </span>
++                        )}
++                      </div>
++                    </div>
++                    <Button onClick={() => shareBook(book)} variant="outline" size="sm" className="w-full rounded-xl text-[10px] font-bold uppercase tracking-widest border-primary/10 h-9">
++                      <Share2 className="h-3 w-3 mr-2" /> Partager
++                    </Button>
++                  </CardContent>
++                </Card>
++              );
++            })}
++          </div>
++        ) : (
++          <div className="w-full py-10 text-center glass-card border-dashed border-primary/20 bg-white/20">
++            <p className="italic text-muted-foreground text-sm">Attribuez une Palme à vos lectures pour les voir apparaître ici.</p>
++          </div>
++        )}
++      </section>
++
++      <section className="space-y-6">
++        <h2 className="text-2xl font-headline italic flex items-center gap-3">
++          <Quote className="h-6 w-6 text-primary/40" /> Carnet de Citations
++        </h2>
++        {quotedBooks.length > 0 ? (
++          <div className="grid gap-4 sm:grid-cols-2">
++            {quotedBooks.map((book: any) => (
++              <Card key={book.id} className="glass-card border-none shadow-sm bg-white/60">
++                <CardContent className="p-6 space-y-3">
++                  <p className="text-sm italic leading-relaxed">"{book.favoriteQuote}"</p>
++                  <div className="flex items-center justify-between">
++                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 line-clamp-1">
++                      {cleanBookTitle(book.title)} — {cleanAuthorName(book.author)}
++                    </p>
++                    <button onClick={() => shareQuote(book)} className="shrink-0 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform" title="Partager la citation">
++                      <Share2 className="h-3.5 w-3.5" />
++                    </button>
++                  </div>
++                </CardContent>
++              </Card>
++            ))}
++          </div>
++        ) : (
++          <div className="w-full py-10 text-center glass-card border-dashed border-primary/20 bg-white/20">
++            <p className="italic text-muted-foreground text-sm">Ajoutez une citation favorite depuis la fiche d'un livre pour l'épingler ici.</p>
++          </div>
++        )}
++      </section>
++
+       {adminMode && (
+         <Card className="glass-card border-2 border-primary/20 bg-primary/5 shadow-sm">
+           <CardHeader className="p-8 border-b border-primary/5">
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index faceb0c..5e8cadb 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -17,12 +17,15 @@ import {
+   FileText,
+   Calendar,
+   Headphones,
+-  TrendingUp
++  TrendingUp,
++  Bell,
++  Quote,
++  Star
+ } from "lucide-react";
+ import Image from 'next/image';
+ import Link from 'next/link';
+ import { BookCover } from '@/components/book-cover';
+-import { cleanBookTitle, cleanAuthorName } from '@/lib/utils';
++import { cleanBookTitle, cleanAuthorName, cn } from '@/lib/utils';
+ import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+ import { collection, query, where, limit, doc } from 'firebase/firestore';
+ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+@@ -60,6 +63,33 @@ export default function Home() {
+ 
+   const { data: allBooks = [] } = useCollection(allBooksQuery);
+ 
++  // Cloche "actualité" : compte les actualités publiées après la dernière
++  // visite de la page /actualites (lastSeenActualityAt), toutes confondues
++  // (pas seulement les auteurs suivis) — c'est une notification générale,
++  // pas le badge ciblé déjà existant dans la barre de navigation.
++  const actualitesQuery = useMemo(() => {
++    if (!db) return null;
++    return collection(db, 'actualites');
++  }, [db]);
++  const { data: allActualites = [] } = useCollection(actualitesQuery);
++  const unseenActualitesCount = useMemo(() => {
++    const lastSeenMillis = profile?.lastSeenActualityAt?.toMillis?.() || 0;
++    return allActualites.filter((a: any) => (a.publishedAt?.toMillis?.() || 0) > lastSeenMillis).length;
++  }, [allActualites, profile]);
++
++  // Dernier avis rédigé, pour le mettre en avant en bas de l'accueil —
++  // basé sur la date d'ajout du livre concerné, faute de date dédiée à
++  // la rédaction de l'avis lui-même dans le modèle de données actuel.
++  const lastReviewedBook = useMemo(() => {
++    return allBooks
++      .filter((b: any) => (b.review || '').toString().trim())
++      .sort((a: any, b: any) => {
++        const da = a.dateAdded?.toMillis?.() || 0;
++        const db2 = b.dateAdded?.toMillis?.() || 0;
++        return db2 - da;
++      })[0] || null;
++  }, [allBooks]);
++
+   const readBooks = useMemo(() => {
+     return allBooks
+       .filter(b => b.status === 'read' || b.status === 'reread')
+@@ -136,7 +166,19 @@ export default function Home() {
+           </div>
+         </div>
+         
+-        <div className="flex gap-4">
++        <div className="flex gap-4 items-center">
++          <Link
++            href="/actualites"
++            className="relative h-16 w-16 rounded-2xl border border-primary/10 bg-white/60 hover:bg-white shadow-sm flex items-center justify-center transition-colors shrink-0"
++            title="Actualités"
++          >
++            <Bell className="h-6 w-6 text-primary/70" />
++            {unseenActualitesCount > 0 && (
++              <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
++                {unseenActualitesCount > 9 ? "9+" : unseenActualitesCount}
++              </span>
++            )}
++          </Link>
+           <Button asChild variant="outline" className="rounded-2xl border-primary/10 hover:bg-white h-16 px-10 font-headline italic text-xl shadow-sm">
+             <Link href="/journal">Mon Journal</Link>
+           </Button>
+@@ -146,69 +188,35 @@ export default function Home() {
+         </div>
+       </header>
+ 
+-      <section className="space-y-8">
+-        <h2 className="text-4xl font-headline flex items-center gap-4 italic px-2">
+-          <Target className="h-8 w-8 text-primary/40" /> Mes Objectifs
+-        </h2>
+-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+-            <div className="flex justify-between items-center">
+-              <div className="space-y-1">
+-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Annuel</p>
+-                <h3 className="text-3xl font-headline italic">{stats.annualCount} / {stats.goals.annual}</h3>
++      <section className="space-y-4">
++        <div className="flex items-center justify-between px-2">
++          <h2 className="text-2xl font-headline flex items-center gap-3 italic">
++            <Target className="h-6 w-6 text-primary/40" /> Objectif de lecture
++          </h2>
++          <Link href="/stats" className="text-[10px] font-bold uppercase tracking-widest text-primary/50 hover:text-primary transition-colors">
++            Détails
++          </Link>
++        </div>
++        <Card className="glass-card p-6 border-none bg-white/60">
++          <div className="flex flex-wrap items-center gap-6">
++            <Trophy className="h-7 w-7 text-amber-500 shrink-0" />
++            <div className="flex-1 min-w-[160px] space-y-2">
++              <div className="flex justify-between items-baseline">
++                <h3 className="text-xl font-headline italic">{stats.annualCount} / {stats.goals.annual} <span className="text-xs font-sans not-italic opacity-50">livres cette année</span></h3>
++                <span className="text-xs font-bold text-primary/60">{stats.annualProgress}%</span>
+               </div>
+-              <Trophy className="h-8 w-8 text-amber-500 animate-float" />
+-            </div>
+-            <div className="space-y-3">
+               <Progress value={stats.annualProgress} className="h-2 bg-primary/5" />
+-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/60">{stats.annualProgress}% complété</p>
+-            </div>
+-          </Card>
+-
+-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+-            <div className="flex justify-between items-center">
+-              <div className="space-y-1">
+-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Mensuel</p>
+-                <h3 className="text-3xl font-headline italic">{stats.monthlyCount} / {stats.goals.monthly}</h3>
+-              </div>
+-              <Calendar className="h-8 w-8 text-blue-400" />
+-            </div>
+-            <div className="space-y-3">
+-              <Progress value={stats.monthlyProgress} className="h-2 bg-blue-50" />
+-              <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400/60">{stats.monthlyProgress}% ce mois</p>
+             </div>
+-          </Card>
+-
+-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+-            <div className="flex justify-between items-center">
+-              <div className="space-y-1">
+-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Pages</p>
+-                <h3 className="text-3xl font-headline italic">{stats.pagesCount.toLocaleString()}</h3>
+-              </div>
+-              <FileText className="h-8 w-8 text-emerald-500" />
++            <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
++              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-blue-400" /> {stats.monthlyCount}/{stats.goals.monthly} ce mois</span>
++              <span className="hidden sm:flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-emerald-500" /> {stats.pagesCount.toLocaleString()} pages</span>
++              <span className="hidden sm:flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5 text-purple-400" /> {stats.audioCount}h</span>
+             </div>
+-            <div className="space-y-3">
+-              <Progress value={stats.pagesProgress} className="h-2 bg-emerald-50" />
+-              <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600/60">Objectif {stats.goals.pages.toLocaleString()}</p>
+-            </div>
+-          </Card>
+-
+-          <Card className="glass-card p-8 border-none bg-white/60 space-y-6 group hover:shadow-2xl transition-all duration-700">
+-            <div className="flex justify-between items-center">
+-              <div className="space-y-1">
+-                <p className="text-[10px] uppercase tracking-[0.4em] text-muted-foreground font-bold italic">Audio</p>
+-                <h3 className="text-3xl font-headline italic">{stats.audioCount}h</h3>
+-              </div>
+-              <Headphones className="h-8 w-8 text-purple-400" />
+-            </div>
+-            <div className="space-y-3">
+-              <Progress value={stats.audioProgress} className="h-2 bg-purple-50" />
+-              <p className="text-[10px] font-bold uppercase tracking-widest text-purple-400/60">Objectif {stats.goals.audio}h</p>
+-            </div>
+-          </Card>
+-        </div>
++          </div>
++        </Card>
+       </section>
+ 
++
+       <section className="space-y-8">
+         <div className="flex justify-between items-center px-2">
+           <h2 className="text-4xl font-headline flex items-center gap-4 italic">
+@@ -335,6 +343,38 @@ export default function Home() {
+           </div>
+         </section>
+       </div>
++
++      {lastReviewedBook && (
++        <section className="space-y-6 pt-4 border-t border-primary/5">
++          <h2 className="text-3xl font-headline flex items-center gap-4 italic px-2">
++            <Quote className="h-7 w-7 text-primary/40" /> Mon dernier avis
++          </h2>
++          <Link href={`/book/${lastReviewedBook.id}`}>
++            <Card className="glass-card border-none bg-white/60 hover:shadow-xl transition-all duration-700 overflow-hidden">
++              <CardContent className="p-8 flex gap-6 items-start">
++                <div className="relative h-28 w-20 shrink-0 rounded-xl overflow-hidden shadow-md">
++                  <BookCover src={lastReviewedBook.cover} alt={lastReviewedBook.title || ""} className="object-cover" />
++                </div>
++                <div className="space-y-2 min-w-0">
++                  <h3 className="font-headline italic text-xl leading-tight">
++                    {cleanBookTitle(lastReviewedBook.title)}{lastReviewedBook.volume ? ` — ${lastReviewedBook.volume}` : ""}
++                  </h3>
++                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">{cleanAuthorName(lastReviewedBook.author)}</p>
++                  <div className="flex gap-1">
++                    {[1, 2, 3, 4, 5].map((s) => (
++                      <Star
++                        key={s}
++                        className={cn("h-3 w-3", s <= (lastReviewedBook.rating || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20")}
++                      />
++                    ))}
++                  </div>
++                  <p className="text-sm italic text-muted-foreground leading-relaxed line-clamp-3">"{lastReviewedBook.review}"</p>
++                </div>
++              </CardContent>
++            </Card>
++          </Link>
++        </section>
++      )}
+     </div>
+   );
+ }
+diff --git a/src/app/profile/page.tsx b/src/app/profile/page.tsx
+index 0a32553..6bb6706 100644
+--- a/src/app/profile/page.tsx
++++ b/src/app/profile/page.tsx
+@@ -230,7 +230,7 @@ export default function ProfilePage() {
+                 <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
+             </Button>
+             <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+-                <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Statistiques détaillées</Link>
++                <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Bilan de lecture</Link>
+             </Button>
+             {user?.email && ADMIN_EMAILS.includes(user.email) && (
+               <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+@@ -383,7 +383,7 @@ export default function ProfilePage() {
+       <section className="space-y-10 pt-10">
+         <div className="flex items-center justify-between">
+           <h2 className="text-4xl font-headline italic flex items-center gap-4">
+-            <Heart className="h-8 w-8 text-primary/40" /> Mes Coups de Cœur
++            <Heart className="h-8 w-8 text-primary/40" /> Mes Envies
+           </h2>
+           <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
+             <Link href="/library">Voir tout <ChevronRight className="ml-2 h-5 w-5" /></Link>
+diff --git a/src/app/stats/page.tsx b/src/app/stats/page.tsx
+index 00e005f..22bfb50 100644
+--- a/src/app/stats/page.tsx
++++ b/src/app/stats/page.tsx
+@@ -63,7 +63,7 @@ export default function StatsPage() {
+   return (
+     <div className="space-y-10 animate-in fade-in duration-1000 pb-24">
+       <header className="text-center space-y-2 pt-8">
+-        <h1 className="text-5xl font-headline italic">Mes statistiques</h1>
++        <h1 className="text-5xl font-headline italic">Bilan de lecture</h1>
+         <p className="text-primary/60 italic font-medium">L'analyse douce de votre voyage littéraire.</p>
+       </header>
+ 

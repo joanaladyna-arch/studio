@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { BookOpen, Headset, Save, History, Plus, Star, Sparkles, MessageCircle, Quote, PlusCircle } from "lucide-react";
+import { BookOpen, Headset, Save, History, Plus, Star, Sparkles, MessageCircle, Quote, PlusCircle, Share2, Heart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { useUser, useFirestore, useCollection } from "@/firebase";
@@ -21,6 +21,36 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import Link from "next/link";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
+import { RANKS } from "@/app/library/page";
+
+/**
+ * Partage un livre ou une citation via l'API native du navigateur
+ * (feuille de partage iOS/Android — Instagram, Messages, etc. y
+ * apparaissent automatiquement selon les apps installées). Si l'appareil
+ * ne supporte pas navigator.share (certains navigateurs desktop), on
+ * copie le texte dans le presse-papier à la place et on prévient
+ * l'utilisatrice, plutôt que de laisser le bouton ne rien faire.
+ */
+async function shareText(title: string, text: string, onFallback: () => void) {
+  if (typeof navigator !== "undefined" && (navigator as any).share) {
+    try {
+      await (navigator as any).share({ title, text });
+      return;
+    } catch {
+      // L'utilisatrice a annulé le partage, ou l'appel a échoué — on ne
+      // bascule pas vers le presse-papier dans ce cas pour ne pas donner
+      // l'impression d'une action supplémentaire non désirée.
+      return;
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    onFallback();
+  } catch {
+    // Échec silencieux : ni partage natif ni presse-papier disponibles.
+  }
+}
+
 
 export default function JournalPage() {
   const { user } = useUser();
@@ -48,6 +78,33 @@ export default function JournalPage() {
   }, [db, user]);
 
   const { data: books = [] } = useCollection(booksQuery);
+
+  // "Mes recommandations" : les livres auxquels une Palme a été
+  // attribuée (le même classement que l'onglet Coups de Cœur) sont, par
+  // définition, les lectures que la lectrice recommande — pas besoin
+  // d'un système de marquage parallèle.
+  const recommendedBooks = useMemo(() => {
+    return books
+      .filter((b: any) => !!b.plumeRank)
+      .sort((a: any, b: any) => (b.dateAdded?.toMillis?.() || 0) - (a.dateAdded?.toMillis?.() || 0));
+  }, [books]);
+
+  // "Carnet de citations" : agrège la citation favorite de chaque livre
+  // qui en a une, déjà saisie depuis la fiche du livre — aucune nouvelle
+  // donnée à créer, seulement une vue qui les réunit.
+  const quotedBooks = useMemo(() => {
+    return books.filter((b: any) => (b.favoriteQuote || "").toString().trim());
+  }, [books]);
+
+  const shareBook = (book: any) => {
+    const text = `${cleanBookTitle(book.title)}, par ${cleanAuthorName(book.author)} — une pépite de ma bibliothèque Lectoria.`;
+    shareText(book.title, text, () => toast({ title: "Copié", description: "Le texte de partage a été copié dans le presse-papier." }));
+  };
+
+  const shareQuote = (book: any) => {
+    const text = `"${book.favoriteQuote}"\n— ${cleanBookTitle(book.title)}, ${cleanAuthorName(book.author)}`;
+    shareText(book.title, text, () => toast({ title: "Copié", description: "La citation a été copiée dans le presse-papier." }));
+  };
 
   const handleSaveNote = (type: 'lecture' | 'écoute') => {
     if (!db || !user) return;
@@ -88,6 +145,75 @@ export default function JournalPage() {
         <h1 className="text-5xl font-headline italic tracking-tight">Journal de bord</h1>
         <p className="text-primary/60 italic font-medium">Capturez l'essence de vos voyages littéraires.</p>
       </header>
+
+      <section className="space-y-6">
+        <h2 className="text-2xl font-headline italic flex items-center gap-3">
+          <Heart className="h-6 w-6 text-primary/40" /> Mes Recommandations
+        </h2>
+        {recommendedBooks.length > 0 ? (
+          <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
+            {recommendedBooks.map((book: any) => {
+              const rank = RANKS[book.plumeRank as keyof typeof RANKS];
+              return (
+                <Card key={book.id} className="glass-card min-w-[220px] border-none shadow-sm shrink-0">
+                  <CardContent className="p-5 space-y-3">
+                    <div className="flex gap-3 items-start">
+                      <div className="relative h-24 w-16 shrink-0 rounded-lg overflow-hidden shadow-sm">
+                        <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                      </div>
+                      <div className="space-y-1 overflow-hidden">
+                        <h4 className="font-headline italic text-sm leading-tight line-clamp-2">{cleanBookTitle(book.title)}</h4>
+                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{cleanAuthorName(book.author)}</p>
+                        {rank && (
+                          <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide opacity-70">
+                            <rank.icon className={cn("h-3 w-3", rank.color)} /> {rank.label}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <Button onClick={() => shareBook(book)} variant="outline" size="sm" className="w-full rounded-xl text-[10px] font-bold uppercase tracking-widest border-primary/10 h-9">
+                      <Share2 className="h-3 w-3 mr-2" /> Partager
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="w-full py-10 text-center glass-card border-dashed border-primary/20 bg-white/20">
+            <p className="italic text-muted-foreground text-sm">Attribuez une Palme à vos lectures pour les voir apparaître ici.</p>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-6">
+        <h2 className="text-2xl font-headline italic flex items-center gap-3">
+          <Quote className="h-6 w-6 text-primary/40" /> Carnet de Citations
+        </h2>
+        {quotedBooks.length > 0 ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            {quotedBooks.map((book: any) => (
+              <Card key={book.id} className="glass-card border-none shadow-sm bg-white/60">
+                <CardContent className="p-6 space-y-3">
+                  <p className="text-sm italic leading-relaxed">"{book.favoriteQuote}"</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 line-clamp-1">
+                      {cleanBookTitle(book.title)} — {cleanAuthorName(book.author)}
+                    </p>
+                    <button onClick={() => shareQuote(book)} className="shrink-0 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform" title="Partager la citation">
+                      <Share2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="w-full py-10 text-center glass-card border-dashed border-primary/20 bg-white/20">
+            <p className="italic text-muted-foreground text-sm">Ajoutez une citation favorite depuis la fiche d'un livre pour l'épingler ici.</p>
+          </div>
+        )}
+      </section>
 
       {adminMode && (
         <Card className="glass-card border-2 border-primary/20 bg-primary/5 shadow-sm">
