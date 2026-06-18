@@ -48,7 +48,7 @@ export function TagDropdown({
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-[320px] p-0 bg-white/95 backdrop-blur-xl border-none shadow-xl rounded-2xl" align="start">
-          <ScrollArea className="max-h-80">
+          <ScrollArea className="h-80">
             <div className="p-3 space-y-1">
               {options.map((opt) => {
                 const isActive = selected.includes(opt);
