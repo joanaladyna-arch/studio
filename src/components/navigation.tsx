@@ -114,7 +114,7 @@ export function Navigation() {
 
   return (
     <>
-      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-8 px-10 shadow-sm">
+      <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-8 px-10 shadow-sm">
         <div className="flex items-center gap-3 mr-10 cursor-pointer group" onClick={() => router.push("/")}>
           <div className="relative h-10 w-10 rounded-full overflow-hidden group-hover:scale-110 transition-transform">
              <Image src="/brand/logo-lectoria-v2.png" alt="" fill className="object-cover" unoptimized />
@@ -154,8 +154,8 @@ export function Navigation() {
         </button>
       </nav>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 py-3 flex justify-around items-center md:hidden h-24 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-        {visibleNavItems.map((item) => {
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 py-3 flex justify-around items-center lg:hidden h-24 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+        {allNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
           return (
@@ -185,6 +185,15 @@ export function Navigation() {
             </Link>
           );
         })}
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center justify-center gap-1.5 transition-all duration-700 p-2 rounded-2xl min-w-[60px] text-muted-foreground"
+        >
+          <div className="relative p-2 rounded-xl bg-transparent">
+            <LogOut className="h-5 w-5" />
+          </div>
+          <span className="text-[10px] font-headline italic tracking-tight font-bold opacity-40">Quitter</span>
+        </button>
       </nav>
     </>
   );
