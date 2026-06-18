@@ -1,6 +1,7 @@
 
 "use client";
 
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState, useMemo } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,8 @@ import {
   Heart,
   Pencil,
   UserRound,
-  Layers
+  Layers,
+  ChevronDown
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -80,6 +82,7 @@ export interface UserBook {
   review?: string;
   plumeRank?: RankType;
   dateAdded: any;
+  dateRead?: any;
   title?: string; 
   author?: string;
   cover?: string;
@@ -171,7 +174,7 @@ export const STATUSES: Record<BookStatus, { label: string, icon: any, color: str
   dnf: { label: "DNF", icon: DoorOpen, color: "bg-rose-400" },
   pause: { label: "Pause", icon: Pause, color: "bg-amber-400" },
   reread: { label: "Relecture", icon: RefreshCw, color: "bg-purple-400" },
-  envie: { label: "Envie", icon: Heart, color: "bg-pink-400" },
+  envie: { label: "Wishlist", icon: Heart, color: "bg-pink-400" },
 };
 
 // Grades de prestige "Palme" (du meilleur au moins bon). Utilisés par la
@@ -204,9 +207,11 @@ const CATEGORIES = [
   { id: "pal", label: "PAL" },
   { id: "progress", label: "EN COURS" },
   { id: "read", label: "LU" },
-  { id: "envie", label: "ENVIE" },
+  { id: "envie", label: "WISHLIST" },
   { id: "dnf", label: "DNF" },
 ];
+
+const MONTH_NAMES = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
 export default function LibraryPage() {
   const { user } = useUser();
@@ -254,6 +259,25 @@ export default function LibraryPage() {
     });
     return sortMode === "author" ? sortByAuthor(matched) : sortBySaga(matched);
   }, [userBooks, activeTab, searchQuery, sortMode]);
+
+  // Quand l'onglet "Lu" est actif, on regroupe les livres par mois de
+  // lecture (dateRead si renseigné, sinon dateAdded en fallback) pour
+  // afficher un journal chronologique style Book Nova. Les mois sont
+  // triés du plus récent au plus ancien. Les livres sans date connue
+  // tombent dans un groupe séparé affiché en toute fin.
+  const booksByMonth = useMemo(() => {
+    if (activeTab !== "read") return null;
+    const groups: Record<string, { label: string; books: typeof filteredBooks }> = {};
+    filteredBooks.forEach((b) => {
+      const raw = b.dateRead || b.dateAdded;
+      const date = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
+      const key = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` : "unknown";
+      const label = date ? `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}` : "Date inconnue";
+      if (!groups[key]) groups[key] = { label, books: [] };
+      groups[key].books.push(b);
+    });
+    return Object.entries(groups).sort(([a], [b]) => (a === "unknown" ? 1 : b === "unknown" ? -1 : b.localeCompare(a)));
+  }, [activeTab, filteredBooks]);
 
   return (
     <div className="space-y-10 animate-paper pb-32">
@@ -318,6 +342,19 @@ export default function LibraryPage() {
             <div className="py-40 text-center flex flex-col items-center gap-6">
               <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
               <p className="font-headline italic text-primary/40 text-xl">Exploration de la réserve...</p>
+            </div>
+          ) : booksByMonth ? (
+            // Onglet "Lu" : livres regroupés par mois de lecture
+            <div className="space-y-4">
+              {booksByMonth.map(([key, { label, books }]) => (
+                <MonthGroup key={key} label={label} books={books} isAdmin={isAdmin} isLoadingEditBook={isLoadingEditBook} openMasterEditor={openMasterEditor} />
+              ))}
+              {booksByMonth.length === 0 && (
+                <div className="py-40 text-center glass-card border-dashed bg-white/20">
+                  <Bookmark className="h-20 w-20 mx-auto text-primary/10" />
+                  <p className="text-primary/60 italic font-headline text-2xl mt-4">Aucun livre lu pour le moment.</p>
+                </div>
+              )}
             </div>
           ) : filteredBooks.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
@@ -388,5 +425,49 @@ export function BookCard({ book }: { book: UserBook }) {
         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{cleanAuthorName(book.author)}</p>
       </div>
     </div>
+  );
+}
+
+// Groupe mensuel collapsible pour l'onglet "Lu" — ouvert par défaut
+// pour les mois récents (logique gérée par le composant parent), avec
+// le compteur de livres dans l'en-tête et la grille de couvertures
+// dans le corps rétractable.
+function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor }: {
+  label: string;
+  books: any[];
+  isAdmin: boolean;
+  isLoadingEditBook: boolean;
+  openMasterEditor: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-4 rounded-2xl bg-white/40 hover:bg-white/60 transition-colors group">
+        <div className="flex items-center gap-4">
+          <span className="font-headline italic text-xl">{label}</span>
+          <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">{books.length} livre{books.length > 1 ? "s" : ""}</span>
+        </div>
+        <ChevronDown className={cn("h-5 w-5 text-primary/40 transition-transform", open && "rotate-180")} />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10 pt-6 px-2">
+          {books.map((book) => (
+            <div key={book.id} className="relative">
+              {isAdmin && (
+                <button
+                  onClick={(e) => { e.preventDefault(); openMasterEditor(book.masterBookId); }}
+                  className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
+                >
+                  {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
+                </button>
+              )}
+              <Link href={`/book/${book.id}`} className="group block">
+                <BookCard book={book} />
+              </Link>
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

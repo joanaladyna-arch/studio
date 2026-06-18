@@ -388,7 +388,7 @@ export default function ProfilePage() {
       <section className="space-y-10 pt-10">
         <div className="flex items-center justify-between">
           <h2 className="text-4xl font-headline italic flex items-center gap-4">
-            <Heart className="h-8 w-8 text-primary/40" /> Mes Envies
+            <Heart className="h-8 w-8 text-primary/40" /> Ma Wishlist
           </h2>
           <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
             <Link href="/library">Voir tout <ChevronRight className="ml-2 h-5 w-5" /></Link>

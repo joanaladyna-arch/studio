@@ -25,7 +25,8 @@ import {
   Pencil,
   Library,
   X,
-  RefreshCw
+  RefreshCw,
+  CalendarDays
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -95,6 +96,7 @@ export default function BookDetailPage() {
   const [otherEditions, setOtherEditions] = useState<any[] | null>(null);
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [editionsOpen, setEditionsOpen] = useState(false);
+  const [recommendations, setRecommendations] = useState<any[] | null>(null);
 
   // Petite photo de l'auteur près de son nom, si elle a été renseignée à
   // la main via la fiche auteur (mode admin). Échoue toujours
@@ -195,7 +197,61 @@ export default function BookDetailPage() {
     }
   }, [db, masterBook, otherEditions]);
 
-  // Pré-remplit les genres depuis la fiche maître si le livre personnel
+  // "Les lecteurs ayant mis ce roman dans leur bibliothèque ont également
+  // lu..." — Recommandations basées sur les tags communs (genres, tropes,
+  // thèmes) avec la fiche partagée actuelle. On pondère par nombre de
+  // tags communs et on booste les livres ayant une Palme dans la
+  // communauté. Chargé en lazy-load à l'ouverture de la section, pas au
+  // chargement de la page. À terme, remplacera par le filtrage
+  // collaboratif (bibliothèques) quand la base d'utilisateurs sera
+  // suffisante (~50-100 actifs avec 20+ livres chacun).
+  const fetchRecommendations = useCallback(async () => {
+    if (!db || !masterBook || recommendations !== null) return;
+    try {
+      const myGenres = toArray<string>(masterBook.genres);
+      const myTropes = toArray<string>(masterBook.tropes);
+      const myThemes = toArray<string>((masterBook as any).themes);
+      const primaryTags = [...myGenres.slice(0, 2), ...myTropes.slice(0, 1)].filter(Boolean);
+      if (primaryTags.length === 0) { setRecommendations([]); return; }
+      const snaps = await Promise.all(
+        primaryTags.map((tag) =>
+          getDocs(query(collection(db, "masterBooks"), where("genres", "array-contains", tag)))
+            .catch(() => ({ docs: [] as any[] }))
+        )
+      );
+      const seen = new Set<string>();
+      const scored: Array<{ book: any; score: number }> = [];
+      snaps.forEach((snap) => {
+        (snap.docs || []).forEach((d: any) => {
+          if (seen.has(d.id) || d.id === masterBook.id) return;
+          seen.add(d.id);
+          const b = { id: d.id, ...d.data() };
+          const bGenres = toArray<string>(b.genres);
+          const bTropes = toArray<string>(b.tropes);
+          const bThemes = toArray<string>(b.themes);
+          let score = 0;
+          myGenres.forEach((g) => { if (bGenres.includes(g)) score += 3; });
+          myTropes.forEach((t) => { if (bTropes.includes(t)) score += 2; });
+          myThemes.forEach((t) => { if (bThemes.includes(t)) score += 1; });
+          if (b.plumeRank) score += 1;
+          scored.push({ book: b, score });
+        });
+      });
+      scored.sort((a, b) => b.score - a.score);
+      setRecommendations(scored.slice(0, 6).map((s) => s.book));
+    } catch (err) {
+      console.error("Fetch Recommendations Error:", err);
+      setRecommendations([]);
+    }
+  }, [db, masterBook, recommendations]);
+
+  // Déclenche le chargement des recommandations dès que la fiche maître
+  // est disponible — pas besoin d'un clic utilisateur pour ça.
+  useEffect(() => {
+    if (masterBook && recommendations === null) fetchRecommendations();
+  }, [masterBook, fetchRecommendations, recommendations]);
+
+
   // n'en a pas encore (cas des livres ajoutés avant qu'on enrichisse les
   // données à l'ajout) — ne s'exécute qu'une fois, dès que masterBook
   // est disponible, sans jamais écraser un choix déjà fait.
@@ -327,8 +383,16 @@ export default function BookDetailPage() {
     if (!userBookRef) return;
     setIsSaving(true);
     try {
+      // Si la lectrice passe ce livre à "Lu" et qu'aucune date de fin
+      // n'est encore enregistrée, on horodate automatiquement aujourd'hui
+      // — la lectrice peut la corriger manuellement via le champ dédié.
+      const dateReadUpdate: any = {};
+      if (editedData.status === "read" && !userBook?.dateRead && !(editedData as any).dateRead) {
+        dateReadUpdate.dateRead = serverTimestamp();
+      }
       await updateDoc(userBookRef, {
         ...editedData,
+        ...dateReadUpdate,
         updatedAt: serverTimestamp()
       });
       proposeMasterCompletion({ description: (editedData as any).description });
@@ -739,9 +803,64 @@ export default function BookDetailPage() {
                <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-12 px-8 font-headline italic">
                  {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer
                </Button>
+
+               {/* Section recommandations — chargée lazily, placée après
+                   "Enregistrer" pour ne pas alourdir le formulaire */}
+               {recommendations && recommendations.length > 0 && (
+                 <div className="space-y-6 pt-6 border-t border-primary/5">
+                   <div className="space-y-1">
+                     <h3 className="font-headline italic text-2xl">Ils ont aussi lu</h3>
+                     <p className="text-[11px] italic opacity-50">Les lecteurs ayant mis ce roman dans leur bibliothèque ont également lu…</p>
+                   </div>
+                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+                     {recommendations.map((rec) => (
+                       <Link key={rec.id} href={`/add?prefill=${encodeURIComponent(JSON.stringify({ title: rec.title, author: rec.author, cover: rec.cover, masterBookId: rec.id }))}`} className="group space-y-2">
+                         <div className="aspect-[2/3] rounded-xl overflow-hidden bg-primary/5 shadow-sm group-hover:shadow-md transition-shadow">
+                           {rec.cover ? (
+                             <img src={rec.cover} alt={rec.title} className="w-full h-full object-cover" />
+                           ) : (
+                             <div className="w-full h-full flex items-center justify-center">
+                               <BookOpen className="h-8 w-8 text-primary/20" />
+                             </div>
+                           )}
+                         </div>
+                         <p className="text-[10px] font-headline italic line-clamp-2 text-center">{rec.title}</p>
+                         <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold text-center line-clamp-1">{rec.author}</p>
+                       </Link>
+                     ))}
+                   </div>
+                 </div>
+               )}
             </TabsContent>
 
             <TabsContent value="journal" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">
+               {/* Date de fin de lecture — permet le classement par mois
+                   dans la bibliothèque et le bilan annuel de lecture */}
+               {(editedData.status === "read" || editedData.status === "reread" || (editedData as any).dateRead) && (
+                 <div className="flex items-center gap-4 glass-card bg-primary/5 border-none p-5 rounded-2xl">
+                   <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
+                   <div className="flex-1 space-y-1">
+                     <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label>
+                     <input
+                       type="date"
+                       value={
+                         (() => {
+                           const raw = (editedData as any).dateRead;
+                           if (!raw) return "";
+                           const d = raw?.toDate ? raw.toDate() : new Date(raw);
+                           return d.toISOString().slice(0, 10);
+                         })()
+                       }
+                       onChange={(e) => {
+                         const val = e.target.value;
+                         setEditedData({ ...editedData, dateRead: val ? new Date(val) : null } as any);
+                       }}
+                       className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full"
+                     />
+                   </div>
+                   <p className="text-[10px] italic opacity-40">Sert au classement par mois dans votre bibliothèque.</p>
+                 </div>
+               )}
                <div className="space-y-6">
                  <div className="flex items-center justify-between flex-wrap gap-4">
                    <Label className="italic text-3xl font-headline">Ma Note</Label>

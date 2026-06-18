@@ -1,0 +1,340 @@
+diff --git a/src/app/add/page.tsx b/src/app/add/page.tsx
+index c3d70e5..5166962 100644
+--- a/src/app/add/page.tsx
++++ b/src/app/add/page.tsx
+@@ -539,7 +539,7 @@ export default function AddBookPage() {
+           </div>
+           <DialogFooter className="p-10 border-t bg-white/60">
+             <Button onClick={confirmAdd} disabled={isAdding} className="w-full h-14 rounded-2xl bg-primary text-xl font-headline italic">
+-              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter dans mes Envies" : "Confirmer l'ajout")}
++              {isAdding ? <Loader2 className="animate-spin" /> : (selectedStatus === "envie" ? "Ajouter à ma Wishlist" : "Confirmer l'ajout")}
+             </Button>
+           </DialogFooter>
+         </DialogContent>
+diff --git a/src/app/book/[id]/page.tsx b/src/app/book/[id]/page.tsx
+index 77afb66..74b85c7 100644
+--- a/src/app/book/[id]/page.tsx
++++ b/src/app/book/[id]/page.tsx
+@@ -25,7 +25,8 @@ import {
+   Pencil,
+   Library,
+   X,
+-  RefreshCw
++  RefreshCw,
++  CalendarDays
+ } from "lucide-react";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+ import { Slider } from "@/components/ui/slider";
+@@ -95,6 +96,7 @@ export default function BookDetailPage() {
+   const [otherEditions, setOtherEditions] = useState<any[] | null>(null);
+   const [editionsLoading, setEditionsLoading] = useState(false);
+   const [editionsOpen, setEditionsOpen] = useState(false);
++  const [recommendations, setRecommendations] = useState<any[] | null>(null);
+ 
+   // Petite photo de l'auteur près de son nom, si elle a été renseignée à
+   // la main via la fiche auteur (mode admin). Échoue toujours
+@@ -195,7 +197,61 @@ export default function BookDetailPage() {
+     }
+   }, [db, masterBook, otherEditions]);
+ 
+-  // Pré-remplit les genres depuis la fiche maître si le livre personnel
++  // "Les lecteurs ayant mis ce roman dans leur bibliothèque ont également
++  // lu..." — Recommandations basées sur les tags communs (genres, tropes,
++  // thèmes) avec la fiche partagée actuelle. On pondère par nombre de
++  // tags communs et on booste les livres ayant une Palme dans la
++  // communauté. Chargé en lazy-load à l'ouverture de la section, pas au
++  // chargement de la page. À terme, remplacera par le filtrage
++  // collaboratif (bibliothèques) quand la base d'utilisateurs sera
++  // suffisante (~50-100 actifs avec 20+ livres chacun).
++  const fetchRecommendations = useCallback(async () => {
++    if (!db || !masterBook || recommendations !== null) return;
++    try {
++      const myGenres = toArray<string>(masterBook.genres);
++      const myTropes = toArray<string>(masterBook.tropes);
++      const myThemes = toArray<string>((masterBook as any).themes);
++      const primaryTags = [...myGenres.slice(0, 2), ...myTropes.slice(0, 1)].filter(Boolean);
++      if (primaryTags.length === 0) { setRecommendations([]); return; }
++      const snaps = await Promise.all(
++        primaryTags.map((tag) =>
++          getDocs(query(collection(db, "masterBooks"), where("genres", "array-contains", tag)))
++            .catch(() => ({ docs: [] as any[] }))
++        )
++      );
++      const seen = new Set<string>();
++      const scored: Array<{ book: any; score: number }> = [];
++      snaps.forEach((snap) => {
++        (snap.docs || []).forEach((d: any) => {
++          if (seen.has(d.id) || d.id === masterBook.id) return;
++          seen.add(d.id);
++          const b = { id: d.id, ...d.data() };
++          const bGenres = toArray<string>(b.genres);
++          const bTropes = toArray<string>(b.tropes);
++          const bThemes = toArray<string>(b.themes);
++          let score = 0;
++          myGenres.forEach((g) => { if (bGenres.includes(g)) score += 3; });
++          myTropes.forEach((t) => { if (bTropes.includes(t)) score += 2; });
++          myThemes.forEach((t) => { if (bThemes.includes(t)) score += 1; });
++          if (b.plumeRank) score += 1;
++          scored.push({ book: b, score });
++        });
++      });
++      scored.sort((a, b) => b.score - a.score);
++      setRecommendations(scored.slice(0, 6).map((s) => s.book));
++    } catch (err) {
++      console.error("Fetch Recommendations Error:", err);
++      setRecommendations([]);
++    }
++  }, [db, masterBook, recommendations]);
++
++  // Déclenche le chargement des recommandations dès que la fiche maître
++  // est disponible — pas besoin d'un clic utilisateur pour ça.
++  useEffect(() => {
++    if (masterBook && recommendations === null) fetchRecommendations();
++  }, [masterBook, fetchRecommendations, recommendations]);
++
++
+   // n'en a pas encore (cas des livres ajoutés avant qu'on enrichisse les
+   // données à l'ajout) — ne s'exécute qu'une fois, dès que masterBook
+   // est disponible, sans jamais écraser un choix déjà fait.
+@@ -327,8 +383,16 @@ export default function BookDetailPage() {
+     if (!userBookRef) return;
+     setIsSaving(true);
+     try {
++      // Si la lectrice passe ce livre à "Lu" et qu'aucune date de fin
++      // n'est encore enregistrée, on horodate automatiquement aujourd'hui
++      // — la lectrice peut la corriger manuellement via le champ dédié.
++      const dateReadUpdate: any = {};
++      if (editedData.status === "read" && !userBook?.dateRead && !(editedData as any).dateRead) {
++        dateReadUpdate.dateRead = serverTimestamp();
++      }
+       await updateDoc(userBookRef, {
+         ...editedData,
++        ...dateReadUpdate,
+         updatedAt: serverTimestamp()
+       });
+       proposeMasterCompletion({ description: (editedData as any).description });
+@@ -739,9 +803,64 @@ export default function BookDetailPage() {
+                <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-12 px-8 font-headline italic">
+                  {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer
+                </Button>
++
++               {/* Section recommandations — chargée lazily, placée après
++                   "Enregistrer" pour ne pas alourdir le formulaire */}
++               {recommendations && recommendations.length > 0 && (
++                 <div className="space-y-6 pt-6 border-t border-primary/5">
++                   <div className="space-y-1">
++                     <h3 className="font-headline italic text-2xl">Ils ont aussi lu</h3>
++                     <p className="text-[11px] italic opacity-50">Les lecteurs ayant mis ce roman dans leur bibliothèque ont également lu…</p>
++                   </div>
++                   <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
++                     {recommendations.map((rec) => (
++                       <Link key={rec.id} href={`/add?prefill=${encodeURIComponent(JSON.stringify({ title: rec.title, author: rec.author, cover: rec.cover, masterBookId: rec.id }))}`} className="group space-y-2">
++                         <div className="aspect-[2/3] rounded-xl overflow-hidden bg-primary/5 shadow-sm group-hover:shadow-md transition-shadow">
++                           {rec.cover ? (
++                             <img src={rec.cover} alt={rec.title} className="w-full h-full object-cover" />
++                           ) : (
++                             <div className="w-full h-full flex items-center justify-center">
++                               <BookOpen className="h-8 w-8 text-primary/20" />
++                             </div>
++                           )}
++                         </div>
++                         <p className="text-[10px] font-headline italic line-clamp-2 text-center">{rec.title}</p>
++                         <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold text-center line-clamp-1">{rec.author}</p>
++                       </Link>
++                     ))}
++                   </div>
++                 </div>
++               )}
+             </TabsContent>
+ 
+             <TabsContent value="journal" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">
++               {/* Date de fin de lecture — permet le classement par mois
++                   dans la bibliothèque et le bilan annuel de lecture */}
++               {(editedData.status === "read" || editedData.status === "reread" || (editedData as any).dateRead) && (
++                 <div className="flex items-center gap-4 glass-card bg-primary/5 border-none p-5 rounded-2xl">
++                   <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
++                   <div className="flex-1 space-y-1">
++                     <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label>
++                     <input
++                       type="date"
++                       value={
++                         (() => {
++                           const raw = (editedData as any).dateRead;
++                           if (!raw) return "";
++                           const d = raw?.toDate ? raw.toDate() : new Date(raw);
++                           return d.toISOString().slice(0, 10);
++                         })()
++                       }
++                       onChange={(e) => {
++                         const val = e.target.value;
++                         setEditedData({ ...editedData, dateRead: val ? new Date(val) : null } as any);
++                       }}
++                       className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full"
++                     />
++                   </div>
++                   <p className="text-[10px] italic opacity-40">Sert au classement par mois dans votre bibliothèque.</p>
++                 </div>
++               )}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <Label className="italic text-3xl font-headline">Ma Note</Label>
+diff --git a/src/app/library/page.tsx b/src/app/library/page.tsx
+index 79918a2..9a0e5c6 100644
+--- a/src/app/library/page.tsx
++++ b/src/app/library/page.tsx
+@@ -1,6 +1,7 @@
+ 
+ "use client";
+ 
++import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+ import { useState, useMemo } from "react";
+ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+ import { Input } from "@/components/ui/input";
+@@ -31,7 +32,8 @@ import {
+   Heart,
+   Pencil,
+   UserRound,
+-  Layers
++  Layers,
++  ChevronDown
+ } from "lucide-react";
+ import Image from "next/image";
+ import { BookCover } from "@/components/book-cover";
+@@ -80,6 +82,7 @@ export interface UserBook {
+   review?: string;
+   plumeRank?: RankType;
+   dateAdded: any;
++  dateRead?: any;
+   title?: string; 
+   author?: string;
+   cover?: string;
+@@ -171,7 +174,7 @@ export const STATUSES: Record<BookStatus, { label: string, icon: any, color: str
+   dnf: { label: "DNF", icon: DoorOpen, color: "bg-rose-400" },
+   pause: { label: "Pause", icon: Pause, color: "bg-amber-400" },
+   reread: { label: "Relecture", icon: RefreshCw, color: "bg-purple-400" },
+-  envie: { label: "Envie", icon: Heart, color: "bg-pink-400" },
++  envie: { label: "Wishlist", icon: Heart, color: "bg-pink-400" },
+ };
+ 
+ // Grades de prestige "Palme" (du meilleur au moins bon). Utilisés par la
+@@ -204,10 +207,12 @@ const CATEGORIES = [
+   { id: "pal", label: "PAL" },
+   { id: "progress", label: "EN COURS" },
+   { id: "read", label: "LU" },
+-  { id: "envie", label: "ENVIE" },
++  { id: "envie", label: "WISHLIST" },
+   { id: "dnf", label: "DNF" },
+ ];
+ 
++const MONTH_NAMES = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
++
+ export default function LibraryPage() {
+   const { user } = useUser();
+   const db = useFirestore();
+@@ -255,6 +260,25 @@ export default function LibraryPage() {
+     return sortMode === "author" ? sortByAuthor(matched) : sortBySaga(matched);
+   }, [userBooks, activeTab, searchQuery, sortMode]);
+ 
++  // Quand l'onglet "Lu" est actif, on regroupe les livres par mois de
++  // lecture (dateRead si renseigné, sinon dateAdded en fallback) pour
++  // afficher un journal chronologique style Book Nova. Les mois sont
++  // triés du plus récent au plus ancien. Les livres sans date connue
++  // tombent dans un groupe séparé affiché en toute fin.
++  const booksByMonth = useMemo(() => {
++    if (activeTab !== "read") return null;
++    const groups: Record<string, { label: string; books: typeof filteredBooks }> = {};
++    filteredBooks.forEach((b) => {
++      const raw = b.dateRead || b.dateAdded;
++      const date = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
++      const key = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` : "unknown";
++      const label = date ? `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}` : "Date inconnue";
++      if (!groups[key]) groups[key] = { label, books: [] };
++      groups[key].books.push(b);
++    });
++    return Object.entries(groups).sort(([a], [b]) => (a === "unknown" ? 1 : b === "unknown" ? -1 : b.localeCompare(a)));
++  }, [activeTab, filteredBooks]);
++
+   return (
+     <div className="space-y-10 animate-paper pb-32">
+       <header className="space-y-8 pt-4">
+@@ -319,6 +343,19 @@ export default function LibraryPage() {
+               <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
+               <p className="font-headline italic text-primary/40 text-xl">Exploration de la réserve...</p>
+             </div>
++          ) : booksByMonth ? (
++            // Onglet "Lu" : livres regroupés par mois de lecture
++            <div className="space-y-4">
++              {booksByMonth.map(([key, { label, books }]) => (
++                <MonthGroup key={key} label={label} books={books} isAdmin={isAdmin} isLoadingEditBook={isLoadingEditBook} openMasterEditor={openMasterEditor} />
++              ))}
++              {booksByMonth.length === 0 && (
++                <div className="py-40 text-center glass-card border-dashed bg-white/20">
++                  <Bookmark className="h-20 w-20 mx-auto text-primary/10" />
++                  <p className="text-primary/60 italic font-headline text-2xl mt-4">Aucun livre lu pour le moment.</p>
++                </div>
++              )}
++            </div>
+           ) : filteredBooks.length > 0 ? (
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
+               {filteredBooks.map((book) => (
+@@ -390,3 +427,47 @@ export function BookCard({ book }: { book: UserBook }) {
+     </div>
+   );
+ }
++
++// Groupe mensuel collapsible pour l'onglet "Lu" — ouvert par défaut
++// pour les mois récents (logique gérée par le composant parent), avec
++// le compteur de livres dans l'en-tête et la grille de couvertures
++// dans le corps rétractable.
++function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor }: {
++  label: string;
++  books: any[];
++  isAdmin: boolean;
++  isLoadingEditBook: boolean;
++  openMasterEditor: (id: string) => void;
++}) {
++  const [open, setOpen] = useState(true);
++  return (
++    <Collapsible open={open} onOpenChange={setOpen}>
++      <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-4 rounded-2xl bg-white/40 hover:bg-white/60 transition-colors group">
++        <div className="flex items-center gap-4">
++          <span className="font-headline italic text-xl">{label}</span>
++          <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">{books.length} livre{books.length > 1 ? "s" : ""}</span>
++        </div>
++        <ChevronDown className={cn("h-5 w-5 text-primary/40 transition-transform", open && "rotate-180")} />
++      </CollapsibleTrigger>
++      <CollapsibleContent>
++        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10 pt-6 px-2">
++          {books.map((book) => (
++            <div key={book.id} className="relative">
++              {isAdmin && (
++                <button
++                  onClick={(e) => { e.preventDefault(); openMasterEditor(book.masterBookId); }}
++                  className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
++                >
++                  {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
++                </button>
++              )}
++              <Link href={`/book/${book.id}`} className="group block">
++                <BookCard book={book} />
++              </Link>
++            </div>
++          ))}
++        </div>
++      </CollapsibleContent>
++    </Collapsible>
++  );
++}
+diff --git a/src/app/profile/page.tsx b/src/app/profile/page.tsx
+index 27a0965..a07e144 100644
+--- a/src/app/profile/page.tsx
++++ b/src/app/profile/page.tsx
+@@ -388,7 +388,7 @@ export default function ProfilePage() {
+       <section className="space-y-10 pt-10">
+         <div className="flex items-center justify-between">
+           <h2 className="text-4xl font-headline italic flex items-center gap-4">
+-            <Heart className="h-8 w-8 text-primary/40" /> Mes Envies
++            <Heart className="h-8 w-8 text-primary/40" /> Ma Wishlist
+           </h2>
+           <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
+             <Link href="/library">Voir tout <ChevronRight className="ml-2 h-5 w-5" /></Link>
