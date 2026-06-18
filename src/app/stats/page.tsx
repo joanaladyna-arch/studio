@@ -1,10 +1,11 @@
 
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star, Landmark } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star, Landmark, Download, Loader2 } from "lucide-react";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 
@@ -53,6 +54,72 @@ export default function StatsPage() {
   }, [books]);
 
   const annualGoal = profile?.annualGoal || 24;
+  const userName = profile?.name || user?.displayName || "Lectrice Lectoria";
+  const [isExporting, setIsExporting] = useState(false);
+
+  // jsPDF est chargé dynamiquement (import() plutôt qu'en haut de
+  // fichier) : c'est une librairie assez lourde, inutile de l'inclure
+  // dans le bundle de la page tant que l'utilisatrice n'a pas
+  // explicitement demandé son bilan en PDF.
+  const exportPdf = async () => {
+    setIsExporting(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const docPdf = new jsPDF();
+      const year = new Date().getFullYear();
+      const progressPct = Math.round((stats.readCount / (annualGoal || 1)) * 100);
+
+      docPdf.setFont("helvetica", "italic");
+      docPdf.setFontSize(11);
+      docPdf.setTextColor(150, 120, 140);
+      docPdf.text("LECTORIA", 105, 20, { align: "center" });
+
+      docPdf.setFont("helvetica", "bold");
+      docPdf.setFontSize(24);
+      docPdf.setTextColor(40, 30, 40);
+      docPdf.text(`Mon année de lecture ${year}`, 105, 35, { align: "center" });
+
+      docPdf.setFont("helvetica", "normal");
+      docPdf.setFontSize(13);
+      docPdf.setTextColor(90, 80, 90);
+      docPdf.text(userName, 105, 45, { align: "center" });
+
+      const lines: [string, string][] = [
+        ["Livres lus", String(stats.readCount)],
+        ["Objectif annuel", `${stats.readCount} / ${annualGoal} (${progressPct}%)`],
+        ["Pages parcourues", stats.totalPages.toLocaleString("fr-FR")],
+        ["Maison d'édition favorite", stats.topPublisher],
+        ["Coups de cœur", String(stats.favorites)],
+        ["Lectures en cours", String(stats.progressCount)],
+      ];
+
+      let y = 70;
+      lines.forEach(([label, value]) => {
+        docPdf.setFont("helvetica", "normal");
+        docPdf.setFontSize(11);
+        docPdf.setTextColor(120, 110, 120);
+        docPdf.text(label, 30, y);
+        docPdf.setFont("helvetica", "bold");
+        docPdf.setFontSize(14);
+        docPdf.setTextColor(40, 30, 40);
+        docPdf.text(value, 180, y, { align: "right" });
+        docPdf.setDrawColor(230, 220, 225);
+        docPdf.line(30, y + 4, 180, y + 4);
+        y += 16;
+      });
+
+      docPdf.setFont("helvetica", "italic");
+      docPdf.setFontSize(9);
+      docPdf.setTextColor(180, 170, 180);
+      docPdf.text("Généré depuis Lectoria, votre journal de lecture.", 105, 280, { align: "center" });
+
+      docPdf.save(`bilan-lecture-${year}.pdf`);
+    } catch (err) {
+      console.error("Export PDF Error:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const cards = [
     { label: "Livres lus", value: stats.readCount, icon: BookOpen, color: "text-primary", bg: "bg-primary/5" },
@@ -62,9 +129,12 @@ export default function StatsPage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-24">
-      <header className="text-center space-y-2 pt-8">
+      <header className="text-center space-y-4 pt-8">
         <h1 className="text-5xl font-headline italic">Bilan de lecture</h1>
         <p className="text-primary/60 italic font-medium">L'analyse douce de votre voyage littéraire.</p>
+        <Button onClick={exportPdf} disabled={isExporting || loading} variant="outline" className="rounded-2xl border-primary/20 text-primary italic font-headline h-12 px-6">
+          {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} Exporter en PDF
+        </Button>
       </header>
 
       {loading ? (

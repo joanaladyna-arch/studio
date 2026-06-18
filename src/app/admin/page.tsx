@@ -25,6 +25,8 @@ import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MasterBookManager } from "@/components/master-book-manager";
+import { AdminMessagerie } from "@/components/admin-messagerie";
 import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey } from "@/lib/utils";
 
 export default function AdminPage() {
@@ -463,6 +465,10 @@ export default function AdminPage() {
       </header>
 
       <div className="grid gap-10">
+        <MasterBookManager />
+
+        <AdminMessagerie />
+
         {/* EXCEL IMPORT SECTION */}
         <Card className="glass-card border-none bg-white/60 shadow-xl">
           <CardHeader className="p-10 border-b border-primary/5">

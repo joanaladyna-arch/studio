@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ContactAdminDialog } from "@/components/contact-admin-dialog";
 import { 
   Crown, 
   Sparkles, 
@@ -225,7 +226,10 @@ export default function ProfilePage() {
           </div>
         </div>
         <div className="flex flex-col gap-4 w-full md:w-auto">
-            <EditProfileDialog profile={profile} />
+            <div className="flex gap-3 items-center justify-center md:justify-start">
+              <EditProfileDialog profile={profile} />
+              <ContactAdminDialog />
+            </div>
             <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
                 <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
             </Button>
