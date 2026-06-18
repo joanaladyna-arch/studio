@@ -15,6 +15,7 @@ import { BookCover } from "@/components/book-cover";
 import { GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { useTaxonomy } from "@/hooks/use-taxonomy";
 import { cn, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
+import { TagDropdown } from "@/components/tag-dropdown";
 
 /**
  * Éditeur complet d'une fiche MasterBook (base partagée Lectoria) — couvre
@@ -86,6 +87,7 @@ export function MasterBookEditor({
       publishedDate: book?.publishedDate || "",
       pageCount: book?.pageCount || "",
       volume: book?.volume || "",
+      saga: book?.saga || "",
       cover: book?.cover || "",
       description: cleanDescriptionHtml(book?.description) || "",
       genres: Array.isArray(book?.genres) ? book.genres : [],
@@ -126,6 +128,7 @@ export function MasterBookEditor({
         publishedDate: form.publishedDate?.trim() || "",
         pageCount: parseInt(form.pageCount) || 0,
         volume: form.volume?.trim() || "",
+        saga: form.saga?.trim() || "",
         cover: form.cover?.trim() || "",
         description: form.description?.trim() || "",
         genres: form.genres || [],
@@ -208,6 +211,15 @@ export function MasterBookEditor({
             <Input value={form.volume || ""} onChange={(e) => setForm((p: any) => ({ ...p, volume: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
           </div>
           <div className="space-y-2">
+            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Saga (facultatif)</Label>
+            <Input
+              value={form.saga || ""}
+              onChange={(e) => setForm((p: any) => ({ ...p, saga: e.target.value }))}
+              placeholder="ex : Legacy of God"
+              className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner"
+            />
+          </div>
+          <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">ISBN 13</Label>
             <Input value={form.isbn13 || ""} onChange={(e) => setForm((p: any) => ({ ...p, isbn13: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" disabled={!isNew} />
           </div>
@@ -239,53 +251,29 @@ export function MasterBookEditor({
         />
       </div>
 
-      <div className="space-y-4">
-        <Label className="italic text-xl font-headline">Genres</Label>
-        <div className="flex flex-wrap gap-2">
-          {taxonomy.genres.map((g) => {
-            const isActive = (form.genres || []).includes(g);
-            return (
-              <button key={g} type="button" onClick={() => toggleTag("genres", g)}
-                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
-                  isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60")}>
-                {g}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <TagDropdown
+        label="Genres"
+        options={taxonomy.genres}
+        selected={form.genres || []}
+        onToggle={(v) => toggleTag("genres", v)}
+        accent="primary"
+      />
 
-      <div className="space-y-4">
-        <Label className="italic text-xl font-headline">Tropes</Label>
-        <div className="flex flex-wrap gap-2">
-          {taxonomy.tropes.map((t) => {
-            const isActive = (form.tropes || []).includes(t);
-            return (
-              <button key={t} type="button" onClick={() => toggleTag("tropes", t)}
-                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
-                  isActive ? "bg-secondary text-white border-secondary shadow-sm" : "border-secondary/20 text-secondary/70 bg-white/40 hover:bg-white/60")}>
-                {t}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <TagDropdown
+        label="Tropes"
+        options={taxonomy.tropes}
+        selected={form.tropes || []}
+        onToggle={(v) => toggleTag("tropes", v)}
+        accent="secondary"
+      />
 
-      <div className="space-y-4">
-        <Label className="italic text-xl font-headline">Thèmes principaux</Label>
-        <div className="flex flex-wrap gap-2">
-          {taxonomy.themes.map((t) => {
-            const isActive = (form.themes || []).includes(t);
-            return (
-              <button key={t} type="button" onClick={() => toggleTag("themes", t)}
-                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
-                  isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60")}>
-                {t}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <TagDropdown
+        label="Thèmes principaux"
+        options={taxonomy.themes}
+        selected={form.themes || []}
+        onToggle={(v) => toggleTag("themes", v)}
+        accent="primary"
+      />
 
       <Button onClick={handleSave} disabled={isSaving} className="w-full h-16 rounded-[2rem] bg-primary shadow-xl shadow-primary/10 font-headline italic text-2xl transition-transform active:scale-95">
         {isSaving ? <Loader2 className="mr-4 h-8 w-8 animate-spin" /> : <Save className="mr-4 h-8 w-8" />} Enregistrer la fiche

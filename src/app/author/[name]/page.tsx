@@ -35,6 +35,7 @@ import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 import { AuthorEditor } from "@/components/author-editor";
+import { MasterBookEditor } from "@/components/master-book-editor";
 
 export default function AuthorPage() {
   const params = useParams();
@@ -43,6 +44,7 @@ export default function AuthorPage() {
   const { user } = useUser();
   const { adminMode } = useAdminMode();
   const [showAuthorEditor, setShowAuthorEditor] = useState(false);
+  const [showAddBook, setShowAddBook] = useState(false);
   const [authorDocId, setAuthorDocId] = useState<string | null>(null);
   const db = useFirestore();
   const { toast } = useToast();
@@ -425,10 +427,35 @@ export default function AuthorPage() {
                   <Pencil className="h-4 w-4 mr-3" /> Modifier la biographie
                 </Button>
               )}
+              {adminMode && (
+                <Button
+                  onClick={() => setShowAddBook(true)}
+                  variant="outline"
+                  className="rounded-2xl h-12 px-6 italic font-headline border-primary/20 bg-primary/5 text-primary"
+                >
+                  <Plus className="h-4 w-4 mr-3" /> Ajouter une fiche
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </header>
+
+      {adminMode && (
+        <Dialog open={showAddBook} onOpenChange={setShowAddBook}>
+          <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+            <ScrollArea className="max-h-[90vh] p-10">
+              <MasterBookEditor
+                book={{ isNew: true, author: authorName }}
+                onClose={() => setShowAddBook(false)}
+                onSaved={(saved) => {
+                  setResults((prev) => [{ ...saved, source: "master" }, ...prev]);
+                }}
+              />
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {adminMode && (
         <Dialog open={showAuthorEditor} onOpenChange={setShowAuthorEditor}>

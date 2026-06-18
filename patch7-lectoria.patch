@@ -1,0 +1,176 @@
+diff --git a/src/app/author/[name]/page.tsx b/src/app/author/[name]/page.tsx
+index d58004e..f9bdc65 100644
+--- a/src/app/author/[name]/page.tsx
++++ b/src/app/author/[name]/page.tsx
+@@ -35,6 +35,7 @@ import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
+ import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch } from "@/lib/utils";
+ import { useAdminMode } from "@/components/admin-mode";
+ import { AuthorEditor } from "@/components/author-editor";
++import { MasterBookEditor } from "@/components/master-book-editor";
+ 
+ export default function AuthorPage() {
+   const params = useParams();
+@@ -43,6 +44,7 @@ export default function AuthorPage() {
+   const { user } = useUser();
+   const { adminMode } = useAdminMode();
+   const [showAuthorEditor, setShowAuthorEditor] = useState(false);
++  const [showAddBook, setShowAddBook] = useState(false);
+   const [authorDocId, setAuthorDocId] = useState<string | null>(null);
+   const db = useFirestore();
+   const { toast } = useToast();
+@@ -425,11 +427,36 @@ export default function AuthorPage() {
+                   <Pencil className="h-4 w-4 mr-3" /> Modifier la biographie
+                 </Button>
+               )}
++              {adminMode && (
++                <Button
++                  onClick={() => setShowAddBook(true)}
++                  variant="outline"
++                  className="rounded-2xl h-12 px-6 italic font-headline border-primary/20 bg-primary/5 text-primary"
++                >
++                  <Plus className="h-4 w-4 mr-3" /> Ajouter une fiche
++                </Button>
++              )}
+             </div>
+           </div>
+         </div>
+       </header>
+ 
++      {adminMode && (
++        <Dialog open={showAddBook} onOpenChange={setShowAddBook}>
++          <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
++            <ScrollArea className="max-h-[90vh] p-10">
++              <MasterBookEditor
++                book={{ isNew: true, author: authorName }}
++                onClose={() => setShowAddBook(false)}
++                onSaved={(saved) => {
++                  setResults((prev) => [{ ...saved, source: "master" }, ...prev]);
++                }}
++              />
++            </ScrollArea>
++          </DialogContent>
++        </Dialog>
++      )}
++
+       {adminMode && (
+         <Dialog open={showAuthorEditor} onOpenChange={setShowAuthorEditor}>
+           <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+diff --git a/src/components/master-book-editor.tsx b/src/components/master-book-editor.tsx
+index 8a63a55..1f381a4 100644
+--- a/src/components/master-book-editor.tsx
++++ b/src/components/master-book-editor.tsx
+@@ -15,6 +15,7 @@ import { BookCover } from "@/components/book-cover";
+ import { GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
+ import { useTaxonomy } from "@/hooks/use-taxonomy";
+ import { cn, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
++import { TagDropdown } from "@/components/tag-dropdown";
+ 
+ /**
+  * Éditeur complet d'une fiche MasterBook (base partagée Lectoria) — couvre
+@@ -86,6 +87,7 @@ export function MasterBookEditor({
+       publishedDate: book?.publishedDate || "",
+       pageCount: book?.pageCount || "",
+       volume: book?.volume || "",
++      saga: book?.saga || "",
+       cover: book?.cover || "",
+       description: cleanDescriptionHtml(book?.description) || "",
+       genres: Array.isArray(book?.genres) ? book.genres : [],
+@@ -126,6 +128,7 @@ export function MasterBookEditor({
+         publishedDate: form.publishedDate?.trim() || "",
+         pageCount: parseInt(form.pageCount) || 0,
+         volume: form.volume?.trim() || "",
++        saga: form.saga?.trim() || "",
+         cover: form.cover?.trim() || "",
+         description: form.description?.trim() || "",
+         genres: form.genres || [],
+@@ -207,6 +210,15 @@ export function MasterBookEditor({
+             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Tome</Label>
+             <Input value={form.volume || ""} onChange={(e) => setForm((p: any) => ({ ...p, volume: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+           </div>
++          <div className="space-y-2">
++            <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Saga (facultatif)</Label>
++            <Input
++              value={form.saga || ""}
++              onChange={(e) => setForm((p: any) => ({ ...p, saga: e.target.value }))}
++              placeholder="ex : Legacy of God"
++              className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner"
++            />
++          </div>
+           <div className="space-y-2">
+             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">ISBN 13</Label>
+             <Input value={form.isbn13 || ""} onChange={(e) => setForm((p: any) => ({ ...p, isbn13: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" disabled={!isNew} />
+@@ -239,53 +251,29 @@ export function MasterBookEditor({
+         />
+       </div>
+ 
+-      <div className="space-y-4">
+-        <Label className="italic text-xl font-headline">Genres</Label>
+-        <div className="flex flex-wrap gap-2">
+-          {taxonomy.genres.map((g) => {
+-            const isActive = (form.genres || []).includes(g);
+-            return (
+-              <button key={g} type="button" onClick={() => toggleTag("genres", g)}
+-                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
+-                  isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60")}>
+-                {g}
+-              </button>
+-            );
+-          })}
+-        </div>
+-      </div>
++      <TagDropdown
++        label="Genres"
++        options={taxonomy.genres}
++        selected={form.genres || []}
++        onToggle={(v) => toggleTag("genres", v)}
++        accent="primary"
++      />
+ 
+-      <div className="space-y-4">
+-        <Label className="italic text-xl font-headline">Tropes</Label>
+-        <div className="flex flex-wrap gap-2">
+-          {taxonomy.tropes.map((t) => {
+-            const isActive = (form.tropes || []).includes(t);
+-            return (
+-              <button key={t} type="button" onClick={() => toggleTag("tropes", t)}
+-                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
+-                  isActive ? "bg-secondary text-white border-secondary shadow-sm" : "border-secondary/20 text-secondary/70 bg-white/40 hover:bg-white/60")}>
+-                {t}
+-              </button>
+-            );
+-          })}
+-        </div>
+-      </div>
++      <TagDropdown
++        label="Tropes"
++        options={taxonomy.tropes}
++        selected={form.tropes || []}
++        onToggle={(v) => toggleTag("tropes", v)}
++        accent="secondary"
++      />
+ 
+-      <div className="space-y-4">
+-        <Label className="italic text-xl font-headline">Thèmes principaux</Label>
+-        <div className="flex flex-wrap gap-2">
+-          {taxonomy.themes.map((t) => {
+-            const isActive = (form.themes || []).includes(t);
+-            return (
+-              <button key={t} type="button" onClick={() => toggleTag("themes", t)}
+-                className={cn("rounded-full border text-xs px-4 py-1.5 italic transition-all",
+-                  isActive ? "bg-primary text-white border-primary shadow-sm" : "border-primary/20 text-primary/60 bg-white/40 hover:bg-white/60")}>
+-                {t}
+-              </button>
+-            );
+-          })}
+-        </div>
+-      </div>
++      <TagDropdown
++        label="Thèmes principaux"
++        options={taxonomy.themes}
++        selected={form.themes || []}
++        onToggle={(v) => toggleTag("themes", v)}
++        accent="primary"
++      />
+ 
+       <Button onClick={handleSave} disabled={isSaving} className="w-full h-16 rounded-[2rem] bg-primary shadow-xl shadow-primary/10 font-headline italic text-2xl transition-transform active:scale-95">
+         {isSaving ? <Loader2 className="mr-4 h-8 w-8 animate-spin" /> : <Save className="mr-4 h-8 w-8" />} Enregistrer la fiche
