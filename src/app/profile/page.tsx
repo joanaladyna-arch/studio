@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContactAdminDialog } from "@/components/contact-admin-dialog";
+import { sortBySaga } from "@/lib/utils";
 import { 
   Crown, 
   Sparkles, 
@@ -96,8 +97,8 @@ export default function ProfilePage() {
   const stats = useMemo(() => {
     const allBooks = toArray<Book>(booksRaw);
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
-    const palBooks = allBooks.filter(b => b.status === 'pal');
-    const wishlistBooks = allBooks.filter(b => b.status === 'envie');
+    const palBooks = sortBySaga(allBooks.filter(b => b.status === 'pal'));
+    const wishlistBooks = sortBySaga(allBooks.filter(b => b.status === 'envie'));
     
     // Seuls les livres pour lesquels l'utilisatrice a confirmé qu'ils
     // comptent (case cochée à l'ajout) alimentent les objectifs — readCount

@@ -35,7 +35,7 @@ import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS } from "@/lib/utils";
+import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { collection, doc, getDoc } from "firebase/firestore";
@@ -241,12 +241,13 @@ export default function LibraryPage() {
   const { data: userBooks = [], loading } = useCollection<UserBook>(booksQuery);
 
   const filteredBooks = useMemo(() => {
-    return userBooks.filter(b => {
+    const matched = userBooks.filter(b => {
       const matchesSearch = (b.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
                            (b.author || "").toLowerCase().includes(searchQuery.toLowerCase());
       if (activeTab === "all") return matchesSearch;
       return b.status === activeTab && matchesSearch;
     });
+    return sortBySaga(matched);
   }, [userBooks, activeTab, searchQuery]);
 
   return (

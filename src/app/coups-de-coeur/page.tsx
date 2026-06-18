@@ -11,7 +11,7 @@ import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { collection, query, where, doc, getDoc, getDocs } from "firebase/firestore";
-import { cn, ADMIN_EMAILS, authorKey } from "@/lib/utils";
+import { cn, ADMIN_EMAILS, authorKey, sortBySaga } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import Link from "next/link";
@@ -110,6 +110,7 @@ export default function CoupsDeCoeurPage() {
       if (!map[b.plumeRank]) map[b.plumeRank] = [];
       map[b.plumeRank].push(b);
     });
+    Object.keys(map).forEach((rank) => { map[rank] = sortBySaga(map[rank]); });
     return map;
   }, [rankedBooks]);
 

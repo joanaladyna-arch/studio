@@ -165,6 +165,64 @@ export function stableBookKey(title: string | null | undefined, author?: string 
 }
 
 /**
+ * Extrait le numéro de tome/volume d'un titre, pour ordonner les tomes
+ * d'une même saga (Tome 1, Tome 2, Tome 3...). Reconnaît "Tome", "T",
+ * "Vol"/"Volume", avec ou sans point/espace/n°. Un bonus numéroté
+ * ("Bonus 2") se classe juste après son tome ; un bonus sans numéro se
+ * classe en toute fin de saga. Sans numéro détecté, renvoie 0 — utile
+ * pour un tome 1 jamais explicitement numéroté, ou une œuvre seule.
+ */
+export function extractTomeRank(title: string | null | undefined): number {
+  const text = (title || "").toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (/\bbonus\b/.test(text)) {
+    const bonusMatch = text.match(/bonus\D{0,6}(\d+(?:[.,]\d+)?)/);
+    if (bonusMatch) return parseFloat(bonusMatch[1].replace(",", ".")) + 0.5;
+    return Infinity;
+  }
+  const match = text.match(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*(\d+(?:[.,]\d+)?)\b/);
+  if (match) return parseFloat(match[1].replace(",", "."));
+  return 0;
+}
+
+/**
+ * Identifiant de SAGA : titre de base (numéro de tome retiré, ainsi que
+ * tout ce qui le suit — sous-titre propre à ce tome) + auteur. Sert à
+ * regrouper les tomes d'une même série, contrairement à stableBookKey
+ * qui CONSERVE le numéro pour distinguer des fiches individuelles.
+ */
+export function seriesKey(title: string | null | undefined, author?: string | null): string {
+  const base = (title || "")
+    .toString()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\bbonus\b.*$/, "")
+    .replace(/\b(?:tome|t\.?|vol(?:ume)?\.?)\s*n?°?\s*\d+(?:[.,]\d+)?\b.*$/, "")
+    .replace(/[^a-z0-9]/g, "");
+  return `${base}-${authorKey(author)}`;
+}
+
+/**
+ * Réordonne une liste de livres pour regrouper les tomes d'une même
+ * saga et les trier (Tome 1, Tome 2, Tome 3, Bonus...), tout en
+ * conservant la position relative des différentes sagas / œuvres
+ * indépendantes telle qu'elle était dans la liste d'origine — on
+ * réorganise localement, sans tout rebattre.
+ */
+export function sortBySaga<T extends { title?: string; author?: string }>(books: T[]): T[] {
+  const order: string[] = [];
+  const groups: Record<string, T[]> = {};
+  books.forEach((b) => {
+    const key = seriesKey(b.title, b.author);
+    if (!groups[key]) { groups[key] = []; order.push(key); }
+    groups[key].push(b);
+  });
+  return order.flatMap((key) =>
+    groups[key].slice().sort((a, b) => extractTomeRank(a.title) - extractTomeRank(b.title))
+  );
+}
+
+
+/**
  * Nettoyage défensif, appliqué à l'AFFICHAGE, des artefacts catalographiques
  * qui ont pu être enregistrés dans Firestore avant la correction de
  * l'extraction BnF (mention de responsabilité dupliquée dans le titre,
