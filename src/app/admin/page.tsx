@@ -27,7 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookManager } from "@/components/master-book-manager";
 import { AdminMessagerie } from "@/components/admin-messagerie";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -381,11 +381,12 @@ export default function AdminPage() {
     }
   };
 
-  // Recherche un résumé via Google Books (par ISBN si disponible, sinon
-  // par titre + auteur) pour toutes les fiches maître qui n'en ont pas
+  // Recherche un résumé pour toutes les fiches maître qui n'en ont pas
   // encore — utile pour les livres ajoutés avant l'enrichissement
   // systématique des résumés, ou dont la source d'origine n'en fournissait
-  // pas. Ne touche jamais aux livres qui ont déjà un résumé.
+  // pas. Ordre de priorité : BnF (souvent en français), puis Google
+  // Books restreint au français, puis Google Books sans restriction en
+  // dernier recours. Ne touche jamais aux livres qui ont déjà un résumé.
   const fillMissingDescriptions = async () => {
     if (!db) return;
     setIsFillingDescriptions(true);
@@ -408,7 +409,30 @@ export default function AdminPage() {
         let description = "";
 
         try {
-          if (isbn) {
+          // 1. La BnF d'abord : quand elle a un résumé catalogué, il est
+          // presque toujours en français, ce que ne garantit jamais un
+          // résultat Google Books pris au hasard sur un ISBN donné.
+          if (title) {
+            const bnfResults = isbn ? await searchBnF(isbn, "isbn") : await searchBnF(author ? `${title} ${author}` : title, "general");
+            description = cleanDescriptionHtml(bnfResults[0]?.description);
+          }
+          // 2. Google Books restreint au français, pour favoriser une
+          // édition FR si une existe et que la BnF ne l'a pas fournie.
+          if (!description && isbn) {
+            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&langRestrict=fr`, {}, 8000);
+            const json = await res.json();
+            description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
+          }
+          if (!description && title) {
+            const q = author ? `${title} ${author}` : title;
+            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&langRestrict=fr`, {}, 8000);
+            const json = await res.json();
+            description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
+          }
+          // 3. Sans restriction de langue en dernier recours, pour ne
+          // jamais laisser un résumé manquant si une version existe dans
+          // une autre langue (mieux qu'aucun résumé du tout).
+          if (!description && isbn) {
             const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`, {}, 8000);
             const json = await res.json();
             description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);

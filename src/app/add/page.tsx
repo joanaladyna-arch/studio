@@ -151,7 +151,7 @@ export default function AddBookPage() {
             cover: b.cover || undefined,
             isbn: b.isbn || "",
             isbn10: "",
-            description: "",
+            description: cleanDescriptionHtml(b.description),
             publisher: b.publisher || "",
             pages: 0,
             language: b.language || "",

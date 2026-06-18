@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useFirestore, useDoc } from "@/firebase";
-import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where } from "firebase/firestore";
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -22,7 +22,9 @@ import {
   Flame,
   ClipboardList,
   ShieldCheck,
-  Pencil
+  Pencil,
+  Library,
+  X
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -37,7 +39,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey } from "@/lib/utils";
+import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey } from "@/lib/utils";
 import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
@@ -87,6 +89,9 @@ export default function BookDetailPage() {
   const [ratingGridOpen, setRatingGridOpen] = useState(false);
   const [isFetchingLink, setIsFetchingLink] = useState(false);
   const [authorPhoto, setAuthorPhoto] = useState<string | null>(null);
+  const [otherEditions, setOtherEditions] = useState<any[] | null>(null);
+  const [editionsLoading, setEditionsLoading] = useState(false);
+  const [editionsOpen, setEditionsOpen] = useState(false);
 
   // Petite photo de l'auteur près de son nom, si elle a été renseignée à
   // la main via la fiche auteur (mode admin). Échoue toujours
@@ -160,6 +165,33 @@ export default function BookDetailPage() {
     }
   }, [userBook, fetchMasterData]);
 
+  // "Éditions" : recherche, dans la base partagée Lectoria, d'autres
+  // fiches correspondant à la même œuvre (même titre+auteur normalisés,
+  // tome inclus pour ne jamais confondre deux tomes d'une série) mais
+  // avec un ISBN différent — c'est-à-dire une autre édition ou maison
+  // d'édition. Basé uniquement sur ce que la communauté Lectoria a déjà
+  // référencé, pas un registre mondial exhaustif. Chargé seulement à
+  // l'ouverture du panneau, pas à chaque visite de la fiche.
+  const findOtherEditions = useCallback(async () => {
+    if (!db || !masterBook?.title || otherEditions !== null) return;
+    setEditionsLoading(true);
+    try {
+      const targetKey = stableBookKey(masterBook.title, masterBook.author);
+      const candidatesSnap = await getDocs(
+        query(collection(db, "masterBooks"), where("author", "==", masterBook.author || ""))
+      );
+      const matches = candidatesSnap.docs
+        .map((d) => ({ id: d.id, ...d.data() } as any))
+        .filter((b) => b.id !== masterBook.id && stableBookKey(b.title, b.author) === targetKey);
+      setOtherEditions(matches);
+    } catch (err) {
+      console.error("Find Other Editions Error:", err);
+      setOtherEditions([]);
+    } finally {
+      setEditionsLoading(false);
+    }
+  }, [db, masterBook, otherEditions]);
+
   // Pré-remplit les genres depuis la fiche maître si le livre personnel
   // n'en a pas encore (cas des livres ajoutés avant qu'on enrichisse les
   // données à l'ajout) — ne s'exécute qu'une fois, dès que masterBook
@@ -213,6 +245,31 @@ export default function BookDetailPage() {
     setEditedData({ ...editedData, [field]: updated } as any);
   };
 
+  // Quand une lectrice complète un résumé ou une couverture pour son
+  // propre livre, et que la fiche partagée n'a pas encore cette info,
+  // on la lui propose en retour — utile pour les romans indés/auto-
+  // publiés, peu couverts par les sources externes (Google Books, BnF).
+  // Ne touche JAMAIS un champ déjà rempli par quelqu'un d'autre, et
+  // échoue toujours silencieusement : une fiche commune mieux remplie
+  // est un bonus, jamais un blocage pour sauvegarder son propre journal.
+  const proposeMasterCompletion = async (fields: { description?: string; cover?: string }) => {
+    if (!db || !masterBook?.id) return;
+    try {
+      const updates: Record<string, string> = {};
+      if (fields.description?.trim() && !(masterBook.description || "").toString().trim()) {
+        updates.description = fields.description.trim();
+      }
+      if (fields.cover?.trim() && !(masterBook.cover || "").toString().trim()) {
+        updates.cover = fields.cover.trim();
+      }
+      if (Object.keys(updates).length === 0) return;
+      await updateDoc(doc(db, "masterBooks", masterBook.id), { ...updates, updatedAt: serverTimestamp() });
+      setMasterBook((prev) => (prev ? { ...prev, ...updates } : prev));
+    } catch (err) {
+      console.error("Propose Master Completion Error:", err);
+    }
+  };
+
   const handleSave = async () => {
     if (!userBookRef) return;
     setIsSaving(true);
@@ -221,6 +278,7 @@ export default function BookDetailPage() {
         ...editedData,
         updatedAt: serverTimestamp()
       });
+      proposeMasterCompletion({ description: (editedData as any).description });
       toast({ title: "Journal gravé", description: "Vos réflexions ont été enregistrées." });
     } catch (err) {
       toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder vos modifications." });
@@ -234,6 +292,7 @@ export default function BookDetailPage() {
     try {
       await updateDoc(userBookRef, { cover: url });
       setEditedData(prev => ({ ...prev, cover: url }));
+      proposeMasterCompletion({ cover: url });
       toast({ title: "Couverture mise à jour" });
       setNewCoverUrl("");
     } catch (err) {
@@ -453,6 +512,47 @@ export default function BookDetailPage() {
                  <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{masterBook?.publisher || "N/A"}</span></div>
                  <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Langue</div><span className="text-foreground">{masterBook?.language || "N/A"}</span></div>
                </div>
+               <button
+                 onClick={() => { setEditionsOpen(true); findOtherEditions(); }}
+                 className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors"
+               >
+                 <Library className="h-4 w-4" /> Voir les éditions
+               </button>
+
+               <Dialog open={editionsOpen} onOpenChange={setEditionsOpen}>
+                 <DialogContent className="glass-card border-none max-w-lg p-10 bg-white/95 backdrop-blur-3xl max-h-[80vh] overflow-y-auto">
+                   <DialogHeader>
+                     <DialogTitle className="font-headline text-2xl italic flex items-center gap-3">
+                       <Library className="h-6 w-6 text-primary" /> Éditions référencées
+                     </DialogTitle>
+                   </DialogHeader>
+                   <p className="text-xs italic opacity-50 -mt-2">D'après ce que la communauté Lectoria a déjà ajouté — pas forcément exhaustif.</p>
+                   <div className="space-y-3 pt-2">
+                     <div className="rounded-2xl bg-primary/5 p-4 flex items-center justify-between gap-3">
+                       <div className="min-w-0">
+                         <p className="text-xs font-bold uppercase opacity-50">Cette édition</p>
+                         <p className="text-sm italic truncate">{masterBook?.publisher || "Éditeur inconnu"} {masterBook?.language ? `· ${masterBook.language}` : ""}</p>
+                       </div>
+                       {(masterBook?.isbn13 || masterBook?.isbn) && <span className="text-[10px] opacity-40 shrink-0">{masterBook?.isbn13 || masterBook?.isbn}</span>}
+                     </div>
+                     {editionsLoading ? (
+                       <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin opacity-40" /></div>
+                     ) : otherEditions && otherEditions.length > 0 ? (
+                       otherEditions.map((ed) => (
+                         <div key={ed.id} className="rounded-2xl bg-white/60 p-4 flex items-center justify-between gap-3">
+                           <div className="min-w-0">
+                             <p className="text-sm italic truncate">{ed.publisher || "Éditeur inconnu"} {ed.language ? `· ${ed.language}` : ""}</p>
+                             {ed.translator && <p className="text-[10px] opacity-50 italic">Traduit par {cleanAuthorName(ed.translator)}</p>}
+                           </div>
+                           {(ed.isbn13 || ed.isbn) && <span className="text-[10px] opacity-40 shrink-0">{ed.isbn13 || ed.isbn}</span>}
+                         </div>
+                       ))
+                     ) : (
+                       <p className="text-sm italic opacity-50 text-center py-6">Aucune autre édition référencée pour le moment.</p>
+                     )}
+                   </div>
+                 </DialogContent>
+               </Dialog>
                <div className="space-y-3 max-w-xs">
                  <Label className="italic text-xl font-headline">Tome / Volume</Label>
                  <Input

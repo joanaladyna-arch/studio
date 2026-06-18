@@ -144,6 +144,11 @@ export async function GET(req: NextRequest) {
         const language = extractFirst(block, "dc:language");
         const subjects = extractAll(block, "dc:subject").slice(0, 5);
         const identifiers = extractAll(block, "dc:identifier");
+        // Pas toutes les notices BnF n'ont un résumé catalogué (zone
+        // UNIMARC 330) — quand il existe, il est précieux car
+        // généralement rédigé en français, ce que Google Books ne
+        // garantit jamais pour un ISBN donné.
+        const description = extractFirst(block, "dc:description");
         const isbnRaw = identifiers.find((id) => /97[89][\d\-X]{9,16}/i.test(id));
         const isbn = isbnRaw ? (isbnRaw.match(/97[89][\d\-X]{9,16}/i) || [""])[0].replace(/-/g, "") : "";
 
@@ -159,6 +164,7 @@ export async function GET(req: NextRequest) {
           genres: subjects,
           isbn,
           cover: "",
+          description,
           source: "bnf",
         };
       })
