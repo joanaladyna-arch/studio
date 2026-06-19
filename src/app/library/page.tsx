@@ -2,7 +2,7 @@
 "use client";
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -296,17 +296,20 @@ export default function LibraryPage() {
 
     setIsReordering(bookId);
     try {
-      const needsInit = palBooks.some((b) => (b as any).palOrder === undefined);
-      if (needsInit) {
-        await Promise.all(palBooks.map((b, i) => updateDoc(doc(db, "users", user.uid, "books", b.id), { palOrder: i })));
-        palBooks.forEach((b, i) => { (b as any).palOrder = i; });
-      }
-      const a = palBooks[index];
-      const b = palBooks[targetIndex];
-      await Promise.all([
-        updateDoc(doc(db, "users", user.uid, "books", a.id), { palOrder: (b as any).palOrder }),
-        updateDoc(doc(db, "users", user.uid, "books", b.id), { palOrder: (a as any).palOrder }),
-      ]);
+      // On réécrit la totalité de l'ordre affiché à chaque déplacement,
+      // en un seul lot atomique — plutôt que de dépendre d'un état
+      // "déjà initialisé" qui pouvait ne pas avoir eu le temps de
+      // revenir de Firestore entre deux clics rapprochés, annulant
+      // alors silencieusement le déplacement précédent.
+      const reordered = palBooks.slice();
+      const [moved] = reordered.splice(index, 1);
+      reordered.splice(targetIndex, 0, moved);
+
+      const batch = writeBatch(db);
+      reordered.forEach((b, i) => {
+        batch.update(doc(db, "users", user.uid, "books", b.id), { palOrder: i });
+      });
+      await batch.commit();
     } catch (err) {
       console.error("Move Book In PAL Error:", err);
       toast({ variant: "destructive", title: "Erreur lors du déplacement" });
@@ -345,6 +348,22 @@ export default function LibraryPage() {
   }, [db, user]);
 
   const { data: userBooks = [], loading } = useCollection<UserBook>(booksQuery);
+
+  // Si un rangement personnalisé existe déjà (palOrder renseigné sur au
+  // moins un livre de la PAL), on rétablit automatiquement le mode
+  // "Ranger moi-même" à l'ouverture de la page — sinon le tri repart
+  // toujours sur "saga" par défaut, donnant l'impression que le
+  // rangement n'a pas été sauvegardé alors qu'il l'était bel et bien.
+  // Ne se déclenche qu'une fois, pour ne jamais forcer un retour au
+  // mode manuel si la lectrice a choisi un autre tri en cours de session.
+  const [sortModeChecked, setSortModeChecked] = useState(false);
+  useEffect(() => {
+    if (sortModeChecked || userBooks.length === 0) return;
+    if (userBooks.some((b: any) => b.status === "pal" && b.palOrder !== undefined)) {
+      setSortMode("manual");
+    }
+    setSortModeChecked(true);
+  }, [userBooks, sortModeChecked]);
 
   const filteredBooks = useMemo(() => {
     const matched = userBooks.filter(b => {

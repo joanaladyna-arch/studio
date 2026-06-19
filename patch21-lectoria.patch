@@ -1,0 +1,121 @@
+diff --git a/src/app/coups-de-coeur/page.tsx b/src/app/coups-de-coeur/page.tsx
+index 4eec4a2..12fe451 100644
+--- a/src/app/coups-de-coeur/page.tsx
++++ b/src/app/coups-de-coeur/page.tsx
+@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
+ import { MasterBookEditor } from "@/components/master-book-editor";
+ import { useCollection, useUser, useFirestore } from "@/firebase";
+ import { useAdminMode } from "@/components/admin-mode";
+-import { collection, query, where, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
++import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
+ import { cn, ADMIN_EMAILS, authorKey, sortBySaga } from "@/lib/utils";
+ import { useToast } from "@/hooks/use-toast";
+ import Image from "next/image";
+@@ -130,28 +130,21 @@ export default function CoupsDeCoeurPage() {
+     }
+   };
+ 
+-  // On récupère désormais les livres de TOUTES les Palmes attribuées
+-  // (pas seulement Diamant/Royale), pour les afficher façon pile en
+-  // éventail — comme "Mon étagère PAL" — avec un écrin spécial réservé
+-  // aux deux rangs les plus prestigieux.
+-  const rankedQuery = useMemo(() => {
+-    if (!db || !user) return null;
+-    return query(
+-      collection(db, "users", user.uid, "books"),
+-      where("plumeRank", "in", Object.keys(RANKS))
+-    );
+-  }, [db, user]);
+-
+-  const { data: rankedBooks = [], loading } = useCollection(rankedQuery);
+-
+-  // "À offrir" et "Relecture d'été" peuvent concerner des livres SANS
+-  // Palme (ajout manuel) — rankedQuery ne suffit pas, il faut toute la
+-  // bibliothèque pour les calculer correctement.
++  // On récupère les livres de TOUTES les Palmes attribuées (pas
++  // seulement Diamant/Royale), pour les afficher façon pile en éventail
++  // — comme "Mon étagère PAL" — avec un écrin spécial réservé aux deux
++  // rangs les plus prestigieux. "À offrir" et "Relecture d'été" peuvent
++  // aussi concerner des livres SANS Palme (ajout manuel) — un seul
++  // écouteur sur toute la bibliothèque suffit pour tout calculer,
++  // plutôt que de faire tourner deux écouteurs Firestore simultanés
++  // sur la même collection.
+   const allBooksQuery = useMemo(() => {
+     if (!db || !user) return null;
+     return collection(db, "users", user.uid, "books");
+   }, [db, user]);
+-  const { data: allUserBooks = [] } = useCollection(allBooksQuery);
++  const { data: allUserBooks = [], loading } = useCollection(allBooksQuery);
++
++  const rankedBooks = useMemo(() => allUserBooks.filter((b: any) => b.plumeRank && Object.keys(RANKS).includes(b.plumeRank)), [allUserBooks]);
+ 
+   const giftBooks = useMemo(() => sortBySaga(allUserBooks.filter((b: any) => b.toGift) as any[]), [allUserBooks]);
+ 
+diff --git a/src/app/library/page.tsx b/src/app/library/page.tsx
+index 8efacb1..3033105 100644
+--- a/src/app/library/page.tsx
++++ b/src/app/library/page.tsx
+@@ -2,7 +2,7 @@
+ "use client";
+ 
+ import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+-import { useState, useMemo } from "react";
++import { useState, useMemo, useEffect } from "react";
+ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+ import { Input } from "@/components/ui/input";
+ import { Dialog, DialogContent } from "@/components/ui/dialog";
+@@ -296,17 +296,20 @@ export default function LibraryPage() {
+ 
+     setIsReordering(bookId);
+     try {
+-      const needsInit = palBooks.some((b) => (b as any).palOrder === undefined);
+-      if (needsInit) {
+-        await Promise.all(palBooks.map((b, i) => updateDoc(doc(db, "users", user.uid, "books", b.id), { palOrder: i })));
+-        palBooks.forEach((b, i) => { (b as any).palOrder = i; });
+-      }
+-      const a = palBooks[index];
+-      const b = palBooks[targetIndex];
+-      await Promise.all([
+-        updateDoc(doc(db, "users", user.uid, "books", a.id), { palOrder: (b as any).palOrder }),
+-        updateDoc(doc(db, "users", user.uid, "books", b.id), { palOrder: (a as any).palOrder }),
+-      ]);
++      // On réécrit la totalité de l'ordre affiché à chaque déplacement,
++      // en un seul lot atomique — plutôt que de dépendre d'un état
++      // "déjà initialisé" qui pouvait ne pas avoir eu le temps de
++      // revenir de Firestore entre deux clics rapprochés, annulant
++      // alors silencieusement le déplacement précédent.
++      const reordered = palBooks.slice();
++      const [moved] = reordered.splice(index, 1);
++      reordered.splice(targetIndex, 0, moved);
++
++      const batch = writeBatch(db);
++      reordered.forEach((b, i) => {
++        batch.update(doc(db, "users", user.uid, "books", b.id), { palOrder: i });
++      });
++      await batch.commit();
+     } catch (err) {
+       console.error("Move Book In PAL Error:", err);
+       toast({ variant: "destructive", title: "Erreur lors du déplacement" });
+@@ -346,6 +349,22 @@ export default function LibraryPage() {
+ 
+   const { data: userBooks = [], loading } = useCollection<UserBook>(booksQuery);
+ 
++  // Si un rangement personnalisé existe déjà (palOrder renseigné sur au
++  // moins un livre de la PAL), on rétablit automatiquement le mode
++  // "Ranger moi-même" à l'ouverture de la page — sinon le tri repart
++  // toujours sur "saga" par défaut, donnant l'impression que le
++  // rangement n'a pas été sauvegardé alors qu'il l'était bel et bien.
++  // Ne se déclenche qu'une fois, pour ne jamais forcer un retour au
++  // mode manuel si la lectrice a choisi un autre tri en cours de session.
++  const [sortModeChecked, setSortModeChecked] = useState(false);
++  useEffect(() => {
++    if (sortModeChecked || userBooks.length === 0) return;
++    if (userBooks.some((b: any) => b.status === "pal" && b.palOrder !== undefined)) {
++      setSortMode("manual");
++    }
++    setSortModeChecked(true);
++  }, [userBooks, sortModeChecked]);
++
+   const filteredBooks = useMemo(() => {
+     const matched = userBooks.filter(b => {
+       const matchesSearch = (b.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 

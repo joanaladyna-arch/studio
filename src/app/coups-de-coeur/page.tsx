@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
-import { collection, query, where, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
 import { cn, ADMIN_EMAILS, authorKey, sortBySaga } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -130,28 +130,21 @@ export default function CoupsDeCoeurPage() {
     }
   };
 
-  // On récupère désormais les livres de TOUTES les Palmes attribuées
-  // (pas seulement Diamant/Royale), pour les afficher façon pile en
-  // éventail — comme "Mon étagère PAL" — avec un écrin spécial réservé
-  // aux deux rangs les plus prestigieux.
-  const rankedQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return query(
-      collection(db, "users", user.uid, "books"),
-      where("plumeRank", "in", Object.keys(RANKS))
-    );
-  }, [db, user]);
-
-  const { data: rankedBooks = [], loading } = useCollection(rankedQuery);
-
-  // "À offrir" et "Relecture d'été" peuvent concerner des livres SANS
-  // Palme (ajout manuel) — rankedQuery ne suffit pas, il faut toute la
-  // bibliothèque pour les calculer correctement.
+  // On récupère les livres de TOUTES les Palmes attribuées (pas
+  // seulement Diamant/Royale), pour les afficher façon pile en éventail
+  // — comme "Mon étagère PAL" — avec un écrin spécial réservé aux deux
+  // rangs les plus prestigieux. "À offrir" et "Relecture d'été" peuvent
+  // aussi concerner des livres SANS Palme (ajout manuel) — un seul
+  // écouteur sur toute la bibliothèque suffit pour tout calculer,
+  // plutôt que de faire tourner deux écouteurs Firestore simultanés
+  // sur la même collection.
   const allBooksQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, "users", user.uid, "books");
   }, [db, user]);
-  const { data: allUserBooks = [] } = useCollection(allBooksQuery);
+  const { data: allUserBooks = [], loading } = useCollection(allBooksQuery);
+
+  const rankedBooks = useMemo(() => allUserBooks.filter((b: any) => b.plumeRank && Object.keys(RANKS).includes(b.plumeRank)), [allUserBooks]);
 
   const giftBooks = useMemo(() => sortBySaga(allUserBooks.filter((b: any) => b.toGift) as any[]), [allUserBooks]);
 
