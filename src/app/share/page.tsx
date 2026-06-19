@@ -115,6 +115,31 @@ export default function SharePage() {
 
   const rank = selectedBook?.plumeRank ? RANKS[selectedBook.plumeRank as keyof typeof RANKS] : null;
 
+  // La couverture affichée sur la carte ET capturée à l'export passe
+  // systématiquement par ce relais (data URI interne), jamais
+  // directement par l'URL externe — voir /api/proxy-image pour le
+  // détail du problème que ça résout (capture impossible sinon).
+  const [coverDataUri, setCoverDataUri] = useState<string | null>(null);
+  const [coverLoading, setCoverLoading] = useState(false);
+  useEffect(() => {
+    if (!selectedBook?.cover) { setCoverDataUri(null); return; }
+    let cancelled = false;
+    setCoverLoading(true);
+    setCoverDataUri(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(selectedBook.cover)}`);
+        const data = await res.json();
+        if (!cancelled) setCoverDataUri(data.dataUri || null);
+      } catch (err) {
+        console.error("Proxy Cover Error:", err);
+      } finally {
+        if (!cancelled) setCoverLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedBook?.cover]);
+
   // Ambiance suggérée automatiquement selon le(s) genre(s) du livre
   // sélectionné, mais jamais imposée : la lectrice change le rendu via
   // les pastilles de couleur sous la carte à tout moment.
@@ -240,7 +265,15 @@ export default function SharePage() {
                 {selectedBook && (
                   <>
                     <div className="relative w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border-4 border-white rotate-1">
-                      <BookCover src={selectedBook.cover} alt={selectedBook.title} className="object-cover" />
+                      {coverDataUri ? (
+                        <img src={coverDataUri} alt={selectedBook.title} className="w-full h-full object-cover" />
+                      ) : coverLoading ? (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-secondary/15 to-primary/5">
+                          <Loader2 className="h-6 w-6 animate-spin opacity-40" />
+                        </div>
+                      ) : (
+                        <BookCover src={selectedBook.cover} alt={selectedBook.title} className="object-cover" />
+                      )}
                     </div>
 
                     <div className="space-y-1">
@@ -300,14 +333,14 @@ export default function SharePage() {
             <div className="grid grid-cols-2 gap-3">
               <Button
                 onClick={() => handleShareToSocial("Instagram")}
-                disabled={isExporting || !selectedBook}
+                disabled={isExporting || !selectedBook || coverLoading}
                 className="w-full rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 shadow-lg shadow-pink-200 border-none h-12"
               >
                 {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Instagram className="mr-2 h-4 w-4" />} Insta
               </Button>
               <Button
                 onClick={() => handleShareToSocial("TikTok")}
-                disabled={isExporting || !selectedBook}
+                disabled={isExporting || !selectedBook || coverLoading}
                 className="w-full rounded-2xl bg-slate-900 shadow-lg shadow-slate-200 border-none h-12"
               >
                 {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Music className="mr-2 h-4 w-4" />} TikTok
@@ -315,7 +348,7 @@ export default function SharePage() {
               <Button
                 variant="outline"
                 onClick={handleExport}
-                disabled={isExporting || !selectedBook}
+                disabled={isExporting || !selectedBook || coverLoading}
                 className="w-full col-span-2 rounded-2xl border-primary/20 text-primary h-12"
               >
                 {isExporting ? (
