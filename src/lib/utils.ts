@@ -284,6 +284,44 @@ export function cleanBookTitle(title?: string | null): string {
  * créer de vrais retours à la ligne. Les <br> et <p> deviennent des
  * retours à la ligne réels ; les autres balises sont retirées.
  */
+const LANGUAGE_LABELS: Record<string, string> = {
+  fr: "Français", fre: "Français", fra: "Français", français: "Français", francais: "Français", french: "Français",
+  en: "Anglais", eng: "Anglais", english: "Anglais", anglais: "Anglais",
+  es: "Espagnol", spa: "Espagnol", spanish: "Espagnol", español: "Espagnol", espagnol: "Espagnol",
+  de: "Allemand", ger: "Allemand", deu: "Allemand", german: "Allemand", deutsch: "Allemand", allemand: "Allemand",
+  it: "Italien", ita: "Italien", italian: "Italien", italiano: "Italien", italien: "Italien",
+  pt: "Portugais", por: "Portugais", portuguese: "Portugais", portugais: "Portugais",
+  nl: "Néerlandais", dut: "Néerlandais", nld: "Néerlandais", dutch: "Néerlandais", néerlandais: "Néerlandais",
+};
+
+/**
+ * Convertit un code langue (ISO 639-1/2 ou nom déjà écrit) en libellé
+ * français lisible pour affichage. Renvoie "Langue non précisée" si la
+ * source n'a fourni aucune info — arrive surtout avec Apple/iTunes, qui
+ * n'expose pas ce champ.
+ */
+export function languageLabel(lang?: string | null): string {
+  const key = (lang || "").toString().trim().toLowerCase();
+  if (!key) return "Langue non précisée";
+  return LANGUAGE_LABELS[key] || (lang as string).toString();
+}
+
+/**
+ * Détermine si un résultat de recherche est en français, pour le
+ * filtrage par défaut des résultats d'ajout de livre. Une langue VIDE
+ * est considérée comme française par défaut plutôt que rejetée — utile
+ * pour ne jamais masquer une fiche Lectoria existante ou un résultat
+ * Apple dont la langue n'est simplement pas renseignée par la source ;
+ * seule une langue explicitement AUTRE (anglais, espagnol, allemand...)
+ * fait basculer le résultat dans le filtre "autres langues".
+ */
+export function isFrenchLanguage(lang?: string | null): boolean {
+  const key = (lang || "").toString().trim().toLowerCase();
+  if (!key) return true;
+  return ["fr", "fre", "fra", "français", "francais", "french"].includes(key);
+}
+
+
 export function cleanDescriptionHtml(desc?: string | null): string {
   if (!desc) return "";
   return desc

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cleanDescriptionHtml } from "@/lib/utils";
 
 /**
  * Route API serveur qui interroge l'iTunes Search API d'Apple (qui
@@ -25,8 +26,8 @@ export async function GET(req: NextRequest) {
   }
 
   const url = isIsbn
-    ? `https://itunes.apple.com/lookup?isbn=${encodeURIComponent(q)}`
-    : `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=ebook&limit=10`;
+    ? `https://itunes.apple.com/lookup?isbn=${encodeURIComponent(q)}&country=FR`
+    : `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=ebook&country=FR&limit=10`;
 
   try {
     const controller = new AbortController();
@@ -44,12 +45,13 @@ export async function GET(req: NextRequest) {
     const items: any[] = data.results || [];
 
     const results = items
+      .filter((item) => item.kind === "ebook")
       .map((item) => ({
         id: `apple-${item.trackId || item.trackName}`,
         title: item.trackName || "",
         author: item.artistName || "",
         cover: (item.artworkUrl100 || item.artworkUrl60 || "").replace(/\d+x\d+bb/, "600x600bb"),
-        description: item.description || item.shortDescription || "",
+        description: cleanDescriptionHtml(item.description || item.shortDescription || ""),
         publishedDate: (item.releaseDate || "").slice(0, 4),
         genres: item.genres || [],
         language: "",

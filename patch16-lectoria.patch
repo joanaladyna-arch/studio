@@ -1,0 +1,224 @@
+diff --git a/src/app/book/[id]/page.tsx b/src/app/book/[id]/page.tsx
+index 74b85c7..f8c2d02 100644
+--- a/src/app/book/[id]/page.tsx
++++ b/src/app/book/[id]/page.tsx
+@@ -82,6 +82,14 @@ export default function BookDetailPage() {
+     return doc(db, "users", user.uid, "books", bookId);
+   }, [db, user, bookId]);
+ 
++  const profileRef = useMemo(() => {
++    if (!db || !user) return null;
++    return doc(db, "users", user.uid);
++  }, [db, user]);
++  const { data: profile } = useDoc(profileRef);
++  const isPinnedAsNext = profile?.nextReadBookId === bookId;
++  const [isPinning, setIsPinning] = useState(false);
++
+   const { data: userBook, loading: userLoading } = useDoc<UserBook>(userBookRef);
+   const [masterBook, setMasterBook] = useState<MasterBook | null>(null);
+   const [masterLoading, setMasterLoading] = useState(false);
+@@ -311,6 +319,29 @@ export default function BookDetailPage() {
+     }
+   };
+ 
++  // Épingle/désépingle ce livre comme "Prochaine lecture", affichée en
++  // tête de l'accueil. Stocké sur le profil de la lectrice (un seul
++  // livre épinglé à la fois — épingler un nouveau livre remplace
++  // automatiquement l'ancien, pas besoin d'aller le désépingler à la
++  // main d'abord) plutôt que sur le livre lui-même : plus simple à
++  // garantir l'unicité et cohérent avec le même schéma déjà utilisé
++  // pour les auteurs suivis.
++  const toggleNextReadPin = async () => {
++    if (!db || !user || !bookId) return;
++    setIsPinning(true);
++    try {
++      await updateDoc(doc(db, "users", user.uid), {
++        nextReadBookId: isPinnedAsNext ? null : bookId,
++      });
++      toast({ title: isPinnedAsNext ? "Épingle retirée" : "Épinglé comme prochaine lecture" });
++    } catch (err) {
++      console.error("Toggle Next Read Pin Error:", err);
++      toast({ variant: "destructive", title: "Erreur" });
++    } finally {
++      setIsPinning(false);
++    }
++  };
++
+   // Ajoute/retire un genre ou un trope de la liste personnelle de
+   // l'utilisatrice pour ce livre — ces champs alimentent directement le
+   // calcul des badges/médailles sur la page profil.
+@@ -390,9 +421,17 @@ export default function BookDetailPage() {
+       if (editedData.status === "read" && !userBook?.dateRead && !(editedData as any).dateRead) {
+         dateReadUpdate.dateRead = serverTimestamp();
+       }
++      // Une "Prochaine lecture" épinglée n'a plus de sens dès que la
++      // lecture démarre (ou que le livre quitte la PAL pour toute autre
++      // raison) — on décroche automatiquement l'épingle dans ce cas.
++      const nextReadUpdate: any = {};
++      if (editedData.status !== "pal" && (userBook as any)?.isNextRead) {
++        nextReadUpdate.isNextRead = false;
++      }
+       await updateDoc(userBookRef, {
+         ...editedData,
+         ...dateReadUpdate,
++        ...nextReadUpdate,
+         updatedAt: serverTimestamp()
+       });
+       proposeMasterCompletion({ description: (editedData as any).description });
+diff --git a/src/app/library/page.tsx b/src/app/library/page.tsx
+index 1a21e07..e618c4d 100644
+--- a/src/app/library/page.tsx
++++ b/src/app/library/page.tsx
+@@ -34,7 +34,8 @@ import {
+   Pencil,
+   UserRound,
+   Layers,
+-  ChevronDown
++  ChevronDown,
++  Pin
+ } from "lucide-react";
+ import Image from "next/image";
+ import { BookCover } from "@/components/book-cover";
+@@ -43,7 +44,7 @@ import { Button } from "@/components/ui/button";
+ import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor } from "@/lib/utils";
+ import { useCollection, useUser, useFirestore } from "@/firebase";
+ import { useAdminMode } from "@/components/admin-mode";
+-import { collection, doc, getDoc } from "firebase/firestore";
++import { collection, doc, getDoc, updateDoc, query, where, getDocs, writeBatch } from "firebase/firestore";
+ import { useToast } from "@/hooks/use-toast";
+ import Link from "next/link";
+ 
+@@ -84,6 +85,7 @@ export interface UserBook {
+   plumeRank?: RankType;
+   dateAdded: any;
+   dateRead?: any;
++  isNextRead?: boolean;
+   title?: string; 
+   author?: string;
+   cover?: string;
+@@ -244,6 +246,33 @@ export default function LibraryPage() {
+     }
+   };
+ 
++  // Épingle un livre de la PAL comme "Prochaine lecture" — un seul
++  // livre épinglé à la fois, donc on désépingle d'abord tout autre
++  // livre qui le serait déjà avant de poser la nouvelle épingle. Le
++  // décrochage automatique quand la lecture démarre est géré côté
++  // fiche livre (handleSave), pas ici.
++  const [isPinning, setIsPinning] = useState<string | null>(null);
++  const togglePinNextRead = async (bookId: string, currentlyPinned: boolean) => {
++    if (!db || !user) return;
++    setIsPinning(bookId);
++    try {
++      if (!currentlyPinned) {
++        const pinnedSnap = await getDocs(query(collection(db, "users", user.uid, "books"), where("isNextRead", "==", true)));
++        if (!pinnedSnap.empty) {
++          const batch = writeBatch(db);
++          pinnedSnap.docs.forEach((d) => batch.update(d.ref, { isNextRead: false }));
++          await batch.commit();
++        }
++      }
++      await updateDoc(doc(db, "users", user.uid, "books", bookId), { isNextRead: !currentlyPinned });
++    } catch (err) {
++      console.error("Toggle Pin Next Read Error:", err);
++      toast({ variant: "destructive", title: "Erreur lors de l'épinglage" });
++    } finally {
++      setIsPinning(null);
++    }
++  };
++
+   const booksQuery = useMemo(() => {
+     if (!db || !user) return null;
+     return collection(db, "users", user.uid, "books");
+@@ -371,6 +400,19 @@ export default function LibraryPage() {
+                       {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
+                     </button>
+                   )}
++                  {activeTab === "pal" && (
++                    <button
++                      onClick={(e) => { e.preventDefault(); togglePinNextRead(book.id, !!(book as any).isNextRead); }}
++                      disabled={isPinning === book.id}
++                      title={(book as any).isNextRead ? "Retirer de Prochaine lecture" : "Épingler comme Prochaine lecture"}
++                      className={cn(
++                        "absolute top-2 right-2 z-10 h-9 w-9 rounded-full shadow-lg flex items-center justify-center transition-colors",
++                        (book as any).isNextRead ? "bg-primary text-white" : "bg-white/80 text-primary/40 hover:text-primary"
++                      )}
++                    >
++                      {isPinning === book.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className={cn("h-4 w-4", (book as any).isNextRead && "fill-white")} />}
++                    </button>
++                  )}
+                   <Link href={`/book/${book.id}`} className="group block">
+                     <BookCard book={book} />
+                   </Link>
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 5e8cadb..dd8ad15 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -94,12 +94,19 @@ export default function Home() {
+     return allBooks
+       .filter(b => b.status === 'read' || b.status === 'reread')
+       .sort((a, b) => {
+-        const da = a.dateAdded?.toDate ? a.dateAdded.toDate() : new Date(a.dateAdded || 0);
+-        const db = b.dateAdded?.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded || 0);
++        const rawA = (a as any).dateRead || a.dateAdded;
++        const rawB = (b as any).dateRead || b.dateAdded;
++        const da = rawA?.toDate ? rawA.toDate() : new Date(rawA || 0);
++        const db = rawB?.toDate ? rawB.toDate() : new Date(rawB || 0);
+         return db.getTime() - da.getTime();
+       });
+   }, [allBooks]);
+ 
++  const lastRead = readBooks[0] || null;
++  const nextRead = useMemo(() => {
++    return allBooks.find((b: any) => b.status === 'pal' && b.isNextRead) || null;
++  }, [allBooks]);
++
+   const stats = useMemo(() => {
+     const now = new Date();
+     const currentMonth = now.getMonth();
+@@ -254,6 +261,45 @@ export default function Home() {
+         )}
+       </section>
+ 
++      {(lastRead || nextRead) && (
++        <div className="grid grid-cols-2 gap-6">
++          <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
++            <div className="relative h-20 w-14 rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
++              {lastRead && <BookCover src={(lastRead as any).cover} alt={(lastRead as any).title || ""} className="object-cover" />}
++            </div>
++            <div className="min-w-0 space-y-1">
++              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Tu viens de terminer</p>
++              {lastRead ? (
++                <Link href={`/book/${(lastRead as any).id}`} className="block">
++                  <p className="font-headline italic text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((lastRead as any).title)}</p>
++                  <p className="text-[11px] text-muted-foreground truncate">{cleanAuthorName((lastRead as any).author)}</p>
++                </Link>
++              ) : (
++                <p className="text-sm italic opacity-40">Aucune lecture terminée pour le moment.</p>
++              )}
++            </div>
++          </div>
++          <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
++            <div className="relative h-20 w-14 rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
++              {nextRead && <BookCover src={(nextRead as any).cover} alt={(nextRead as any).title || ""} className="object-cover" />}
++            </div>
++            <div className="min-w-0 space-y-1">
++              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">À suivre</p>
++              {nextRead ? (
++                <Link href={`/book/${(nextRead as any).id}`} className="block">
++                  <p className="font-headline italic text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((nextRead as any).title)}</p>
++                  <p className="text-[11px] text-muted-foreground truncate">{cleanAuthorName((nextRead as any).author)}</p>
++                </Link>
++              ) : (
++                <Link href="/library" className="text-sm italic text-primary/50 hover:text-primary transition-colors">
++                  Épingle un livre de ta PAL →
++                </Link>
++              )}
++            </div>
++          </div>
++        </div>
++      )}
++
+       <div className="grid md:grid-cols-[1.8fr_1fr] gap-12">
+         <section className="space-y-8">
+           <div className="flex justify-between items-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,7 +25,7 @@ import { MasterBookEditor } from "@/components/master-book-editor";
 import { IsbnImporter } from "@/components/isbn-importer";
 import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga, isFrenchLanguage, languageLabel } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 
 export default function AddBookPage() {
@@ -56,6 +56,7 @@ export default function AddBookPage() {
   const [searchMode, setSearchMode] = useState<"general" | "publisher">("general");
   const [results, setResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showAllLanguages, setShowAllLanguages] = useState(false);
   const [pendingBook, setPendingBook] = useState<any | null>(null);
   const [previewBook, setPreviewBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
@@ -381,6 +382,17 @@ export default function AddBookPage() {
     }
   };
 
+  // Par défaut, n'affiche que les résultats français (ou de langue non
+  // précisée — surtout les fiches Lectoria et Apple, qui ne fournissent
+  // pas toujours cette info, donc on ne les masque jamais à tort). Le
+  // toggle "Afficher toutes les langues" révèle le reste sans relancer
+  // de recherche, puisque tout est déjà chargé en mémoire.
+  const visibleResults = useMemo(() => {
+    if (showAllLanguages) return results;
+    return results.filter((b) => b.source === "master" || isFrenchLanguage(b.language));
+  }, [results, showAllLanguages]);
+  const hiddenCount = results.length - visibleResults.length;
+
   return (
     <div className="space-y-12 animate-paper pb-32">
       <header className="text-center space-y-4 pt-8">
@@ -433,7 +445,22 @@ export default function AddBookPage() {
       </div>
 
       <div className="max-w-4xl mx-auto grid gap-6">
-        {results.map((book) => (
+        {results.length > 0 && (
+          <div className="flex items-center justify-between flex-wrap gap-3 px-2">
+            <p className="text-[11px] italic opacity-50">
+              {showAllLanguages ? "Tous les résultats, toutes langues confondues." : "Résultats en français affichés en priorité."}
+            </p>
+            {hiddenCount > 0 && (
+              <button
+                onClick={() => setShowAllLanguages((v) => !v)}
+                className="text-[11px] font-bold uppercase tracking-widest text-primary/60 hover:text-primary transition-colors underline underline-offset-4"
+              >
+                {showAllLanguages ? "Revenir au français uniquement" : `Afficher aussi les autres langues (+${hiddenCount})`}
+              </button>
+            )}
+          </div>
+        )}
+        {visibleResults.map((book) => (
           <Card key={book.id} className="glass-card overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-0 flex flex-col sm:flex-row">
               <div className="relative w-32 aspect-[2/3] bg-secondary/5 shrink-0">
@@ -452,6 +479,9 @@ export default function AddBookPage() {
                   <h3 className="text-xl font-headline italic leading-tight">{book.title}</h3>
                   <p className="text-xs text-muted-foreground font-bold uppercase">{book.author}</p>
                   {book.publisher && <p className="text-[10px] text-primary/50 italic">{book.publisher}</p>}
+                  <Badge variant="secondary" className="bg-secondary/5 text-secondary/60 border-none text-[8px] mt-1">
+                    {languageLabel(book.language)}
+                  </Badge>
                   {book.source === 'master' && (
                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px] mt-2">
                       Base Lectoria

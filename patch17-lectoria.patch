@@ -1,0 +1,341 @@
+diff --git a/package-lock.json b/package-lock.json
+index a91c282..fb7f847 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -35,6 +35,7 @@
+         "date-fns": "^3.6.0",
+         "embla-carousel-react": "^8.6.0",
+         "firebase": "^11.9.1",
++        "html-to-image": "^1.11.13",
+         "html5-qrcode": "^2.3.8",
+         "jspdf": "^4.2.1",
+         "lucide-react": "^0.475.0",
+@@ -5105,6 +5106,12 @@
+         "node": ">= 0.4"
+       }
+     },
++    "node_modules/html-to-image": {
++      "version": "1.11.13",
++      "resolved": "https://registry.npmjs.org/html-to-image/-/html-to-image-1.11.13.tgz",
++      "integrity": "sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg==",
++      "license": "MIT"
++    },
+     "node_modules/html2canvas": {
+       "version": "1.4.1",
+       "resolved": "https://registry.npmjs.org/html2canvas/-/html2canvas-1.4.1.tgz",
+diff --git a/package.json b/package.json
+index 964cf54..fd04256 100644
+--- a/package.json
++++ b/package.json
+@@ -37,6 +37,7 @@
+     "date-fns": "^3.6.0",
+     "embla-carousel-react": "^8.6.0",
+     "firebase": "^11.9.1",
++    "html-to-image": "^1.11.13",
+     "html5-qrcode": "^2.3.8",
+     "jspdf": "^4.2.1",
+     "lucide-react": "^0.475.0",
+diff --git a/src/app/share/page.tsx b/src/app/share/page.tsx
+index 7c94299..796ba71 100644
+--- a/src/app/share/page.tsx
++++ b/src/app/share/page.tsx
+@@ -1,12 +1,13 @@
+ 
+ "use client";
+ 
+-import { useState, useMemo, useEffect } from "react";
++import { useState, useMemo, useEffect, useRef } from "react";
+ import { useSearchParams } from "next/navigation";
+ import { Navigation } from "@/components/navigation";
+ import { Card, CardContent } from "@/components/ui/card";
+ import { Button } from "@/components/ui/button";
+-import { Download, Instagram, Music } from "lucide-react";
++import { Download, Instagram, Music, Loader2, Check } from "lucide-react";
++import { toPng } from "html-to-image";
+ import Image from "next/image";
+ import { BookCover } from "@/components/book-cover";
+ import Link from "next/link";
+@@ -14,6 +15,75 @@ import { RANKS, EMOTIONS, Book, BookCard } from "@/app/library/page";
+ import { cn, toArray } from "@/lib/utils";
+ import { useUser, useFirestore, useCollection } from "@/firebase";
+ import { collection, query, where } from "firebase/firestore";
++import { useToast } from "@/hooks/use-toast";
++
++/**
++ * Ambiances de couleur pour la carte de partage, choisies pour rester
++ * "jolies et soignées" tout en se démarquant visuellement selon le ton
++ * du livre — une carte Dark Romance ne doit pas ressembler à une carte
++ * Romance Contemporaine. Couleurs en valeurs explicites (pas de
++ * variables CSS du thème) pour un rendu fiable lors de l'export en
++ * image. `genres` sert à la suggestion automatique ; la lectrice garde
++ * toujours la main pour changer manuellement via les pastilles.
++ */
++const SHARE_THEMES: Record<string, { label: string; genres: string[]; gradient: string; text: string; accent: string; badge: string; swatch: string }> = {
++  dark_romance: {
++    label: "Dark Romance",
++    genres: ["Dark romance"],
++    gradient: "linear-gradient(150deg, #160c10 0%, #2d0f1a 55%, #160c10 100%)",
++    text: "#f5e6e8",
++    accent: "#d65d83",
++    badge: "rgba(245,230,232,0.12)",
++    swatch: "#2d0f1a",
++  },
++  thriller: {
++    label: "Thriller & Suspense",
++    genres: ["Thriller", "Suspense", "Policier", "Mystère"],
++    gradient: "linear-gradient(150deg, #0c121f 0%, #1c2740 55%, #0c121f 100%)",
++    text: "#e8edf5",
++    accent: "#7da3d6",
++    badge: "rgba(232,237,245,0.12)",
++    swatch: "#1c2740",
++  },
++  fantasy: {
++    label: "Fantasy & Romantasy",
++    genres: ["Fantasy", "Romantasy"],
++    gradient: "linear-gradient(150deg, #170f28 0%, #2e1f4d 55%, #170f28 100%)",
++    text: "#f0e8fa",
++    accent: "#c2a15b",
++    badge: "rgba(240,232,250,0.12)",
++    swatch: "#2e1f4d",
++  },
++  romance: {
++    label: "Romance Douce",
++    genres: ["Romance contemporaine", "New romance", "New adult", "Young adult"],
++    gradient: "linear-gradient(150deg, #fdf2f5 0%, #fbe4ea 55%, #fdf2f5 100%)",
++    text: "#4a2c35",
++    accent: "#d68fa3",
++    badge: "rgba(74,44,53,0.07)",
++    swatch: "#fbe4ea",
++  },
++  default: {
++    label: "Lectoria",
++    genres: [],
++    gradient: "linear-gradient(150deg, #fdf8f5 0%, #f7e7ce 55%, #fdf8f5 100%)",
++    text: "#2b2b2b",
++    accent: "#d68fa3",
++    badge: "rgba(43,43,43,0.06)",
++    swatch: "#f7e7ce",
++  },
++};
++
++const THEME_ORDER = ["dark_romance", "thriller", "fantasy", "romance", "default"];
++
++function detectTheme(genres: string[]): string {
++  for (const key of THEME_ORDER) {
++    if (key === "default") continue;
++    if (SHARE_THEMES[key].genres.some((g) => genres.includes(g))) return key;
++  }
++  return "default";
++}
++
+ 
+ export default function SharePage() {
+   const { user } = useUser();
+@@ -45,6 +115,88 @@ export default function SharePage() {
+ 
+   const rank = selectedBook?.plumeRank ? RANKS[selectedBook.plumeRank as keyof typeof RANKS] : null;
+ 
++  // Ambiance suggérée automatiquement selon le(s) genre(s) du livre
++  // sélectionné, mais jamais imposée : la lectrice change le rendu via
++  // les pastilles de couleur sous la carte à tout moment.
++  const [selectedTheme, setSelectedTheme] = useState<string>("default");
++  const [themeManuallySet, setThemeManuallySet] = useState(false);
++  useEffect(() => {
++    if (!selectedBook || themeManuallySet) return;
++    setSelectedTheme(detectTheme(toArray<string>((selectedBook as any).genres)));
++  }, [selectedBook, themeManuallySet]);
++  const theme = SHARE_THEMES[selectedTheme];
++
++  const cardRef = useRef<HTMLDivElement>(null);
++  const [isExporting, setIsExporting] = useState(false);
++  const [exportDone, setExportDone] = useState(false);
++  const { toast } = useToast();
++
++  // Génère réellement le fichier image à partir de la carte affichée à
++  // l'écran (et non un gabarit séparé), pour que ce que la lectrice voit
++  // soit exactement ce qu'elle obtient. Le délai court avant capture
++  // laisse le temps aux polices/images de finir de se charger.
++  const captureCard = async (): Promise<string | null> => {
++    if (!cardRef.current) return null;
++    await new Promise((r) => setTimeout(r, 150));
++    return toPng(cardRef.current, { pixelRatio: 3, cacheBust: true });
++  };
++
++  const fileName = () => `lectoria-${(selectedBook?.title || "partage").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
++
++  const handleExport = async () => {
++    if (isExporting) return;
++    setIsExporting(true);
++    setExportDone(false);
++    try {
++      const dataUrl = await captureCard();
++      if (!dataUrl) return;
++      const link = document.createElement("a");
++      link.download = fileName();
++      link.href = dataUrl;
++      link.click();
++      setExportDone(true);
++      setTimeout(() => setExportDone(false), 2500);
++    } catch (err) {
++      console.error("Export Share Card Error:", err);
++    } finally {
++      setIsExporting(false);
++    }
++  };
++
++  // Ouvre la fenêtre de partage native du téléphone (qui propose
++  // Instagram, TikTok, Messages...) avec l'image déjà générée jointe.
++  // Si le navigateur ne sait pas partager de fichier (essentiellement
++  // sur ordinateur), on retombe sur un simple téléchargement avec une
++  // explication claire plutôt qu'un bouton qui ne fait rien.
++  const handleShareToSocial = async (platform: string) => {
++    if (isExporting) return;
++    setIsExporting(true);
++    try {
++      const dataUrl = await captureCard();
++      if (!dataUrl) return;
++      const blob = await (await fetch(dataUrl)).blob();
++      const file = new File([blob], fileName(), { type: "image/png" });
++
++      if (typeof navigator !== "undefined" && (navigator as any).canShare?.({ files: [file] })) {
++        await (navigator as any).share({
++          files: [file],
++          title: selectedBook?.title || "Lectoria",
++          text: selectedBook ? `${selectedBook.title} — sur Lectoria` : "Lectoria",
++        });
++      } else {
++        const link = document.createElement("a");
++        link.download = fileName();
++        link.href = dataUrl;
++        link.click();
++        toast({ title: "Image enregistrée", description: `Ouvre ${platform} et ajoute l'image manuellement à ta story.` });
++      }
++    } catch (err: any) {
++      if (err?.name !== "AbortError") console.error("Share To Social Error:", err);
++    } finally {
++      setIsExporting(false);
++    }
++  };
++
+   return (
+     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
+       <header>
+@@ -75,11 +227,15 @@ export default function SharePage() {
+           </div>
+ 
+           <div className="space-y-6">
+-            <div id="share-card" className="relative w-full aspect-[9/16] bg-gradient-to-br from-primary/10 via-background to-accent/10 rounded-[3rem] overflow-hidden shadow-2xl border border-white/40 flex flex-col items-center p-8 text-center animate-paper">
+-              <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-white/60 to-transparent" />
++            <div
++              ref={cardRef}
++              className="relative w-full aspect-[9/16] rounded-[3rem] overflow-hidden shadow-2xl border border-white/40 flex flex-col items-center p-8 text-center animate-paper"
++              style={{ background: theme.gradient, color: theme.text }}
++            >
++              <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-white/10 to-transparent" />
+               
+               <div className="relative z-10 space-y-6 w-full flex flex-col items-center">
+-                <div className="text-[10px] uppercase tracking-[0.4em] font-bold text-primary/60">Mon Carnet Lectoria</div>
++                <div className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>Mon Carnet Lectoria</div>
+                 
+                 {selectedBook && (
+                   <>
+@@ -89,27 +245,31 @@ export default function SharePage() {
+ 
+                     <div className="space-y-1">
+                       <h3 className="text-2xl font-headline italic leading-tight">{selectedBook.title}</h3>
+-                      <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest">{selectedBook.author}</p>
++                      <p className="text-xs font-bold uppercase tracking-widest opacity-70">{selectedBook.author}</p>
+                     </div>
+ 
+                     {rank && (
+                       <div className="flex flex-col items-center gap-1 py-2">
+-                        <rank.icon className={cn("h-8 w-8", rank.color)} />
+-                        <span className="text-[10px] font-bold uppercase tracking-tighter opacity-60">{rank.label}</span>
++                        <rank.icon className="h-8 w-8" style={{ color: theme.accent }} />
++                        <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">{rank.label}</span>
+                       </div>
+                     )}
+ 
+                     <div className="flex flex-wrap justify-center gap-1.5">
+                       {toArray<string>(selectedBook.emotions).map(e => (
+-                        <span key={e} className="text-[9px] px-2 py-1 rounded-full bg-white/90 border border-white shadow-sm font-bold flex items-center gap-1">
++                        <span
++                          key={e}
++                          className="text-[9px] px-2 py-1 rounded-full border shadow-sm font-bold flex items-center gap-1"
++                          style={{ backgroundColor: theme.badge, borderColor: theme.badge }}
++                        >
+                           {EMOTIONS[e]?.icon} {EMOTIONS[e]?.label}
+                         </span>
+                       ))}
+                     </div>
+ 
+                     {selectedBook.favoriteQuote && (
+-                      <div className="pt-4 border-t border-primary/10 w-full">
+-                        <p className="text-xs italic leading-relaxed text-muted-foreground px-4">
++                      <div className="pt-4 border-t w-full" style={{ borderColor: theme.badge }}>
++                        <p className="text-xs italic leading-relaxed opacity-70 px-4">
+                           "{selectedBook.favoriteQuote}"
+                         </p>
+                       </div>
+@@ -117,19 +277,54 @@ export default function SharePage() {
+                   </>
+                 )}
+ 
+-                <div className="absolute bottom-4 text-primary/30 font-headline italic text-sm tracking-widest">@Lectoria</div>
++                <div className="absolute bottom-3 text-[9px] font-headline italic tracking-widest opacity-30">@Lectoria</div>
+               </div>
+             </div>
+ 
++            <div className="flex items-center justify-center gap-3">
++              {THEME_ORDER.map((key) => (
++                <button
++                  key={key}
++                  onClick={() => { setSelectedTheme(key); setThemeManuallySet(true); }}
++                  title={SHARE_THEMES[key].label}
++                  className={cn(
++                    "h-8 w-8 rounded-full border-2 transition-all shadow-sm",
++                    selectedTheme === key ? "border-primary scale-110" : "border-white/60 hover:scale-105"
++                  )}
++                  style={{ background: SHARE_THEMES[key].swatch }}
++                />
++              ))}
++            </div>
++            <p className="text-center text-[10px] italic opacity-40 -mt-2">{theme.label}{!themeManuallySet && " (suggéré selon le genre)"}</p>
++
+             <div className="grid grid-cols-2 gap-3">
+-              <Button className="w-full rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 shadow-lg shadow-pink-200 border-none h-12">
+-                <Instagram className="mr-2 h-4 w-4" /> Insta
++              <Button
++                onClick={() => handleShareToSocial("Instagram")}
++                disabled={isExporting || !selectedBook}
++                className="w-full rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 shadow-lg shadow-pink-200 border-none h-12"
++              >
++                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Instagram className="mr-2 h-4 w-4" />} Insta
+               </Button>
+-              <Button className="w-full rounded-2xl bg-slate-900 shadow-lg shadow-slate-200 border-none h-12">
+-                <Music className="mr-2 h-4 w-4" /> TikTok
++              <Button
++                onClick={() => handleShareToSocial("TikTok")}
++                disabled={isExporting || !selectedBook}
++                className="w-full rounded-2xl bg-slate-900 shadow-lg shadow-slate-200 border-none h-12"
++              >
++                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Music className="mr-2 h-4 w-4" />} TikTok
+               </Button>
+-              <Button variant="outline" className="w-full col-span-2 rounded-2xl border-primary/20 text-primary h-12">
+-                <Download className="mr-2 h-4 w-4" /> Enregistrer
++              <Button
++                variant="outline"
++                onClick={handleExport}
++                disabled={isExporting || !selectedBook}
++                className="w-full col-span-2 rounded-2xl border-primary/20 text-primary h-12"
++              >
++                {isExporting ? (
++                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Génération...</>
++                ) : exportDone ? (
++                  <><Check className="mr-2 h-4 w-4" /> Image enregistrée !</>
++                ) : (
++                  <><Download className="mr-2 h-4 w-4" /> Enregistrer</>
++                )}
+               </Button>
+             </div>
+           </div>
