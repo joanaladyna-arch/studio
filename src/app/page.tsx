@@ -94,10 +94,17 @@ export default function Home() {
     return allBooks
       .filter(b => b.status === 'read' || b.status === 'reread')
       .sort((a, b) => {
-        const da = a.dateAdded?.toDate ? a.dateAdded.toDate() : new Date(a.dateAdded || 0);
-        const db = b.dateAdded?.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded || 0);
+        const rawA = (a as any).dateRead || a.dateAdded;
+        const rawB = (b as any).dateRead || b.dateAdded;
+        const da = rawA?.toDate ? rawA.toDate() : new Date(rawA || 0);
+        const db = rawB?.toDate ? rawB.toDate() : new Date(rawB || 0);
         return db.getTime() - da.getTime();
       });
+  }, [allBooks]);
+
+  const lastRead = readBooks[0] || null;
+  const nextRead = useMemo(() => {
+    return allBooks.find((b: any) => b.status === 'pal' && b.isNextRead) || null;
   }, [allBooks]);
 
   const stats = useMemo(() => {
@@ -253,6 +260,45 @@ export default function Home() {
           <p className="text-muted-foreground italic px-2">Vos lectures terminées s'empileront ici, une à une.</p>
         )}
       </section>
+
+      {(lastRead || nextRead) && (
+        <div className="grid grid-cols-2 gap-6">
+          <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
+            <div className="relative h-20 w-14 rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
+              {lastRead && <BookCover src={(lastRead as any).cover} alt={(lastRead as any).title || ""} className="object-cover" />}
+            </div>
+            <div className="min-w-0 space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Tu viens de terminer</p>
+              {lastRead ? (
+                <Link href={`/book/${(lastRead as any).id}`} className="block">
+                  <p className="font-headline italic text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((lastRead as any).title)}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{cleanAuthorName((lastRead as any).author)}</p>
+                </Link>
+              ) : (
+                <p className="text-sm italic opacity-40">Aucune lecture terminée pour le moment.</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
+            <div className="relative h-20 w-14 rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
+              {nextRead && <BookCover src={(nextRead as any).cover} alt={(nextRead as any).title || ""} className="object-cover" />}
+            </div>
+            <div className="min-w-0 space-y-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">À suivre</p>
+              {nextRead ? (
+                <Link href={`/book/${(nextRead as any).id}`} className="block">
+                  <p className="font-headline italic text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((nextRead as any).title)}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{cleanAuthorName((nextRead as any).author)}</p>
+                </Link>
+              ) : (
+                <Link href="/library" className="text-sm italic text-primary/50 hover:text-primary transition-colors">
+                  Épingle un livre de ta PAL →
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-[1.8fr_1fr] gap-12">
         <section className="space-y-8">

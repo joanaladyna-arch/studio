@@ -82,6 +82,14 @@ export default function BookDetailPage() {
     return doc(db, "users", user.uid, "books", bookId);
   }, [db, user, bookId]);
 
+  const profileRef = useMemo(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+  const { data: profile } = useDoc(profileRef);
+  const isPinnedAsNext = profile?.nextReadBookId === bookId;
+  const [isPinning, setIsPinning] = useState(false);
+
   const { data: userBook, loading: userLoading } = useDoc<UserBook>(userBookRef);
   const [masterBook, setMasterBook] = useState<MasterBook | null>(null);
   const [masterLoading, setMasterLoading] = useState(false);
@@ -311,6 +319,29 @@ export default function BookDetailPage() {
     }
   };
 
+  // Épingle/désépingle ce livre comme "Prochaine lecture", affichée en
+  // tête de l'accueil. Stocké sur le profil de la lectrice (un seul
+  // livre épinglé à la fois — épingler un nouveau livre remplace
+  // automatiquement l'ancien, pas besoin d'aller le désépingler à la
+  // main d'abord) plutôt que sur le livre lui-même : plus simple à
+  // garantir l'unicité et cohérent avec le même schéma déjà utilisé
+  // pour les auteurs suivis.
+  const toggleNextReadPin = async () => {
+    if (!db || !user || !bookId) return;
+    setIsPinning(true);
+    try {
+      await updateDoc(doc(db, "users", user.uid), {
+        nextReadBookId: isPinnedAsNext ? null : bookId,
+      });
+      toast({ title: isPinnedAsNext ? "Épingle retirée" : "Épinglé comme prochaine lecture" });
+    } catch (err) {
+      console.error("Toggle Next Read Pin Error:", err);
+      toast({ variant: "destructive", title: "Erreur" });
+    } finally {
+      setIsPinning(false);
+    }
+  };
+
   // Ajoute/retire un genre ou un trope de la liste personnelle de
   // l'utilisatrice pour ce livre — ces champs alimentent directement le
   // calcul des badges/médailles sur la page profil.
@@ -390,9 +421,17 @@ export default function BookDetailPage() {
       if (editedData.status === "read" && !userBook?.dateRead && !(editedData as any).dateRead) {
         dateReadUpdate.dateRead = serverTimestamp();
       }
+      // Une "Prochaine lecture" épinglée n'a plus de sens dès que la
+      // lecture démarre (ou que le livre quitte la PAL pour toute autre
+      // raison) — on décroche automatiquement l'épingle dans ce cas.
+      const nextReadUpdate: any = {};
+      if (editedData.status !== "pal" && (userBook as any)?.isNextRead) {
+        nextReadUpdate.isNextRead = false;
+      }
       await updateDoc(userBookRef, {
         ...editedData,
         ...dateReadUpdate,
+        ...nextReadUpdate,
         updatedAt: serverTimestamp()
       });
       proposeMasterCompletion({ description: (editedData as any).description });

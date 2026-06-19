@@ -34,7 +34,8 @@ import {
   Pencil,
   UserRound,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Pin
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -43,7 +44,7 @@ import { Button } from "@/components/ui/button";
 import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
-import { collection, doc, getDoc } from "firebase/firestore";
+import { collection, doc, getDoc, updateDoc, query, where, getDocs, writeBatch } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -84,6 +85,7 @@ export interface UserBook {
   plumeRank?: RankType;
   dateAdded: any;
   dateRead?: any;
+  isNextRead?: boolean;
   title?: string; 
   author?: string;
   cover?: string;
@@ -244,6 +246,33 @@ export default function LibraryPage() {
     }
   };
 
+  // Épingle un livre de la PAL comme "Prochaine lecture" — un seul
+  // livre épinglé à la fois, donc on désépingle d'abord tout autre
+  // livre qui le serait déjà avant de poser la nouvelle épingle. Le
+  // décrochage automatique quand la lecture démarre est géré côté
+  // fiche livre (handleSave), pas ici.
+  const [isPinning, setIsPinning] = useState<string | null>(null);
+  const togglePinNextRead = async (bookId: string, currentlyPinned: boolean) => {
+    if (!db || !user) return;
+    setIsPinning(bookId);
+    try {
+      if (!currentlyPinned) {
+        const pinnedSnap = await getDocs(query(collection(db, "users", user.uid, "books"), where("isNextRead", "==", true)));
+        if (!pinnedSnap.empty) {
+          const batch = writeBatch(db);
+          pinnedSnap.docs.forEach((d) => batch.update(d.ref, { isNextRead: false }));
+          await batch.commit();
+        }
+      }
+      await updateDoc(doc(db, "users", user.uid, "books", bookId), { isNextRead: !currentlyPinned });
+    } catch (err) {
+      console.error("Toggle Pin Next Read Error:", err);
+      toast({ variant: "destructive", title: "Erreur lors de l'épinglage" });
+    } finally {
+      setIsPinning(null);
+    }
+  };
+
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, "users", user.uid, "books");
@@ -369,6 +398,19 @@ export default function LibraryPage() {
                       title="Éditer la fiche partagée (admin)"
                     >
                       {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
+                    </button>
+                  )}
+                  {activeTab === "pal" && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); togglePinNextRead(book.id, !!(book as any).isNextRead); }}
+                      disabled={isPinning === book.id}
+                      title={(book as any).isNextRead ? "Retirer de Prochaine lecture" : "Épingler comme Prochaine lecture"}
+                      className={cn(
+                        "absolute top-2 right-2 z-10 h-9 w-9 rounded-full shadow-lg flex items-center justify-center transition-colors",
+                        (book as any).isNextRead ? "bg-primary text-white" : "bg-white/80 text-primary/40 hover:text-primary"
+                      )}
+                    >
+                      {isPinning === book.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className={cn("h-4 w-4", (book as any).isNextRead && "fill-white")} />}
                     </button>
                   )}
                   <Link href={`/book/${book.id}`} className="group block">
