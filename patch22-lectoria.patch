@@ -1,0 +1,146 @@
+diff --git a/src/app/api/proxy-image/route.ts b/src/app/api/proxy-image/route.ts
+index 42b8e78..587b87c 100644
+--- a/src/app/api/proxy-image/route.ts
++++ b/src/app/api/proxy-image/route.ts
+@@ -18,18 +18,37 @@ export async function GET(req: NextRequest) {
+   }
+   try {
+     const controller = new AbortController();
+-    const timeout = setTimeout(() => controller.abort(), 8000);
++    const timeout = setTimeout(() => controller.abort(), 10000);
+     const res = await fetch(url, {
+-      headers: { "User-Agent": "Mozilla/5.0 (compatible; LectoriaBot/1.0)" },
++      headers: {
++        // Un User-Agent de vrai navigateur plutôt qu'un nom de robot —
++        // certains hébergeurs d'images (Google Books, Apple...)
++        // dégradent ou bloquent silencieusement les requêtes identifiées
++        // comme robots, sans renvoyer d'erreur claire pour autant.
++        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
++        "Accept": "image/avif,image/webp,image/png,image/jpeg,image/*,*/*;q=0.8",
++      },
+       signal: controller.signal,
+     });
+     clearTimeout(timeout);
+-    if (!res.ok) return NextResponse.json({ error: "Image inaccessible" }, { status: 502 });
+-    const contentType = res.headers.get("content-type") || "image/jpeg";
++    if (!res.ok) {
++      return NextResponse.json({ error: `Image inaccessible (code ${res.status})` }, { status: 502 });
++    }
++    const contentType = res.headers.get("content-type") || "";
++    if (!contentType.startsWith("image/")) {
++      // Le lien a répondu, mais avec autre chose qu'une image (souvent
++      // une page d'erreur ou de blocage déguisée en réponse 200) — on
++      // le signale clairement plutôt que de fabriquer une fausse image.
++      return NextResponse.json({ error: "Ce lien ne renvoie pas une image valide" }, { status: 502 });
++    }
+     const buffer = Buffer.from(await res.arrayBuffer());
++    if (buffer.length < 100) {
++      return NextResponse.json({ error: "Image vide ou corrompue" }, { status: 502 });
++    }
+     const dataUri = `data:${contentType};base64,${buffer.toString("base64")}`;
+     return NextResponse.json({ dataUri });
+-  } catch (err) {
+-    return NextResponse.json({ error: "Impossible de récupérer cette image." }, { status: 500 });
++  } catch (err: any) {
++    const message = err?.name === "AbortError" ? "Délai dépassé en récupérant l'image." : "Impossible de récupérer cette image.";
++    return NextResponse.json({ error: message }, { status: 500 });
+   }
+ }
+diff --git a/src/app/share/page.tsx b/src/app/share/page.tsx
+index 4ad547f..4d375a7 100644
+--- a/src/app/share/page.tsx
++++ b/src/app/share/page.tsx
+@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
+ import { Navigation } from "@/components/navigation";
+ import { Card, CardContent } from "@/components/ui/card";
+ import { Button } from "@/components/ui/button";
+-import { Download, Instagram, Music, Loader2, Check } from "lucide-react";
++import { Download, Instagram, Music, Loader2, Check, BookOpen } from "lucide-react";
+ import { toPng } from "html-to-image";
+ import Image from "next/image";
+ import { BookCover } from "@/components/book-cover";
+@@ -118,27 +118,52 @@ export default function SharePage() {
+   // La couverture affichée sur la carte ET capturée à l'export passe
+   // systématiquement par ce relais (data URI interne), jamais
+   // directement par l'URL externe — voir /api/proxy-image pour le
+-  // détail du problème que ça résout (capture impossible sinon).
++  // détail du problème que ça résout (capture impossible sinon). On ne
++  // considère la couverture "prête" qu'une fois qu'elle a réellement
++  // fini de se décoder dans le navigateur (pas seulement reçue) — sans
++  // ça, une image récupérée mais corrompue ou non décodable produisait
++  // un export silencieusement vide, sans aucune indication du problème.
+   const [coverDataUri, setCoverDataUri] = useState<string | null>(null);
+   const [coverLoading, setCoverLoading] = useState(false);
++  const [coverError, setCoverError] = useState<string | null>(null);
++  const [coverRetryCount, setCoverRetryCount] = useState(0);
+   useEffect(() => {
+-    if (!selectedBook?.cover) { setCoverDataUri(null); return; }
++    if (!selectedBook?.cover) { setCoverDataUri(null); setCoverError(null); return; }
+     let cancelled = false;
+     setCoverLoading(true);
+     setCoverDataUri(null);
++    setCoverError(null);
+     (async () => {
+       try {
+         const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(selectedBook.cover)}`);
+         const data = await res.json();
+-        if (!cancelled) setCoverDataUri(data.dataUri || null);
++        if (cancelled) return;
++        if (data.error || !data.dataUri) {
++          console.error("Proxy Cover Error:", data.error);
++          setCoverError(data.error || "Couverture indisponible");
++          setCoverLoading(false);
++          return;
++        }
++        const img = new window.Image();
++        img.onload = () => {
++          if (cancelled) return;
++          setCoverDataUri(data.dataUri);
++          setCoverLoading(false);
++        };
++        img.onerror = () => {
++          if (cancelled) return;
++          console.error("Cover Decode Error: image reçue mais non décodable");
++          setCoverError("Image reçue mais illisible");
++          setCoverLoading(false);
++        };
++        img.src = data.dataUri;
+       } catch (err) {
+-        console.error("Proxy Cover Error:", err);
+-      } finally {
+-        if (!cancelled) setCoverLoading(false);
++        console.error("Proxy Cover Fetch Error:", err);
++        if (!cancelled) { setCoverError("Erreur réseau"); setCoverLoading(false); }
+       }
+     })();
+     return () => { cancelled = true; };
+-  }, [selectedBook?.cover]);
++  }, [selectedBook?.cover, coverRetryCount]);
+ 
+   // Ambiance suggérée automatiquement selon le(s) genre(s) du livre
+   // sélectionné, mais jamais imposée : la lectrice change le rendu via
+@@ -271,6 +296,11 @@ export default function SharePage() {
+                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-secondary/15 to-primary/5">
+                           <Loader2 className="h-6 w-6 animate-spin opacity-40" />
+                         </div>
++                      ) : coverError ? (
++                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary/10 via-secondary/15 to-primary/5 p-3 text-center">
++                          <BookOpen className="h-8 w-8 opacity-30" />
++                          <p className="text-[9px] italic opacity-50 leading-tight">Couverture indisponible</p>
++                        </div>
+                       ) : (
+                         <BookCover src={selectedBook.cover} alt={selectedBook.title} className="object-cover" />
+                       )}
+@@ -329,6 +359,12 @@ export default function SharePage() {
+               ))}
+             </div>
+             <p className="text-center text-[10px] italic opacity-40 -mt-2">{theme.label}{!themeManuallySet && " (suggéré selon le genre)"}</p>
++            {coverError && (
++              <p className="text-center text-[11px] italic text-amber-600 -mt-1">
++                Couverture indisponible pour ce livre ({coverError}). L'export se fera sans, sauf si tu{" "}
++                <button onClick={() => setCoverRetryCount((n) => n + 1)} className="underline">réessaies</button>.
++              </p>
++            )}
+ 
+             <div className="grid grid-cols-2 gap-3">
+               <Button
