@@ -3,14 +3,14 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { RANKS, RankType } from "@/app/library/page";
-import { Diamond, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart } from "lucide-react";
+import { Diamond, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart, Gift, Sun, X } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
-import { collection, query, where, doc, getDoc, getDocs } from "firebase/firestore";
+import { collection, query, where, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
 import { cn, ADMIN_EMAILS, authorKey, sortBySaga } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -143,6 +143,36 @@ export default function CoupsDeCoeurPage() {
   }, [db, user]);
 
   const { data: rankedBooks = [], loading } = useCollection(rankedQuery);
+
+  // "À offrir" et "Relecture d'été" peuvent concerner des livres SANS
+  // Palme (ajout manuel) — rankedQuery ne suffit pas, il faut toute la
+  // bibliothèque pour les calculer correctement.
+  const allBooksQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return collection(db, "users", user.uid, "books");
+  }, [db, user]);
+  const { data: allUserBooks = [] } = useCollection(allBooksQuery);
+
+  const giftBooks = useMemo(() => sortBySaga(allUserBooks.filter((b: any) => b.toGift) as any[]), [allUserBooks]);
+
+  // Diamant/Royale par défaut, sauf override explicite à false ; un
+  // override explicite à true ajoute un livre qui n'a pas cette Palme.
+  const summerRereadBooks = useMemo(() => {
+    return sortBySaga(allUserBooks.filter((b: any) => {
+      if (b.summerReread === true) return true;
+      if (b.summerReread === false) return false;
+      return b.plumeRank === "diamant" || b.plumeRank === "royale";
+    }) as any[]);
+  }, [allUserBooks]);
+
+  const removeFromSummerReread = async (bookId: string) => {
+    if (!db || !user) return;
+    try {
+      await updateDoc(doc(db, "users", user.uid, "books", bookId), { summerReread: false });
+    } catch (err) {
+      console.error("Remove From Summer Reread Error:", err);
+    }
+  };
 
   const booksByRank = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -320,6 +350,59 @@ export default function CoupsDeCoeurPage() {
             Attribuez une Palme à vos livres pour les voir apparaître ici.
           </p>
         </div>
+      )}
+
+      {summerRereadBooks.length > 0 && (
+        <section className="space-y-6 max-w-5xl mx-auto px-4 pt-12">
+          <div className="flex items-center gap-3 px-2">
+            <Sun className="h-7 w-7 text-amber-400" />
+            <div>
+              <h2 className="text-3xl font-headline italic">Relecture d'été</h2>
+              <p className="text-sm italic opacity-50">Je t'accompagne même en vacances.</p>
+            </div>
+          </div>
+          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
+            {summerRereadBooks.slice(0, 14).map((book: any, i: number) => (
+              <div key={book.id} className="relative shrink-0">
+                <Link
+                  href={`/book/${book.id}`}
+                  className="relative block w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
+                  style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
+                >
+                  <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+                </Link>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFromSummerReread(book.id); }}
+                  className="absolute -top-1 -right-1 z-30 h-6 w-6 rounded-full bg-white shadow-md flex items-center justify-center text-primary/50 hover:text-red-500 hover:scale-110 transition-all"
+                  title="Retirer de Relecture d'été"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {giftBooks.length > 0 && (
+        <section className="space-y-6 max-w-5xl mx-auto px-4 pt-4">
+          <div className="flex items-center gap-3 px-2">
+            <Gift className="h-7 w-7 text-rose-400" />
+            <h2 className="text-3xl font-headline italic">À offrir</h2>
+          </div>
+          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
+            {giftBooks.slice(0, 14).map((book: any, i: number) => (
+              <Link
+                key={book.id}
+                href={`/book/${book.id}`}
+                className="relative shrink-0 block w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
+                style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
+              >
+                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+              </Link>
+            ))}
+          </div>
+        </section>
       )}
 
       <section className="pt-20 border-t border-primary/10">

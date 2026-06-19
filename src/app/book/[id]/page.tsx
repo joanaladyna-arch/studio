@@ -26,7 +26,9 @@ import {
   Library,
   X,
   RefreshCw,
-  CalendarDays
+  CalendarDays,
+  Gift,
+  Sun
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -598,6 +600,38 @@ export default function BookDetailPage() {
                })}
              </div>
              <p className="text-[10px] text-muted-foreground italic">Cliquez à nouveau sur un rang pour le retirer.</p>
+           </div>
+
+           <div className="space-y-4 pt-4 border-t border-primary/5">
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label>
+             <div className="flex flex-wrap gap-2">
+               <Button
+                 variant="outline"
+                 onClick={() => setEditedData({ ...editedData, toGift: !(editedData as any).toGift } as any)}
+                 className={cn(
+                   "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
+                   (editedData as any).toGift ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
+                 )}
+               >
+                 <Gift className="h-3.5 w-3.5" /> À offrir
+               </Button>
+               <Button
+                 variant="outline"
+                 onClick={() => {
+                   const isPrestige = editedData.plumeRank === "diamant" || editedData.plumeRank === "royale";
+                   const effectivelyIn = (editedData as any).summerReread === true || ((editedData as any).summerReread !== false && isPrestige);
+                   setEditedData({ ...editedData, summerReread: !effectivelyIn } as any);
+                 }}
+                 className={cn(
+                   "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
+                   ((editedData as any).summerReread === true || ((editedData as any).summerReread !== false && (editedData.plumeRank === "diamant" || editedData.plumeRank === "royale")))
+                     ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
+                 )}
+               >
+                 <Sun className="h-3.5 w-3.5" /> Relecture d'été
+               </Button>
+             </div>
+             <p className="text-[10px] text-muted-foreground italic">Pour "Relecture d'été", les livres Palme Diamant/Royale y apparaissent déjà par défaut — utilisez ce bouton pour en ajouter un autre ou pour en retirer un.</p>
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">

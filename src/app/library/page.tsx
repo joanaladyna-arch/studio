@@ -35,7 +35,10 @@ import {
   UserRound,
   Layers,
   ChevronDown,
-  Pin
+  ChevronUp,
+  Pin,
+  Dices,
+  ListOrdered
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -86,6 +89,9 @@ export interface UserBook {
   dateAdded: any;
   dateRead?: any;
   isNextRead?: boolean;
+  palOrder?: number;
+  toGift?: boolean;
+  summerReread?: boolean;
   title?: string; 
   author?: string;
   cover?: string;
@@ -223,7 +229,10 @@ export default function LibraryPage() {
   const { adminMode } = useAdminMode();
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortMode, setSortMode] = useState<"saga" | "author">("saga");
+  const [sortMode, setSortMode] = useState<"saga" | "author" | "manual">("saga");
+  const [isReordering, setIsReordering] = useState<string | null>(null);
+  const [drawnBook, setDrawnBook] = useState<any | null>(null);
+  const [isPinningDraw, setIsPinningDraw] = useState(false);
   const isAdmin = adminMode;
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
@@ -273,6 +282,63 @@ export default function LibraryPage() {
     }
   };
 
+  // Déplace un livre d'un cran dans l'ordre personnalisé de la PAL. Si
+  // aucun livre du groupe n'a encore de palOrder (première utilisation),
+  // on initialise tout le monde sur l'ordre d'affichage actuel avant de
+  // déplacer, pour que le réordonnancement parte d'une base cohérente
+  // plutôt que de valeurs vides désordonnées.
+  const moveBookInPal = async (bookId: string, direction: "up" | "down") => {
+    if (!db || !user || isReordering) return;
+    const palBooks = filteredBooks;
+    const index = palBooks.findIndex((b) => b.id === bookId);
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (index === -1 || targetIndex < 0 || targetIndex >= palBooks.length) return;
+
+    setIsReordering(bookId);
+    try {
+      const needsInit = palBooks.some((b) => (b as any).palOrder === undefined);
+      if (needsInit) {
+        await Promise.all(palBooks.map((b, i) => updateDoc(doc(db, "users", user.uid, "books", b.id), { palOrder: i })));
+        palBooks.forEach((b, i) => { (b as any).palOrder = i; });
+      }
+      const a = palBooks[index];
+      const b = palBooks[targetIndex];
+      await Promise.all([
+        updateDoc(doc(db, "users", user.uid, "books", a.id), { palOrder: (b as any).palOrder }),
+        updateDoc(doc(db, "users", user.uid, "books", b.id), { palOrder: (a as any).palOrder }),
+      ]);
+    } catch (err) {
+      console.error("Move Book In PAL Error:", err);
+      toast({ variant: "destructive", title: "Erreur lors du déplacement" });
+    } finally {
+      setIsReordering(null);
+    }
+  };
+
+  // "Surprends-moi" : tire un livre au hasard dans la PAL et demande
+  // confirmation avant de l'épingler — jamais d'épinglage automatique
+  // sans validation, pour rester dans l'esprit "proposition" et non
+  // "décision imposée" du tirage au sort.
+  const drawRandomNextRead = () => {
+    const palBooks = userBooks.filter((b) => b.status === "pal");
+    if (palBooks.length === 0) {
+      toast({ title: "Ta PAL est vide", description: "Ajoute des livres à lire pour pouvoir tirer au sort." });
+      return;
+    }
+    setDrawnBook(palBooks[Math.floor(Math.random() * palBooks.length)]);
+  };
+
+  const confirmDrawnPin = async () => {
+    if (!drawnBook) return;
+    setIsPinningDraw(true);
+    try {
+      await togglePinNextRead(drawnBook.id, false);
+      setDrawnBook(null);
+    } finally {
+      setIsPinningDraw(false);
+    }
+  };
+
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, "users", user.uid, "books");
@@ -287,6 +353,19 @@ export default function LibraryPage() {
       if (activeTab === "all") return matchesSearch;
       return b.status === activeTab && matchesSearch;
     });
+    if (sortMode === "manual" && activeTab === "pal") {
+      // Ordre personnalisé : palOrder en priorité, puis date d'ajout pour
+      // les livres jamais encore réordonnés à la main (sinon ils se
+      // retrouveraient tous mélangés en tête, palOrder valant 0 partout).
+      return matched.slice().sort((a, b) => {
+        const oa = (a as any).palOrder ?? Number.MAX_SAFE_INTEGER;
+        const ob = (b as any).palOrder ?? Number.MAX_SAFE_INTEGER;
+        if (oa !== ob) return oa - ob;
+        const da = a.dateAdded?.toMillis?.() || 0;
+        const db = b.dateAdded?.toMillis?.() || 0;
+        return da - db;
+      });
+    }
     return sortMode === "author" ? sortByAuthor(matched) : sortBySaga(matched);
   }, [userBooks, activeTab, searchQuery, sortMode]);
 
@@ -333,7 +412,7 @@ export default function LibraryPage() {
           </Button>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex justify-center flex-wrap gap-3">
           <button
             onClick={() => setSortMode(sortMode === "author" ? "saga" : "author")}
             className={cn(
@@ -344,8 +423,55 @@ export default function LibraryPage() {
             {sortMode === "author" ? <Layers className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
             {sortMode === "author" ? "Revenir au tri par saga" : "Classer par auteur"}
           </button>
+          {activeTab === "pal" && (
+            <>
+              <button
+                onClick={() => setSortMode(sortMode === "manual" ? "saga" : "manual")}
+                className={cn(
+                  "inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
+                  sortMode === "manual" ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
+                )}
+              >
+                <ListOrdered className="h-4 w-4" />
+                {sortMode === "manual" ? "Quitter l'ordre personnalisé" : "Ranger moi-même"}
+              </button>
+              <button
+                onClick={drawRandomNextRead}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline text-white shadow-lg transition-transform hover:scale-105"
+                style={{ background: "linear-gradient(135deg, #ff6b9d 0%, #c44dff 50%, #6b8cff 100%)" }}
+              >
+                <Dices className="h-4 w-4" /> Surprends-moi
+              </button>
+            </>
+          )}
         </div>
       </header>
+
+      <Dialog open={!!drawnBook} onOpenChange={(o) => !o && setDrawnBook(null)}>
+        <DialogContent className="glass-card border-none max-w-sm p-10 bg-white/95 backdrop-blur-3xl text-center">
+          {drawnBook && (
+            <div className="space-y-6">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary/50">Le sort a choisi...</p>
+              <div className="relative w-32 aspect-[2/3] mx-auto rounded-2xl overflow-hidden shadow-xl">
+                <BookCover src={drawnBook.cover} alt={drawnBook.title || ""} className="object-cover" />
+              </div>
+              <div>
+                <p className="font-headline italic text-2xl">{cleanBookTitle(drawnBook.title)}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">{cleanAuthorName(drawnBook.author)}</p>
+              </div>
+              <p className="text-sm italic opacity-60">L'épingler comme Prochaine lecture ?</p>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setDrawnBook(null)} className="flex-1 rounded-2xl h-12 italic">
+                  Annuler
+                </Button>
+                <Button onClick={confirmDrawnPin} disabled={isPinningDraw} className="flex-1 rounded-2xl h-12 italic bg-primary">
+                  {isPinningDraw ? <Loader2 className="h-4 w-4 animate-spin" /> : "Oui !"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
 
@@ -400,7 +526,7 @@ export default function LibraryPage() {
                       {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
                     </button>
                   )}
-                  {activeTab === "pal" && (
+                  {activeTab === "pal" && sortMode !== "manual" && (
                     <button
                       onClick={(e) => { e.preventDefault(); togglePinNextRead(book.id, !!(book as any).isNextRead); }}
                       disabled={isPinning === book.id}
@@ -412,6 +538,24 @@ export default function LibraryPage() {
                     >
                       {isPinning === book.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className={cn("h-4 w-4", (book as any).isNextRead && "fill-white")} />}
                     </button>
+                  )}
+                  {activeTab === "pal" && sortMode === "manual" && (
+                    <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
+                      <button
+                        onClick={(e) => { e.preventDefault(); moveBookInPal(book.id, "up"); }}
+                        disabled={!!isReordering || filteredBooks.findIndex((b) => b.id === book.id) === 0}
+                        className="h-8 w-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary/60 hover:text-primary disabled:opacity-30 transition-colors"
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.preventDefault(); moveBookInPal(book.id, "down"); }}
+                        disabled={!!isReordering || filteredBooks.findIndex((b) => b.id === book.id) === filteredBooks.length - 1}
+                        className="h-8 w-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary/60 hover:text-primary disabled:opacity-30 transition-colors"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </button>
+                    </div>
                   )}
                   <Link href={`/book/${book.id}`} className="group block">
                     <BookCard book={book} />
