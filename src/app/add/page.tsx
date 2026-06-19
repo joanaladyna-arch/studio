@@ -9,7 +9,9 @@ import {
   Loader2, 
   CheckCircle2,
   X,
-  Pencil
+  Pencil,
+  Magnet,
+  HelpCircle
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -58,6 +60,9 @@ export default function AddBookPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
   const [pendingBook, setPendingBook] = useState<any | null>(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualForm, setManualForm] = useState({ title: "", author: "", referenceLink: "", description: "", cover: "" });
+  const [isFetchingManualLink, setIsFetchingManualLink] = useState(false);
   const [previewBook, setPreviewBook] = useState<any | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<BookStatus>("pal");
   const [selectedFormat, setSelectedFormat] = useState<BookFormat>("papier");
@@ -288,6 +293,60 @@ export default function AddBookPage() {
     setPendingBook(book);
   };
 
+  // Réutilise exactement le même mécanisme que l'aimant sur la fiche
+  // d'un livre (même route /api/fetch-link-preview) pour pré-remplir
+  // résumé et couverture depuis un lien Wattpad, Amazon ou autre, sans
+  // jamais écraser ce que la lectrice aurait déjà tapé à la main.
+  const handleFetchManualLink = async () => {
+    if (!manualForm.referenceLink) return;
+    setIsFetchingManualLink(true);
+    try {
+      const res = await fetch(`/api/fetch-link-preview?url=${encodeURIComponent(manualForm.referenceLink)}`);
+      const data = await res.json();
+      if (data.error) {
+        toast({ variant: "destructive", title: "Récupération impossible", description: data.error });
+        return;
+      }
+      setManualForm((prev) => ({
+        ...prev,
+        title: prev.title || data.title || "",
+        description: prev.description || cleanDescriptionHtml(data.description) || "",
+        cover: prev.cover || data.image || "",
+      }));
+      if (!data.title && !data.description && !data.image) {
+        toast({ title: "Rien à récupérer", description: "Cette page ne fournit pas ces informations — complète à la main." });
+      } else {
+        toast({ title: "Informations récupérées" });
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "Erreur", description: "Impossible de contacter cette page." });
+    } finally {
+      setIsFetchingManualLink(false);
+    }
+  };
+
+  // Transmet la fiche minimale au même circuit d'ajout que les
+  // résultats de recherche habituels (handleAddClick → confirmAdd) —
+  // aucune logique d'écriture Firestore dupliquée, donc aucun nouveau
+  // risque : si l'ajout normal fonctionne, celui-ci fonctionne aussi.
+  const handleManualSubmit = () => {
+    if (!manualForm.title.trim() || !manualForm.author.trim()) {
+      toast({ variant: "destructive", title: "Titre et auteur sont obligatoires" });
+      return;
+    }
+    handleAddClick({
+      title: manualForm.title.trim(),
+      author: manualForm.author.trim(),
+      cover: manualForm.cover,
+      description: manualForm.description,
+      referenceLink: manualForm.referenceLink,
+      genres: [],
+      source: "api",
+    });
+    setShowManualEntry(false);
+    setManualForm({ title: "", author: "", referenceLink: "", description: "", cover: "" });
+  };
+
   const confirmAdd = async () => {
     if (!db || !user || !pendingBook) return;
     setIsAdding(true);
@@ -357,6 +416,7 @@ export default function AddBookPage() {
         themes: toArray<string>(pendingBook.themes),
         description: pendingBook.description || "",
         volume: pendingBook.volume || "",
+        referenceLink: pendingBook.referenceLink || "",
         status: selectedStatus,
         format: selectedFormat,
         dateAdded: serverTimestamp(),
@@ -442,7 +502,70 @@ export default function AddBookPage() {
             {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
           </Button>
         </form>
+        <div className="text-center pt-3">
+          <button
+            onClick={() => setShowManualEntry(true)}
+            className="inline-flex items-center gap-2 text-xs italic text-primary/50 hover:text-primary transition-colors underline underline-offset-4"
+          >
+            <HelpCircle className="h-3.5 w-3.5" /> Je ne trouve pas mon livre (auto-édition, Wattpad...)
+          </button>
+        </div>
       </div>
+
+      <Dialog open={showManualEntry} onOpenChange={(o) => { setShowManualEntry(o); if (!o) setManualForm({ title: "", author: "", referenceLink: "", description: "", cover: "" }); }}>
+        <DialogContent className="glass-card border-none max-w-lg p-10 bg-white/95 backdrop-blur-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl italic">Ajouter un livre introuvable</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs italic opacity-50 -mt-2">Pour un livre auto-édité, sur Wattpad, ou absent de nos sources habituelles. La fiche sera complétée plus tard si besoin.</p>
+          <div className="space-y-4 pt-2">
+            <Input
+              placeholder="Titre *"
+              value={manualForm.title}
+              onChange={(e) => setManualForm({ ...manualForm, title: e.target.value })}
+              className="h-12 rounded-xl bg-white/60 italic"
+            />
+            <Input
+              placeholder="Auteur *"
+              value={manualForm.author}
+              onChange={(e) => setManualForm({ ...manualForm, author: e.target.value })}
+              className="h-12 rounded-xl bg-white/60 italic"
+            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Lien Wattpad, Amazon... (facultatif)"
+                value={manualForm.referenceLink}
+                onChange={(e) => setManualForm({ ...manualForm, referenceLink: e.target.value })}
+                className="h-12 rounded-xl bg-white/60 italic"
+              />
+              <Button
+                type="button"
+                onClick={handleFetchManualLink}
+                disabled={isFetchingManualLink || !manualForm.referenceLink}
+                variant="secondary"
+                title="Capturer le résumé et la couverture depuis ce lien"
+                className="h-12 px-4 rounded-xl shrink-0"
+              >
+                {isFetchingManualLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Magnet className="h-4 w-4" />}
+              </Button>
+            </div>
+            {manualForm.cover && (
+              <div className="flex items-center gap-3">
+                <div className="relative h-20 w-14 rounded-lg overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
+                  <img src={manualForm.cover} alt="" className="w-full h-full object-cover" />
+                </div>
+                <p className="text-[11px] italic opacity-50">Couverture récupérée depuis le lien.</p>
+              </div>
+            )}
+            <p className="text-[10px] italic opacity-40">Le résumé et la couverture se complètent automatiquement si le lien le permet — sinon, pas de souci, la fiche pourra être enrichie plus tard.</p>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleManualSubmit} className="w-full h-12 rounded-2xl bg-primary font-headline italic">
+              <Plus className="mr-2 h-4 w-4" /> Continuer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="max-w-4xl mx-auto grid gap-6">
         {results.length > 0 && (
