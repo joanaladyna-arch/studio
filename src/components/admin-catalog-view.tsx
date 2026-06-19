@@ -1,0 +1,162 @@
+"use client";
+
+import { useState } from "react";
+import { useFirestore } from "@/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import { Button } from "@/components/ui/button";
+import { BookCover } from "@/components/book-cover";
+import { MasterBookEditor } from "@/components/master-book-editor";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { cleanDescriptionHtml, cn } from "@/lib/utils";
+import { GENRES_LIST } from "@/app/library/page";
+import { Library, Loader2, ChevronDown, AlertTriangle, Pencil } from "lucide-react";
+
+/**
+ * Liste les anomalies d'une fiche partagée : champs vides ou résumé
+ * encore pollué par du HTML brut (cas <br> non nettoyé). Sert à la fois
+ * à décider si la fiche mérite le badge rouge, et à expliquer pourquoi
+ * au survol/clic — toujours basé sur les mêmes règles que les outils de
+ * nettoyage en masse, pour ne jamais afficher un problème déjà résolu
+ * ailleurs.
+ */
+function getBookIssues(book: any): string[] {
+  const issues: string[] = [];
+  const desc = (book.description || "").toString();
+  if (!desc.trim()) issues.push("Résumé manquant");
+  else if (cleanDescriptionHtml(desc) !== desc) issues.push("HTML brut dans le résumé");
+  if (!(book.cover || "").toString().trim()) issues.push("Couverture manquante");
+  if (!Array.isArray(book.genres) || book.genres.length === 0) issues.push("Genres manquants");
+  if (!(book.isbn13 || book.isbn || "").toString().trim()) issues.push("ISBN manquant");
+  if (!(book.publisher || "").toString().trim()) issues.push("Éditeur manquant");
+  return issues;
+}
+
+/**
+ * Vue admin de la base de livres complète (masterBooks) regroupée par
+ * genre, avec les fiches incomplètes remontées en tête de chaque
+ * groupe et signalées par un ⚠️ rouge. S'ajoute à la bibliothèque
+ * personnelle sans la remplacer — un admin reste aussi une lectrice et
+ * doit garder accès à sa propre étagère sans avoir à désactiver le
+ * mode admin.
+ */
+export function AdminCatalogView() {
+  const db = useFirestore();
+  const [open, setOpen] = useState(false);
+  const [cache, setCache] = useState<any[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [editingBook, setEditingBook] = useState<any | null>(null);
+
+  const load = async () => {
+    if (!db || cache) return;
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, "masterBooks"));
+      setCache(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (err) {
+      console.error("Load Catalog Error:", err);
+      setCache([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggle = (next: boolean) => {
+    setOpen(next);
+    if (next) load();
+  };
+
+  const handleSaved = (saved: any) => {
+    setCache((prev) => (prev ? prev.map((b) => (b.id === saved.id ? saved : b)) : prev));
+  };
+
+  const groups: Record<string, any[]> = {};
+  (cache || []).forEach((b) => {
+    const genre = Array.isArray(b.genres) && b.genres[0] ? b.genres[0] : "Sans genre";
+    if (!groups[genre]) groups[genre] = [];
+    groups[genre].push(b);
+  });
+  const orderedGenreKeys = [...GENRES_LIST.filter((g) => groups[g]), ...Object.keys(groups).filter((g) => !GENRES_LIST.includes(g))];
+  const totalIssues = (cache || []).filter((b) => getBookIssues(b).length > 0).length;
+
+  return (
+    <Collapsible open={open} onOpenChange={handleToggle} className="rounded-[2rem] border-2 border-primary/10 bg-white/30">
+      <CollapsibleTrigger className="w-full flex items-center justify-between p-6 hover:bg-primary/5 transition-colors rounded-[2rem]">
+        <div className="flex items-center gap-3">
+          <Library className="h-6 w-6 text-primary" />
+          <span className="font-headline italic text-2xl">Base de livres complète (admin)</span>
+          {cache && (
+            <span className={cn("text-xs font-bold px-3 py-1 rounded-full", totalIssues > 0 ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary")}>
+              {cache.length} fiches{totalIssues > 0 ? ` · ${totalIssues} à corriger` : ""}
+            </span>
+          )}
+        </div>
+        {loading ? <Loader2 className="h-5 w-5 animate-spin opacity-40" /> : <ChevronDown className={cn("h-5 w-5 text-primary/40 transition-transform", open && "rotate-180")} />}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="p-6 pt-0 space-y-4">
+        {orderedGenreKeys.map((genre) => {
+          const books = groups[genre]
+            .slice()
+            .sort((a, b) => (getBookIssues(b).length > 0 ? 1 : 0) - (getBookIssues(a).length > 0 ? 1 : 0));
+          const issuesInGroup = books.filter((b) => getBookIssues(b).length > 0).length;
+          return (
+            <Collapsible key={genre} className="rounded-2xl bg-white/50">
+              <CollapsibleTrigger className="w-full flex items-center justify-between px-5 py-3 hover:bg-primary/5 rounded-2xl transition-colors">
+                <span className="italic font-headline text-lg">{genre}</span>
+                <div className="flex items-center gap-3">
+                  {issuesInGroup > 0 && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-red-500">
+                      <AlertTriangle className="h-3.5 w-3.5" /> {issuesInGroup}
+                    </span>
+                  )}
+                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">{books.length} livre{books.length > 1 ? "s" : ""}</span>
+                  <ChevronDown className="h-4 w-4 opacity-30" />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="divide-y divide-primary/5 px-2">
+                {books.map((b) => {
+                  const issues = getBookIssues(b);
+                  return (
+                    <button
+                      key={b.id}
+                      onClick={() => setEditingBook(b)}
+                      className="w-full flex items-center gap-4 p-3 hover:bg-primary/5 transition-colors text-left"
+                    >
+                      <div className="relative h-14 w-10 rounded-lg overflow-hidden flex-shrink-0 bg-primary/5">
+                        <BookCover src={b.cover} alt={b.title} className="object-cover" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-headline italic truncate text-sm">{b.title}</p>
+                        <p className="text-xs opacity-50 truncate">{b.author}</p>
+                        {issues.length > 0 && (
+                          <p className="text-[10px] text-red-500 italic truncate">{issues.join(" · ")}</p>
+                        )}
+                      </div>
+                      {issues.length > 0 ? (
+                        <AlertTriangle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                      ) : (
+                        <Pencil className="h-4 w-4 opacity-20 flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          );
+        })}
+        {cache && cache.length === 0 && (
+          <p className="text-sm italic opacity-50 text-center py-6">Aucune fiche dans la base.</p>
+        )}
+      </CollapsibleContent>
+
+      <Dialog open={!!editingBook} onOpenChange={(o) => !o && setEditingBook(null)}>
+        <DialogContent className="glass-card border-none max-w-3xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[90vh]">
+          <ScrollArea className="max-h-[90vh] p-10">
+            {editingBook && <MasterBookEditor book={editingBook} onClose={() => setEditingBook(null)} onSaved={(s) => { handleSaved(s); setEditingBook(null); }} />}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    </Collapsible>
+  );
+}

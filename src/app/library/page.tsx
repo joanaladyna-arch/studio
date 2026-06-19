@@ -9,6 +9,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { MasterBookManager } from "@/components/master-book-manager";
+import { AdminCatalogView } from "@/components/admin-catalog-view";
 import { 
   Search, 
   Plus, 
@@ -320,8 +321,9 @@ export default function LibraryPage() {
       <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
 
         {isAdmin && (
-          <div className="mb-10">
+          <div className="mb-10 space-y-6">
             <MasterBookManager />
+            <AdminCatalogView />
           </div>
         )}
 
