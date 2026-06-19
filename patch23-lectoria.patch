@@ -1,0 +1,22 @@
+diff --git a/src/app/book/[id]/page.tsx b/src/app/book/[id]/page.tsx
+index 16d5e3b..7dbc0c4 100644
+--- a/src/app/book/[id]/page.tsx
++++ b/src/app/book/[id]/page.tsx
+@@ -173,7 +173,7 @@ export default function BookDetailPage() {
+ 
+   useEffect(() => {
+     if (userBook) {
+-      setEditedData(userBook);
++      setEditedData({ ...userBook, description: userBook.description ? cleanDescriptionHtml(userBook.description) : userBook.description } as any);
+       if (userBook.masterBookId) {
+         fetchMasterData(userBook.masterBookId);
+       }
+@@ -810,7 +810,7 @@ export default function BookDetailPage() {
+                <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm space-y-4">
+                  <h4 className="font-headline text-2xl italic opacity-40">Résumé de la pépite</h4>
+                  <Textarea
+-                   value={(editedData as any).description ?? cleanDescriptionHtml(masterBook?.description) ?? ""}
++                   value={cleanDescriptionHtml((editedData as any).description) || cleanDescriptionHtml(masterBook?.description) || ""}
+                    onChange={(e) => setEditedData({ ...editedData, description: e.target.value } as any)}
+                    placeholder="Cette œuvre attend que vous en décriviez l'essence."
+                    className="italic text-lg leading-relaxed text-muted-foreground bg-transparent border-none focus-visible:ring-1 focus-visible:ring-primary/20 resize-none min-h-[140px] p-0"
