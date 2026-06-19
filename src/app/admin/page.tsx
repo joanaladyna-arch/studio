@@ -27,6 +27,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookManager } from "@/components/master-book-manager";
 import { AdminMessagerie } from "@/components/admin-messagerie";
+import { PublisherReviewQueue } from "@/components/publisher-review-queue";
 import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF } from "@/lib/utils";
 
 export default function AdminPage() {
@@ -532,6 +533,7 @@ export default function AdminPage() {
         <MasterBookManager />
 
         <AdminMessagerie />
+        <PublisherReviewQueue />
 
         {/* EXCEL IMPORT SECTION */}
         <Card className="glass-card border-none bg-white/60 shadow-xl">

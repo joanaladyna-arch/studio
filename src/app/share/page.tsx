@@ -6,7 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Instagram, Music, Loader2, Check, BookOpen } from "lucide-react";
+import { Download, Loader2, Check, BookOpen } from "lucide-react";
+import { siInstagram, siTiktok } from "simple-icons";
 import { toPng } from "html-to-image";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -370,16 +371,18 @@ export default function SharePage() {
               <Button
                 onClick={() => handleShareToSocial("Instagram")}
                 disabled={isExporting || !selectedBook || coverLoading}
-                className="w-full rounded-2xl bg-gradient-to-br from-pink-400 to-rose-500 shadow-lg shadow-pink-200 border-none h-12"
+                className="w-full rounded-2xl shadow-lg shadow-pink-200 border-none h-12"
+                style={{ background: "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)" }}
               >
-                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Instagram className="mr-2 h-4 w-4" />} Insta
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4 fill-white"><path d={siInstagram.path} /></svg>} Insta
               </Button>
               <Button
                 onClick={() => handleShareToSocial("TikTok")}
                 disabled={isExporting || !selectedBook || coverLoading}
-                className="w-full rounded-2xl bg-slate-900 shadow-lg shadow-slate-200 border-none h-12"
+                className="w-full rounded-2xl shadow-lg shadow-slate-200 border-none h-12"
+                style={{ backgroundColor: `#${siTiktok.hex}` }}
               >
-                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Music className="mr-2 h-4 w-4" />} TikTok
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4 fill-white"><path d={siTiktok.path} /></svg>} TikTok
               </Button>
               <Button
                 variant="outline"

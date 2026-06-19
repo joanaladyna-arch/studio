@@ -27,7 +27,7 @@ import Link from 'next/link';
 import { BookCover } from '@/components/book-cover';
 import { cleanBookTitle, cleanAuthorName, cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
-import { collection, query, where, limit, doc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function Home() {
@@ -44,24 +44,15 @@ export default function Home() {
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'cher lecteur';
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
 
-  const currentReadQuery = useMemo(() => {
-    if (!db || !user) return null;
-    return query(
-      collection(db, 'users', user.uid, 'books'),
-      where('status', '==', 'progress'),
-      limit(1)
-    );
-  }, [db, user]);
-
-  const { data: currentReads = [], loading: readingLoading } = useCollection(currentReadQuery);
-  const currentRead = currentReads[0];
-
   const allBooksQuery = useMemo(() => {
     if (!db || !user) return null;
     return collection(db, 'users', user.uid, 'books');
   }, [db, user]);
 
-  const { data: allBooks = [] } = useCollection(allBooksQuery);
+  const { data: allBooks = [], loading: readingLoading } = useCollection(allBooksQuery);
+  // "Lecture Actuelle" est déjà incluse dans allBooks — pas besoin d'un
+  // second écouteur Firestore juste pour ce sous-ensemble.
+  const currentRead = useMemo(() => allBooks.find((b: any) => b.status === 'progress'), [allBooks]);
 
   // Cloche "actualité" : compte les actualités publiées après la dernière
   // visite de la page /actualites (lastSeenActualityAt), toutes confondues

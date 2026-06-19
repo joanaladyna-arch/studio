@@ -16,6 +16,18 @@ export async function GET(req: NextRequest) {
   if (!url || !/^https?:\/\//i.test(url)) {
     return NextResponse.json({ error: "Lien invalide" }, { status: 400 });
   }
+  // Garde-fou : ce relais ne doit jamais pouvoir être détourné pour
+  // sonder des adresses internes/privées (réseau interne de
+  // l'hébergeur, services cloud locaux...) — seules des adresses
+  // publiques sont acceptées.
+  try {
+    const hostname = new URL(url).hostname;
+    if (/^(localhost|127\.|0\.0\.0\.0|169\.254\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/i.test(hostname)) {
+      return NextResponse.json({ error: "Adresse non autorisée" }, { status: 400 });
+    }
+  } catch {
+    return NextResponse.json({ error: "Lien invalide" }, { status: 400 });
+  }
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);

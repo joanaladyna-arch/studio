@@ -14,8 +14,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContactAdminDialog } from "@/components/contact-admin-dialog";
+import { PublisherSubmissionDialog } from "@/components/publisher-submission-dialog";
 import { sortBySaga } from "@/lib/utils";
+import { siWattpad } from "simple-icons";
 import { 
+  Share2,
+  ShoppingBag,
   Crown, 
   Sparkles, 
   Trophy,
@@ -231,12 +235,41 @@ export default function ProfilePage() {
               <EditProfileDialog profile={profile} />
               <ContactAdminDialog />
             </div>
+            <div className="flex justify-center md:justify-start">
+              <PublisherSubmissionDialog />
+            </div>
             <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
                 <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
             </Button>
             <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
                 <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Bilan de lecture</Link>
             </Button>
+            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+                <Link href="/share"><Share2 className="h-5 w-5 mr-3" /> Exporter vers les réseaux</Link>
+            </Button>
+            {(profile?.wattpadUrl || profile?.amazonUrl) && (
+              <div className="flex gap-3 justify-center md:justify-start px-2">
+                {profile?.wattpadUrl && (
+                  <a
+                    href={profile.wattpadUrl} target="_blank" rel="noopener noreferrer"
+                    title="Mon profil Wattpad"
+                    className="h-12 w-12 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform"
+                    style={{ backgroundColor: `#${siWattpad.hex}` }}
+                  >
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white"><path d={siWattpad.path} /></svg>
+                  </a>
+                )}
+                {profile?.amazonUrl && (
+                  <a
+                    href={profile.amazonUrl} target="_blank" rel="noopener noreferrer"
+                    title="Ma page auteur Amazon"
+                    className="h-12 w-12 rounded-full flex items-center justify-center shadow-md hover:scale-105 transition-transform bg-[#FF9900]"
+                  >
+                    <ShoppingBag className="h-5 w-5 text-white" />
+                  </a>
+                )}
+              </div>
+            )}
             {user?.email && ADMIN_EMAILS.includes(user.email) && (
               <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
                   <Link href="/admin"><ShieldCheck className="h-5 w-5 mr-3" /> Administration</Link>
@@ -444,6 +477,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [favoriteFormat, setFavoriteFormat] = useState<BookFormat>('papier');
   const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
   const [favoriteTropes, setFavoriteTropes] = useState<string[]>([]);
+  const [wattpadUrl, setWattpadUrl] = useState('');
+  const [amazonUrl, setAmazonUrl] = useState('');
 
   useEffect(() => {
     if (profile && open) {
@@ -458,6 +493,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setFavoriteFormat(profile.favoriteFormat || 'papier');
       setFavoriteGenres(toArray<string>(profile.favoriteGenres));
       setFavoriteTropes(toArray<string>(profile.favoriteTropes));
+      setWattpadUrl(profile.wattpadUrl || '');
+      setAmazonUrl(profile.amazonUrl || '');
     }
   }, [profile, open]);
 
@@ -468,6 +505,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       name, bio, favoriteQuote, favoriteAuthor,
       annualGoal, monthlyGoal, annualGoalPages, annualAudioGoal,
       favoriteFormat, favoriteGenres, favoriteTropes,
+      wattpadUrl: wattpadUrl.trim(), amazonUrl: amazonUrl.trim(),
       lastUpdated: serverTimestamp()
     };
     try {
@@ -520,6 +558,16 @@ function EditProfileDialog({ profile }: { profile: any }) {
                   <div className="space-y-3">
                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Auteur de Référence</Label>
                     <Input value={favoriteAuthor} onChange={(e) => setFavoriteAuthor(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
+                  </div>
+                </div>
+                <div className="grid md:grid-cols-2 gap-8">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon profil Wattpad</Label>
+                    <Input value={wattpadUrl} onChange={(e) => setWattpadUrl(e.target.value)} placeholder="https://www.wattpad.com/user/..." className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Ma page auteur Amazon</Label>
+                    <Input value={amazonUrl} onChange={(e) => setAmazonUrl(e.target.value)} placeholder="https://www.amazon.fr/..." className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
                   </div>
                 </div>
               </div>
