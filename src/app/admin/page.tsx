@@ -42,6 +42,7 @@ export default function AdminPage() {
   const [importResults, setImportResults] = useState<{ success: number; errors: number } | null>(null);
   const [isSyncingAuthors, setIsSyncingAuthors] = useState(false);
   const [isFillingDescriptions, setIsFillingDescriptions] = useState(false);
+  const [isCleaningDescriptions, setIsCleaningDescriptions] = useState(false);
   const [fillProgress, setFillProgress] = useState(0);
   const [fillResults, setFillResults] = useState<{ filled: number; notFound: number; skipped: number } | null>(null);
   const [isCleaningGenres, setIsCleaningGenres] = useState(false);
@@ -475,6 +476,45 @@ export default function AdminPage() {
     }
   };
 
+  // Relit tous les résumés déjà enregistrés et repasse chacun par le
+  // même nettoyeur HTML utilisé partout ailleurs (cleanDescriptionHtml)
+  // — utile pour rattraper les résumés enregistrés AVANT le correctif
+  // sur la récupération via lien de référence, qui gardaient parfois
+  // des balises <br> brutes. Aucune source externe interrogée, donc
+  // aucun risque de limite de temps serveur : tout reste en mémoire
+  // côté navigateur. N'écrit que les fiches réellement modifiées par
+  // le nettoyage — jamais de réécriture inutile sur un résumé déjà propre.
+  const cleanRawHtmlDescriptions = async () => {
+    if (!db) return;
+    setIsCleaningDescriptions(true);
+    let cleaned = 0;
+    let checked = 0;
+    try {
+      const snap = await getDocs(collection(db, "masterBooks"));
+      const writes: Promise<any>[] = [];
+      snap.docs.forEach((bookDoc) => {
+        const raw = (bookDoc.data() as any)?.description as string | undefined;
+        if (!raw) return;
+        checked++;
+        const fixed = cleanDescriptionHtml(raw);
+        if (fixed && fixed !== raw) {
+          writes.push(setDoc(doc(db, "masterBooks", bookDoc.id), { description: fixed, updatedAt: serverTimestamp() }, { merge: true }));
+          cleaned++;
+        }
+      });
+      await Promise.all(writes);
+      toast({
+        title: "Nettoyage terminé",
+        description: `${cleaned} résumé(s) nettoyé(s) sur ${checked} vérifié(s).`
+      });
+    } catch (err) {
+      console.error("Clean Descriptions Error:", err);
+      toast({ variant: "destructive", title: "Échec", description: "Vérifie les règles Firestore (lecture/écriture sur masterBooks)." });
+    } finally {
+      setIsCleaningDescriptions(false);
+    }
+  };
+
 
   return (
     <div className="space-y-12 animate-paper pb-24 max-w-7xl mx-auto px-4">
@@ -664,6 +704,9 @@ export default function AdminPage() {
                    {fillResults.filled} résumés complétés, {fillResults.notFound} introuvables, {fillResults.skipped} en avaient déjà un.
                  </p>
                )}
+               <Button variant="outline" onClick={cleanRawHtmlDescriptions} disabled={isCleaningDescriptions} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+                 {isCleaningDescriptions ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Nettoyer les résumés (HTML brut)
+               </Button>
                <Button variant="outline" onClick={cleanGenres} disabled={isCleaningGenres} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
                  {isCleaningGenres ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Nettoyer les Genres
                </Button>
