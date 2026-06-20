@@ -155,6 +155,12 @@ export function stableBookKey(title: string | null | undefined, author?: string 
       return cand === a ? "" : m;
     });
   }
+  // Retire les mentions d'édition qui ne font pas partie du titre réel
+  // ("Into pieces (Réédition)" et "Into pieces" doivent être reconnus
+  // comme le même livre) — limité à des formulations génériques sans
+  // ambiguïté, jamais à un sous-titre quelconque entre parenthèses qui
+  // pourrait, lui, distinguer deux œuvres réellement différentes.
+  t = t.replace(/\s*[(\[](?:r[ée][ée]dition|nouvelle [ée]dition|[ée]dition (?:collector|r[ée]vis[ée]e|augment[ée]e|illustr[ée]e|reli[ée]e|poche|grand format))[)\]]\s*$/i, "");
   const normalizedTitle = t
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
