@@ -32,7 +32,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch, dicebearAvatarUrl } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 import { AuthorEditor } from "@/components/author-editor";
 import { MasterBookEditor } from "@/components/master-book-editor";
@@ -392,7 +392,7 @@ export default function AuthorPage() {
             {authorPhoto && !authorPhotoFailed ? (
                <Image src={authorPhoto} alt={authorName} fill className="object-cover" onError={() => setAuthorPhotoFailed(true)} />
             ) : (
-               <UserIcon className="h-20 w-20 text-primary/20" />
+               <img src={dicebearAvatarUrl(authorName)} alt={authorName} className="w-full h-full object-cover" />
             )}
           </div>
           <div className="space-y-6 flex-1">

@@ -1,0 +1,70 @@
+diff --git a/src/app/author/[name]/page.tsx b/src/app/author/[name]/page.tsx
+index f9bdc65..37caa53 100644
+--- a/src/app/author/[name]/page.tsx
++++ b/src/app/author/[name]/page.tsx
+@@ -32,7 +32,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
+ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+ import { ScrollArea } from "@/components/ui/scroll-area";
+ import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
+-import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch } from "@/lib/utils";
++import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch, dicebearAvatarUrl } from "@/lib/utils";
+ import { useAdminMode } from "@/components/admin-mode";
+ import { AuthorEditor } from "@/components/author-editor";
+ import { MasterBookEditor } from "@/components/master-book-editor";
+@@ -392,7 +392,7 @@ export default function AuthorPage() {
+             {authorPhoto && !authorPhotoFailed ? (
+                <Image src={authorPhoto} alt={authorName} fill className="object-cover" onError={() => setAuthorPhotoFailed(true)} />
+             ) : (
+-               <UserIcon className="h-20 w-20 text-primary/20" />
++               <img src={dicebearAvatarUrl(authorName)} alt={authorName} className="w-full h-full object-cover" />
+             )}
+           </div>
+           <div className="space-y-6 flex-1">
+diff --git a/src/app/coups-de-coeur/page.tsx b/src/app/coups-de-coeur/page.tsx
+index 12fe451..834011e 100644
+--- a/src/app/coups-de-coeur/page.tsx
++++ b/src/app/coups-de-coeur/page.tsx
+@@ -11,7 +11,7 @@ import { MasterBookEditor } from "@/components/master-book-editor";
+ import { useCollection, useUser, useFirestore } from "@/firebase";
+ import { useAdminMode } from "@/components/admin-mode";
+ import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
+-import { cn, ADMIN_EMAILS, authorKey, sortBySaga } from "@/lib/utils";
++import { cn, ADMIN_EMAILS, authorKey, sortBySaga, dicebearAvatarUrl } from "@/lib/utils";
+ import { useToast } from "@/hooks/use-toast";
+ import Image from "next/image";
+ import Link from "next/link";
+@@ -238,7 +238,7 @@ export default function CoupsDeCoeurPage() {
+                     {author.photo ? (
+                       <Image src={author.photo} alt={author.name} fill className="object-cover" />
+                     ) : (
+-                      <UserIcon className="h-10 w-10 text-primary/20" />
++                      <img src={dicebearAvatarUrl(author.name)} alt={author.name} className="w-full h-full object-cover" />
+                     )}
+                     {!isAdmin && (
+                       <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary shadow-md flex items-center justify-center">
+diff --git a/src/lib/utils.ts b/src/lib/utils.ts
+index da3b150..0082fa4 100644
+--- a/src/lib/utils.ts
++++ b/src/lib/utils.ts
+@@ -284,6 +284,21 @@ export function cleanBookTitle(title?: string | null): string {
+  * créer de vrais retours à la ligne. Les <br> et <p> deviennent des
+  * retours à la ligne réels ; les autres balises sont retirées.
+  */
++/**
++ * Avatar illustré généré automatiquement à partir du nom d'un auteur
++ * quand aucune vraie photo n'est disponible — beaucoup d'auteurs
++ * indépendants (Wattpad, auto-édition) n'ont aucune photo publique. Le
++ * style "personas" donne un portrait stylisé crédible, ni trop enfantin
++ * ni abstrait. Le même nom génère toujours le même avatar (seed
++ * déterministe) — gratuit, sans compte, sans dépendance à installer.
++ * NOTE : l'API gratuite DiceBear est prévue pour un usage non
++ * commercial — si Lectoria devient payant, prévoir soit une instance
++ * auto-hébergée (gratuite aussi), soit une offre commerciale DiceBear.
++ */
++export function dicebearAvatarUrl(seed: string): string {
++  return `https://api.dicebear.com/10.x/personas/svg?seed=${encodeURIComponent(seed || "auteur")}&backgroundType=gradientLinear`;
++}
++
+ const LANGUAGE_LABELS: Record<string, string> = {
+   fr: "Français", fre: "Français", fra: "Français", français: "Français", francais: "Français", french: "Français",
+   en: "Anglais", eng: "Anglais", english: "Anglais", anglais: "Anglais",

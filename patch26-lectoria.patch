@@ -1,0 +1,83 @@
+diff --git a/src/components/book-duplicates-manager.tsx b/src/components/book-duplicates-manager.tsx
+index 685c9ae..9d8b40a 100644
+--- a/src/components/book-duplicates-manager.tsx
++++ b/src/components/book-duplicates-manager.tsx
+@@ -43,7 +43,8 @@ function stripAccents(s: string) {
+ // Clé de regroupement volontairement "floue" : but de SUGGESTION
+ // uniquement, jamais de fusion automatique. Elle ignore la ponctuation,
+ // les mots tome/volume et les chiffres de tome, ainsi qu'un éventuel
+-// suffixe "/ {auteur}" ajouté par erreur lors d'un import BnF.
++// suffixe "/ {auteur}" ajouté par erreur lors d'un import BnF, ainsi
++// que les mentions d'édition génériques (Réédition, nouvelle édition...).
+ function fuzzyClusterKey(title: string, author?: string): string {
+   let t = title || "";
+   t = t.replace(/\s*\/\s*([^/]+)$/, (m, name) => {
+@@ -51,6 +52,7 @@ function fuzzyClusterKey(title: string, author?: string): string {
+     const a = author ? stripAccents(cleanAuthorName(author)).toLowerCase().trim() : "";
+     return cand === a ? "" : m;
+   });
++  t = t.replace(/\s*[(\[](?:r[ée][ée]dition|nouvelle [ée]dition|[ée]dition (?:collector|r[ée]vis[ée]e|augment[ée]e|illustr[ée]e|reli[ée]e|poche|grand format))[)\]]\s*$/i, "");
+   t = stripAccents(t).toLowerCase();
+   t = t.replace(/\b(tome|volume|vol|t)\b/g, " ");
+   t = t.replace(/[^a-z]/g, "");
+@@ -91,12 +93,40 @@ export function BookDuplicatesManager() {
+   const clusters = (() => {
+     if (!books) return [];
+     const groups: Record<string, any[]> = {};
++    const groupKeys: string[] = [];
+     for (const b of books) {
+-      const key = `${authorKey(cleanAuthorName(b.author))}::${fuzzyClusterKey(b.title || "", b.author)}`;
+-      if (!groups[key]) groups[key] = [];
++      const author = authorKey(cleanAuthorName(b.author));
++      const key = `${author}::${fuzzyClusterKey(b.title || "", b.author)}`;
++      if (!groups[key]) { groups[key] = []; groupKeys.push(key); }
+       groups[key].push(b);
+     }
+-    return Object.values(groups).filter((g) => g.length > 1);
++    // Seconde passe : relie les groupes du même auteur dont le titre
++    // normalisé de l'un commence par celui de l'autre ("Into pieces" /
++    // "Into pieces : leur amour né du chaos") — un cas que la
++    // correspondance exacte ne peut pas attraper, mais qui reste assez
++    // fiable pour une SUGGESTION (jamais de fusion automatique). Seuil
++    // de 6 caractères pour éviter les faux positifs sur des titres très
++    // courts partagés par hasard.
++    const parent: Record<string, string> = {};
++    const find = (k: string): string => (parent[k] && parent[k] !== k ? (parent[k] = find(parent[k])) : (parent[k] = parent[k] || k));
++    const union = (a: string, b: string) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; };
++    groupKeys.forEach((k) => { parent[k] = k; });
++    for (let i = 0; i < groupKeys.length; i++) {
++      const [authorA, titleA] = groupKeys[i].split("::");
++      if (titleA.length < 6) continue;
++      for (let j = i + 1; j < groupKeys.length; j++) {
++        const [authorB, titleB] = groupKeys[j].split("::");
++        if (authorA !== authorB || titleB.length < 6) continue;
++        if (titleA.startsWith(titleB) || titleB.startsWith(titleA)) union(groupKeys[i], groupKeys[j]);
++      }
++    }
++    const merged: Record<string, any[]> = {};
++    groupKeys.forEach((k) => {
++      const root = find(k);
++      if (!merged[root]) merged[root] = [];
++      merged[root].push(...groups[k]);
++    });
++    return Object.values(merged).filter((g) => g.length > 1);
+   })();
+ 
+   const removeBookEverywhere = (id: string) => {
+diff --git a/src/lib/utils.ts b/src/lib/utils.ts
+index 0082fa4..951cb2a 100644
+--- a/src/lib/utils.ts
++++ b/src/lib/utils.ts
+@@ -155,6 +155,12 @@ export function stableBookKey(title: string | null | undefined, author?: string
+       return cand === a ? "" : m;
+     });
+   }
++  // Retire les mentions d'édition qui ne font pas partie du titre réel
++  // ("Into pieces (Réédition)" et "Into pieces" doivent être reconnus
++  // comme le même livre) — limité à des formulations génériques sans
++  // ambiguïté, jamais à un sous-titre quelconque entre parenthèses qui
++  // pourrait, lui, distinguer deux œuvres réellement différentes.
++  t = t.replace(/\s*[(\[](?:r[ée][ée]dition|nouvelle [ée]dition|[ée]dition (?:collector|r[ée]vis[ée]e|augment[ée]e|illustr[ée]e|reli[ée]e|poche|grand format))[)\]]\s*$/i, "");
+   const normalizedTitle = t
+     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+     .toLowerCase()

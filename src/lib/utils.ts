@@ -284,6 +284,21 @@ export function cleanBookTitle(title?: string | null): string {
  * créer de vrais retours à la ligne. Les <br> et <p> deviennent des
  * retours à la ligne réels ; les autres balises sont retirées.
  */
+/**
+ * Avatar illustré généré automatiquement à partir du nom d'un auteur
+ * quand aucune vraie photo n'est disponible — beaucoup d'auteurs
+ * indépendants (Wattpad, auto-édition) n'ont aucune photo publique. Le
+ * style "personas" donne un portrait stylisé crédible, ni trop enfantin
+ * ni abstrait. Le même nom génère toujours le même avatar (seed
+ * déterministe) — gratuit, sans compte, sans dépendance à installer.
+ * NOTE : l'API gratuite DiceBear est prévue pour un usage non
+ * commercial — si Lectoria devient payant, prévoir soit une instance
+ * auto-hébergée (gratuite aussi), soit une offre commerciale DiceBear.
+ */
+export function dicebearAvatarUrl(seed: string): string {
+  return `https://api.dicebear.com/10.x/personas/svg?seed=${encodeURIComponent(seed || "auteur")}&backgroundType=gradientLinear`;
+}
+
 const LANGUAGE_LABELS: Record<string, string> = {
   fr: "Français", fre: "Français", fra: "Français", français: "Français", francais: "Français", french: "Français",
   en: "Anglais", eng: "Anglais", english: "Anglais", anglais: "Anglais",
