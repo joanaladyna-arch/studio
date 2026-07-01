@@ -188,7 +188,7 @@ export default function BookDetailPage() {
     // les thèmes, genres ou autres coches que la lectrice venait de faire.
     if (!hasInitialized.current) {
       hasInitialized.current = true;
-      setEditedData({ ...userBook, description: userBook.description ? cleanDescriptionHtml(userBook.description) : userBook.description } as any);
+      setEditedData({ ...userBook, description: cleanDescriptionHtml(userBook.description || "") } as any);
     }
     if (userBook.masterBookId) {
       fetchMasterData(userBook.masterBookId);
@@ -452,18 +452,15 @@ export default function BookDetailPage() {
         nextReadUpdate.isNextRead = false;
       }
       await updateDoc(userBookRef, {
-        ...editedData,
+        // Firestore refuse toute valeur `undefined` depuis les versions
+        // récentes du SDK — on les filtre systématiquement avant l'envoi
+        // plutôt que de risquer une erreur silencieuse ou visible.
+        ...Object.fromEntries(Object.entries(editedData).filter(([, v]) => v !== undefined)),
         ...dateReadUpdate,
         ...nextReadUpdate,
         updatedAt: serverTimestamp()
       });
       proposeMasterCompletion({ description: (editedData as any).description });
-      // Après une sauvegarde réussie, on peut sans risque resynchroniser
-      // editedData depuis la base — les modifications viennent d'être
-      // persistées, donc un rechargement ne perd rien.
-      if (userBook) {
-        setEditedData({ ...userBook, ...editedData, updatedAt: undefined } as any);
-      }
       toast({ title: "Journal gravé", description: "Vos réflexions ont été enregistrées." });
     } catch (err: any) {
       console.error("HandleSave Error:", err);
