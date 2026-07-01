@@ -1,0 +1,141 @@
+diff --git a/src/app/api/proxy-image/route.ts b/src/app/api/proxy-image/route.ts
+index c167de0..dc48393 100644
+--- a/src/app/api/proxy-image/route.ts
++++ b/src/app/api/proxy-image/route.ts
+@@ -31,14 +31,16 @@ export async function GET(req: NextRequest) {
+   try {
+     const controller = new AbortController();
+     const timeout = setTimeout(() => controller.abort(), 10000);
++    // Google Books exige parfois un en-tête Referer pour servir l'image
++    // depuis son CDN (books.googleusercontent.com) — sans lui, le serveur
++    // répond 200 mais avec un contenu invalide (page HTML ou image 1×1).
++    const parsedUrl = new URL(url);
++    const isGoogleBooks = parsedUrl.hostname.includes("google");
+     const res = await fetch(url, {
+       headers: {
+-        // Un User-Agent de vrai navigateur plutôt qu'un nom de robot —
+-        // certains hébergeurs d'images (Google Books, Apple...)
+-        // dégradent ou bloquent silencieusement les requêtes identifiées
+-        // comme robots, sans renvoyer d'erreur claire pour autant.
+         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+         "Accept": "image/avif,image/webp,image/png,image/jpeg,image/*,*/*;q=0.8",
++        ...(isGoogleBooks ? { "Referer": "https://books.google.com/" } : {}),
+       },
+       signal: controller.signal,
+     });
+@@ -47,10 +49,10 @@ export async function GET(req: NextRequest) {
+       return NextResponse.json({ error: `Image inaccessible (code ${res.status})` }, { status: 502 });
+     }
+     const contentType = res.headers.get("content-type") || "";
+-    if (!contentType.startsWith("image/")) {
+-      // Le lien a répondu, mais avec autre chose qu'une image (souvent
+-      // une page d'erreur ou de blocage déguisée en réponse 200) — on
+-      // le signale clairement plutôt que de fabriquer une fausse image.
++    // Certains CDN servent des images avec un content-type générique
++    // ("application/octet-stream") ou absent — on vérifie le contenu
++    // plutôt que de rejeter aveuglément au lieu de les bloquer.
++    if (contentType.startsWith("text/html") || contentType.startsWith("application/json")) {
+       return NextResponse.json({ error: "Ce lien ne renvoie pas une image valide" }, { status: 502 });
+     }
+     const buffer = Buffer.from(await res.arrayBuffer());
+diff --git a/src/app/share/page.tsx b/src/app/share/page.tsx
+index 4da2626..2038ef0 100644
+--- a/src/app/share/page.tsx
++++ b/src/app/share/page.tsx
+@@ -15,7 +15,7 @@ import Link from "next/link";
+ import { RANKS, EMOTIONS, Book, BookCard } from "@/app/library/page";
+ import { cn, toArray } from "@/lib/utils";
+ import { useUser, useFirestore, useCollection } from "@/firebase";
+-import { collection, query, where } from "firebase/firestore";
++import { collection, query, where, doc, getDoc } from "firebase/firestore";
+ import { useToast } from "@/hooks/use-toast";
+ 
+ /**
+@@ -116,6 +116,34 @@ export default function SharePage() {
+ 
+   const rank = selectedBook?.plumeRank ? RANKS[selectedBook.plumeRank as keyof typeof RANKS] : null;
+ 
++  // Quand le livre de l'utilisatrice n'a pas d'URL de couverture (cas
++  // fréquent des livres issus de BnF qui ne fournit pas d'image), on
++  // tente de récupérer la couverture depuis la fiche partagée
++  // masterBooks — qui aura été enrichie par l'admin ou par un ajout
++  // ultérieur depuis une source qui avait l'image.
++  const [masterCoverUrl, setMasterCoverUrl] = useState<string | null>(null);
++  useEffect(() => {
++    if (!db || !selectedBook) { setMasterCoverUrl(null); return; }
++    if (selectedBook.cover) { setMasterCoverUrl(null); return; } // user cover a priorité
++    const masterBookId = (selectedBook as any).masterBookId;
++    if (!masterBookId) { setMasterCoverUrl(null); return; }
++    getDoc(doc(db, "masterBooks", masterBookId))
++      .then((snap) => { if (snap.exists()) setMasterCoverUrl(snap.data()?.cover || null); })
++      .catch(() => setMasterCoverUrl(null));
++  }, [db, selectedBook]);
++
++  const effectiveCoverUrl = (selectedBook as any)?.cover || masterCoverUrl || "";
++
++  // Tronque l'avis de lecture pour qu'il tienne dans la carte de
++  // partage sans la faire exploser — 180 caractères est un bon
++  // compromis entre lisibilité sur story (petit texte) et densité
++  // d'information. On coupe proprement au mot, jamais au milieu.
++  const truncateReview = (text: string, max = 180) => {
++    if (!text || text.length <= max) return text;
++    const cut = text.slice(0, max).lastIndexOf(" ");
++    return text.slice(0, cut > 0 ? cut : max) + "…";
++  };
++
+   // La couverture affichée sur la carte ET capturée à l'export passe
+   // systématiquement par ce relais (data URI interne), jamais
+   // directement par l'URL externe — voir /api/proxy-image pour le
+@@ -129,14 +157,14 @@ export default function SharePage() {
+   const [coverError, setCoverError] = useState<string | null>(null);
+   const [coverRetryCount, setCoverRetryCount] = useState(0);
+   useEffect(() => {
+-    if (!selectedBook?.cover) { setCoverDataUri(null); setCoverError(null); return; }
++    if (!effectiveCoverUrl) { setCoverDataUri(null); setCoverError(null); return; }
+     let cancelled = false;
+     setCoverLoading(true);
+     setCoverDataUri(null);
+     setCoverError(null);
+     (async () => {
+       try {
+-        const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(selectedBook.cover)}`);
++        const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(effectiveCoverUrl)}`);
+         const data = await res.json();
+         if (cancelled) return;
+         if (data.error || !data.dataUri) {
+@@ -164,7 +192,7 @@ export default function SharePage() {
+       }
+     })();
+     return () => { cancelled = true; };
+-  }, [selectedBook?.cover, coverRetryCount]);
++  }, [effectiveCoverUrl, coverRetryCount]);
+ 
+   // Ambiance suggérée automatiquement selon le(s) genre(s) du livre
+   // sélectionné, mais jamais imposée : la lectrice change le rendu via
+@@ -303,7 +331,7 @@ export default function SharePage() {
+                           <p className="text-[9px] italic opacity-50 leading-tight">Couverture indisponible</p>
+                         </div>
+                       ) : (
+-                        <BookCover src={selectedBook.cover} alt={selectedBook.title} className="object-cover" />
++                        <BookCover src={effectiveCoverUrl} alt={selectedBook.title} className="object-cover" />
+                       )}
+                     </div>
+ 
+@@ -331,7 +359,16 @@ export default function SharePage() {
+                       ))}
+                     </div>
+ 
+-                    {selectedBook.favoriteQuote && (
++                    {(selectedBook as any).review && (
++                      <div className="pt-3 border-t w-full" style={{ borderColor: theme.badge }}>
++                        <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-50" style={{ color: theme.accent }}>Mon Avis</p>
++                        <p className="text-[10px] italic leading-relaxed opacity-80 px-2 text-left">
++                          {truncateReview((selectedBook as any).review)}
++                        </p>
++                      </div>
++                    )}
++
++                    {selectedBook.favoriteQuote && !(selectedBook as any).review && (
+                       <div className="pt-4 border-t w-full" style={{ borderColor: theme.badge }}>
+                         <p className="text-xs italic leading-relaxed opacity-70 px-4">
+                           "{selectedBook.favoriteQuote}"

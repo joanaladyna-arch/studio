@@ -31,14 +31,16 @@ export async function GET(req: NextRequest) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
+    // Google Books exige parfois un en-tête Referer pour servir l'image
+    // depuis son CDN (books.googleusercontent.com) — sans lui, le serveur
+    // répond 200 mais avec un contenu invalide (page HTML ou image 1×1).
+    const parsedUrl = new URL(url);
+    const isGoogleBooks = parsedUrl.hostname.includes("google");
     const res = await fetch(url, {
       headers: {
-        // Un User-Agent de vrai navigateur plutôt qu'un nom de robot —
-        // certains hébergeurs d'images (Google Books, Apple...)
-        // dégradent ou bloquent silencieusement les requêtes identifiées
-        // comme robots, sans renvoyer d'erreur claire pour autant.
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         "Accept": "image/avif,image/webp,image/png,image/jpeg,image/*,*/*;q=0.8",
+        ...(isGoogleBooks ? { "Referer": "https://books.google.com/" } : {}),
       },
       signal: controller.signal,
     });
@@ -47,10 +49,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: `Image inaccessible (code ${res.status})` }, { status: 502 });
     }
     const contentType = res.headers.get("content-type") || "";
-    if (!contentType.startsWith("image/")) {
-      // Le lien a répondu, mais avec autre chose qu'une image (souvent
-      // une page d'erreur ou de blocage déguisée en réponse 200) — on
-      // le signale clairement plutôt que de fabriquer une fausse image.
+    // Certains CDN servent des images avec un content-type générique
+    // ("application/octet-stream") ou absent — on vérifie le contenu
+    // plutôt que de rejeter aveuglément au lieu de les bloquer.
+    if (contentType.startsWith("text/html") || contentType.startsWith("application/json")) {
       return NextResponse.json({ error: "Ce lien ne renvoie pas une image valide" }, { status: 502 });
     }
     const buffer = Buffer.from(await res.arrayBuffer());
