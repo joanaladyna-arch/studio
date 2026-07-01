@@ -291,18 +291,20 @@ export function cleanBookTitle(title?: string | null): string {
  * retours à la ligne réels ; les autres balises sont retirées.
  */
 /**
- * Avatar illustré généré automatiquement à partir du nom d'un auteur
- * quand aucune vraie photo n'est disponible — beaucoup d'auteurs
- * indépendants (Wattpad, auto-édition) n'ont aucune photo publique. Le
- * style "personas" donne un portrait stylisé crédible, ni trop enfantin
- * ni abstrait. Le même nom génère toujours le même avatar (seed
- * déterministe) — gratuit, sans compte, sans dépendance à installer.
- * NOTE : l'API gratuite DiceBear est prévue pour un usage non
- * commercial — si Lectoria devient payant, prévoir soit une instance
- * auto-hébergée (gratuite aussi), soit une offre commerciale DiceBear.
+ * Avatar par défaut pour un auteur sans photo disponible — choisi de
+ * façon déterministe (même nom = toujours le même avatar) parmi les 30
+ * illustrations personnalisées de Lectoria (public/avatars/), au lieu
+ * d'une icône générique. Beaucoup d'auteurs indépendants (Wattpad,
+ * auto-édition) n'ont aucune photo publique.
  */
-export function dicebearAvatarUrl(seed: string): string {
-  return `https://api.dicebear.com/10.x/personas/svg?seed=${encodeURIComponent(seed || "auteur")}&backgroundType=gradientLinear`;
+export function defaultAvatarUrl(seed: string): string {
+  const s = (seed || "auteur").toString();
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  const index = (hash % 30) + 1;
+  return `/avatars/avatar-${index.toString().padStart(2, "0")}.png`;
 }
 
 const LANGUAGE_LABELS: Record<string, string> = {

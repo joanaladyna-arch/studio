@@ -11,7 +11,7 @@ import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { collection, doc, getDoc, getDocs, updateDoc } from "firebase/firestore";
-import { cn, ADMIN_EMAILS, authorKey, sortBySaga, dicebearAvatarUrl } from "@/lib/utils";
+import { cn, ADMIN_EMAILS, authorKey, sortBySaga, defaultAvatarUrl } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import Link from "next/link";
@@ -238,7 +238,7 @@ export default function CoupsDeCoeurPage() {
                     {author.photo ? (
                       <Image src={author.photo} alt={author.name} fill className="object-cover" />
                     ) : (
-                      <img src={dicebearAvatarUrl(author.name)} alt={author.name} className="w-full h-full object-cover" />
+                      <img src={defaultAvatarUrl(author.name)} alt={author.name} className="w-full h-full object-cover" />
                     )}
                     {!isAdmin && (
                       <div className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-primary shadow-md flex items-center justify-center">
