@@ -354,21 +354,24 @@ export default function AddBookPage() {
     try {
       let masterBookId = pendingBook.id;
 
-      // 1. Si source est API, on crée — ou on RETROUVE — le document dans
-      // masterBooks. Avant, un identifiant aléatoire était généré à
-      // chaque ajout, ce qui créait une fiche en double dès que le même
-      // livre était retrouvé une seconde fois avec une légère variation
-      // de titre/auteur (ponctuation, casse, mention BnF "auteur du
-      // texte"...). Désormais l'identifiant est déterministe (l'ISBN
-      // nettoyé en priorité, sinon une clé stable basée sur titre+auteur
-      // normalisés) : un même livre retombe systématiquement sur la même
-      // fiche, qu'on le retrouve via Google Books, la BnF, ou un import
-      // ultérieur. Si la fiche existe déjà, on ne l'écrase jamais — on ne
-      // complète que les champs encore vides (même logique que la
-      // protection anti-écrasement de l'import Excel).
-      if (pendingBook.source === "api") {
+      // BnF, Apple et Open Library envoient des sources différentes de
+      // "api" (respectivement "bnf", "api" déjà, "api"). On normalise
+      // ici pour que tous les résultats externes aillent dans masterBooks
+      // sous un identifiant déterministe — au lieu de garder l'ID
+      // temporaire généré côté client qui ne correspond à aucun document
+      // en base et rend la fiche inaccessible immédiatement après l'ajout.
+      const isExternalSource = pendingBook.source !== "master";
+
+      if (isExternalSource) {
         const cleanedIsbn = cleanIsbnValue(pendingBook.isbn);
-        masterBookId = cleanedIsbn || stableBookKey(pendingBook.title, pendingBook.author);
+        const rawKey = cleanedIsbn || stableBookKey(pendingBook.title, pendingBook.author);
+        // Garde-fou : si le titre ET l'auteur sont tous deux vides/null,
+        // stableBookKey renvoie "-" qui est une valeur invalide comme
+        // identifiant Firestore. On préfère un UUID court basé sur le
+        // titre/auteur "inconnus" plutôt que laisser silencieusement
+        // écraser toutes les fiches orphelines au même endroit.
+        masterBookId = rawKey && rawKey !== "-" ? rawKey : `unknown-${Date.now()}`;
+
         const masterRef = doc(db, "masterBooks", masterBookId);
         const existingSnap = await getDoc(masterRef);
         const existing: any = existingSnap.exists() ? existingSnap.data() : {};
@@ -392,7 +395,7 @@ export default function AddBookPage() {
           translator: keepText(pendingBook.translator, existing.translator),
           pageCount: keepNum(pendingBook.pages, existing.pageCount),
           language: keepText(pendingBook.language, existing.language),
-          publishedDate: keepText(pendingBook.publishedDate, existing.publishedDate),
+          publishedDate: keepText(pendingBook.publishedDate ?? pendingBook.publicationDate, existing.publishedDate),
           genres: keepArr(toArray<string>(pendingBook.genres), existing.genres),
           updatedAt: serverTimestamp(),
           source: existing.source || "discovered"

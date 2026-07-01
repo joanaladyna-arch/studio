@@ -320,7 +320,8 @@ export default function AuthorPage() {
       let masterBookId = pendingBook.masterBookId;
       if (!masterBookId) {
         const cleanedIsbn = cleanIsbnValue(pendingBook.isbn);
-        masterBookId = cleanedIsbn || stableBookKey(pendingBook.title, pendingBook.author || authorName);
+        const rawKey = cleanedIsbn || stableBookKey(pendingBook.title, pendingBook.author || authorName);
+        masterBookId = rawKey && rawKey !== "-" ? rawKey : `unknown-${Date.now()}`;
         const masterRef = doc(db, "masterBooks", masterBookId);
         const existingSnap = await getDoc(masterRef);
         const existing: any = existingSnap.exists() ? existingSnap.data() : {};
