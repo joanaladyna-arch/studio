@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useFirestore, useDoc } from "@/firebase";
-import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -116,17 +116,18 @@ export default function BookDetailPage() {
 
   // Petite photo de l'auteur près de son nom, si elle a été renseignée à
   // la main via la fiche auteur (mode admin). Échoue toujours
-  // silencieusement : l'absence de photo ne doit jamais bloquer
-  // l'affichage de la fiche livre elle-même.
+  // Photo de l'auteur en temps réel — dès que l'admin met à jour la fiche
+  // auteur (nouvelle photo), le changement apparaît immédiatement sans
+  // recharger la page, chez toutes les lectrices ayant cette fiche ouverte.
   useEffect(() => {
     const authorName = masterBook?.author || userBook?.author;
     if (!db || !authorName) { setAuthorPhoto(null); return; }
-    getDoc(doc(db, "authors", authorKey(authorName)))
-      .then((snap) => {
-        const photo = snap.exists() ? (snap.data() as any)?.photo : null;
-        setAuthorPhoto(photo || null);
-      })
-      .catch(() => setAuthorPhoto(null));
+    const unsub = onSnapshot(
+      doc(db, "authors", authorKey(authorName)),
+      (snap) => setAuthorPhoto(snap.exists() ? ((snap.data() as any)?.photo || null) : null),
+      () => setAuthorPhoto(null)
+    );
+    return () => unsub();
   }, [db, masterBook?.author, userBook?.author]);
 
   // Récupération des données Master

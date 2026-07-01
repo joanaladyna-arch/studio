@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useFirestore } from "@/firebase";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2, BookOpen, Globe, Hash, Plus, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
@@ -76,9 +76,12 @@ export default function MasterBookPreviewPage() {
 
   useEffect(() => {
     if (!db || !book?.author) return;
-    getDoc(doc(db, "authors", authorKey(book.author)))
-      .then((snap) => setAuthorPhoto(snap.exists() ? (snap.data() as any)?.photo || null : null))
-      .catch(() => setAuthorPhoto(null));
+    const unsub = onSnapshot(
+      doc(db, "authors", authorKey(book.author)),
+      (snap) => setAuthorPhoto(snap.exists() ? (snap.data() as any)?.photo || null : null),
+      () => setAuthorPhoto(null)
+    );
+    return () => unsub();
   }, [db, book?.author]);
 
   const handleAdd = async () => {
