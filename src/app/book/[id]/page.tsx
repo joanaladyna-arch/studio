@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where } from "firebase/firestore";
@@ -97,6 +97,12 @@ export default function BookDetailPage() {
   const [masterLoading, setMasterLoading] = useState(false);
   const [editedData, setEditedData] = useState<Partial<UserBook>>({});
   const [isSaving, setIsSaving] = useState(false);
+  // Ce ref devient true dès que editedData est initialisé une première
+  // fois depuis la base. Les rechargements ultérieurs du snapshot
+  // (reconnexion réseau, sync background...) ne réinitialiseront PLUS
+  // les modifications en cours — c'était la cause du bug "mes coches
+  // disparaissent avant que j'aie pu enregistrer".
+  const hasInitialized = useRef(false);
   const [isUploading, setIsUploading] = useState(false);
   const [newCoverUrl, setNewCoverUrl] = useState("");
   const [ratingGridOpen, setRatingGridOpen] = useState(false);
@@ -172,13 +178,21 @@ export default function BookDetailPage() {
   }, [db, userBook]);
 
   useEffect(() => {
-    if (userBook) {
+    if (!userBook) return;
+    // On n'initialise editedData QU'UNE SEULE FOIS (premier snapshot)
+    // pour ne jamais écraser les modifications en cours. Les snapshots
+    // suivants (reconnexion réseau, sync Firestore...) changent la
+    // référence objet de userBook sans que les données aient réellement
+    // changé — sans ce garde, chaque snapshot effaçait silencieusement
+    // les thèmes, genres ou autres coches que la lectrice venait de faire.
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
       setEditedData({ ...userBook, description: userBook.description ? cleanDescriptionHtml(userBook.description) : userBook.description } as any);
-      if (userBook.masterBookId) {
-        fetchMasterData(userBook.masterBookId);
-      }
     }
-  }, [userBook, fetchMasterData]);
+    if (userBook.masterBookId) {
+      fetchMasterData(userBook.masterBookId);
+    }
+  }, [userBook, fetchMasterData]); // userBook en dépendance pour réagir au premier chargement
 
   // "Éditions" : recherche, dans la base partagée Lectoria, d'autres
   // fiches correspondant à la même œuvre (même titre+auteur normalisés,
@@ -413,6 +427,13 @@ export default function BookDetailPage() {
 
   const handleSave = async () => {
     if (!userBookRef) return;
+    // Si le livre n'a pas encore chargé depuis Firestore, on attend
+    // plutôt que d'enregistrer un objet vide — ce qui arriverait si la
+    // lectrice clique trop vite avant le premier snapshot.
+    if (!userBook) {
+      toast({ variant: "destructive", title: "Chargement en cours", description: "Le livre n'est pas encore chargé, réessaie dans un instant." });
+      return;
+    }
     setIsSaving(true);
     try {
       // Si la lectrice passe ce livre à "Lu" et qu'aucune date de fin
@@ -436,9 +457,19 @@ export default function BookDetailPage() {
         updatedAt: serverTimestamp()
       });
       proposeMasterCompletion({ description: (editedData as any).description });
+      // Après une sauvegarde réussie, on peut sans risque resynchroniser
+      // editedData depuis la base — les modifications viennent d'être
+      // persistées, donc un rechargement ne perd rien.
+      if (userBook) {
+        setEditedData({ ...userBook, ...editedData, updatedAt: undefined } as any);
+      }
       toast({ title: "Journal gravé", description: "Vos réflexions ont été enregistrées." });
-    } catch (err) {
-      toast({ variant: "destructive", title: "Erreur", description: "Impossible de sauvegarder vos modifications." });
+    } catch (err: any) {
+      console.error("HandleSave Error:", err);
+      // On affiche le vrai message d'erreur Firebase (ex: permission-denied,
+      // not-found...) plutôt qu'un message générique, pour pouvoir
+      // diagnostiquer sans avoir accès à la console du navigateur.
+      toast({ variant: "destructive", title: "Impossible de sauvegarder", description: err?.message || err?.code || "Erreur inconnue." });
     } finally {
       setIsSaving(false);
     }
