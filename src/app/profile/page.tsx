@@ -559,13 +559,13 @@ function EditProfileDialog({ profile }: { profile: any }) {
           <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
-        <DialogHeader className="p-8 border-b bg-white/40 shrink-0">
-          <DialogTitle className="font-headline text-4xl italic">Identité Lectoria</DialogTitle>
+      <DialogContent className="max-w-4xl w-[calc(100vw-1rem)] h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
+        <DialogHeader className="p-6 sm:p-8 border-b bg-white/40 shrink-0">
+          <DialogTitle className="font-headline text-3xl sm:text-4xl italic">Identité Lectoria</DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 w-full overflow-y-auto">
-          <div className="p-8 space-y-16 pb-12">
+        <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden">
+          <div className="p-5 sm:p-8 space-y-12 sm:space-y-16 pb-12">
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Informations Personnelles</h3>
               <div className="grid gap-8">
@@ -602,30 +602,38 @@ function EditProfileDialog({ profile }: { profile: any }) {
 
             <div className="space-y-10">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.5em] text-primary/60 border-b pb-4">Mes Défis de Lecture</h3>
-              <div className="grid md:grid-cols-2 gap-12">
-                <div className="space-y-6">
+              <div className="grid sm:grid-cols-2 gap-8 sm:gap-12">
+                <div className="space-y-4 sm:space-y-6 w-full min-w-0">
                   <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
                     Livres / An <span className="text-primary italic font-headline text-lg">{annualGoal}</span>
                   </Label>
-                  <Slider value={[annualGoal]} min={1} max={500} onValueChange={(v) => setAnnualGoal(v[0])} />
+                  <div className="w-full overflow-hidden pr-1">
+                    <Slider value={[annualGoal]} min={1} max={500} onValueChange={(v) => setAnnualGoal(v[0])} />
+                  </div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6 w-full min-w-0">
                   <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
                     Livres / Mois <span className="text-primary italic font-headline text-lg">{monthlyGoal}</span>
                   </Label>
-                  <Slider value={[monthlyGoal]} min={1} max={50} onValueChange={(v) => setMonthlyGoal(v[0])} />
+                  <div className="w-full overflow-hidden pr-1">
+                    <Slider value={[monthlyGoal]} min={1} max={50} onValueChange={(v) => setMonthlyGoal(v[0])} />
+                  </div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6 w-full min-w-0">
                   <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
                     Pages / An <span className="text-primary italic font-headline text-lg">{annualGoalPages.toLocaleString()}</span>
                   </Label>
-                  <Slider value={[annualGoalPages]} min={1000} max={100000} step={1000} onValueChange={(v) => setAnnualGoalPages(v[0])} />
+                  <div className="w-full overflow-hidden pr-1">
+                    <Slider value={[annualGoalPages]} min={1000} max={100000} step={1000} onValueChange={(v) => setAnnualGoalPages(v[0])} />
+                  </div>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6 w-full min-w-0">
                   <Label className="text-[10px] uppercase font-bold opacity-60 flex justify-between">
                     Audio / An (heures) <span className="text-primary italic font-headline text-lg">{annualAudioGoal}h</span>
                   </Label>
-                  <Slider value={[annualAudioGoal]} min={1} max={1000} onValueChange={(v) => setAnnualAudioGoal(v[0])} />
+                  <div className="w-full overflow-hidden pr-1">
+                    <Slider value={[annualAudioGoal]} min={1} max={1000} onValueChange={(v) => setAnnualAudioGoal(v[0])} />
+                  </div>
                 </div>
               </div>
             </div>
