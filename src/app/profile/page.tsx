@@ -178,14 +178,30 @@ export default function ProfilePage() {
     setUploading(true);
     const storageRef = ref(storage, `users/${user.uid}/profile/avatar-${Date.now()}`);
     try {
-      await uploadBytes(storageRef, file);
+      // Timeout de 15s : si Firebase Storage bloque la requête sans
+      // renvoyer d'erreur (règles trop restrictives, problème réseau),
+      // le spinner s'arrêterait sinon à l'infini.
+      await Promise.race([
+        uploadBytes(storageRef, file),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 15000))
+      ]);
       const url = await getDownloadURL(storageRef);
       await updateDoc(doc(db, 'users', user.uid), { avatarUrl: url });
       if (auth?.currentUser) await updateProfile(auth.currentUser, { photoURL: url });
       toast({ title: 'Photo mise à jour', description: 'Votre nouvelle identité est gravée.' });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Profile Upload Error:", error);
-      toast({ variant: 'destructive', title: 'Erreur d\'importation' });
+      const isTimeout = error?.message === "timeout";
+      const isPermission = error?.code === "storage/unauthorized";
+      toast({
+        variant: 'destructive',
+        title: isTimeout ? 'Délai dépassé' : isPermission ? 'Permission refusée' : 'Erreur d\'importation',
+        description: isTimeout
+          ? 'Vérifiez les règles Firebase Storage dans la console.'
+          : isPermission
+          ? 'Les règles Firebase Storage bloquent l\'upload.'
+          : 'La photo n\'a pas pu être envoyée. Réessaie.',
+      });
     } finally {
       setUploading(false);
     }
@@ -210,12 +226,23 @@ export default function ProfilePage() {
               <AvatarImage src={userPhoto} className="object-cover" />
               <AvatarFallback className="font-headline italic text-3xl">PL</AvatarFallback>
             </Avatar>
-            <button 
-              onClick={() => fileInputRef.current?.click()} 
-              className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-10"
+            {/* Overlay desktop (hover) */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute inset-0 bg-black/40 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-10 hidden md:flex"
               disabled={uploading}
             >
               {uploading ? <Loader2 className="h-8 w-8 text-white animate-spin" /> : <Camera className="h-8 w-8 text-white" />}
+            </button>
+            {/* Bouton toujours visible sur mobile — le hover n'existe pas
+                sur écran tactile, donc l'overlay ci-dessus resterait
+                invisible à jamais pour les lectrices sur iPhone/Android. */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="md:hidden absolute -bottom-2 -left-2 bg-primary text-white rounded-full p-2.5 border-4 border-white shadow-xl z-20 flex items-center justify-center"
+              disabled={uploading}
+            >
+              {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
             <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white rounded-full p-3 border-4 border-white shadow-xl z-20">
