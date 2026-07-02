@@ -62,7 +62,7 @@ export default function RootLayout({
               <AdminModeProvider>
                 <Navigation />
                 <AdminModeBar />
-                <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-36 md:pt-28 md:pb-16 w-full" style={{ paddingBottom: "calc(9rem + env(safe-area-inset-bottom))" }}>
+                <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-36 md:pt-28 md:pb-16 w-full" style={{ paddingBottom: "calc(10rem + env(safe-area-inset-bottom, 0px))" }}>
                   {children}
                 </main>
               </AdminModeProvider>
