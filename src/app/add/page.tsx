@@ -222,7 +222,30 @@ export default function AddBookPage() {
             ((m.title || "").toLowerCase() === (b.title || "").toLowerCase() && (m.author || "").toLowerCase() === (b.author || "").toLowerCase())
           )
         );
-        allResults = [...allResults, ...newBnfResults];
+        // Enrichissement des résultats BnF qui n'ont pas de couverture
+        // ou de résumé : on interroge Google Books par ISBN en parallèle
+        // et on complète uniquement les champs vides — jamais d'écrasement.
+        const enrichedBnf = await Promise.all(
+          newBnfResults.map(async (b: any) => {
+            if ((b.cover && b.description) || !b.isbn) return b;
+            try {
+              const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${b.isbn}&maxResults=1`;
+              const gRes = await fetchWithTimeout(gUrl, {}, 5000);
+              if (!gRes.ok) return b;
+              const gData = await gRes.json();
+              const info = gData.items?.[0]?.volumeInfo;
+              if (!info) return b;
+              return {
+                ...b,
+                cover: b.cover || info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
+                description: b.description || cleanDescriptionHtml(info.description) || "",
+              };
+            } catch {
+              return b;
+            }
+          })
+        );
+        allResults = [...allResults, ...enrichedBnf];
       } else {
         console.error("BnF Error:", bnfSettled.reason);
         // On continue même si la BnF échoue ou expire : source bonus, pas bloquante
@@ -282,6 +305,21 @@ export default function AddBookPage() {
 
       if (allResults.length === 0) {
         toast({ title: "Aucun résultat", description: "Aucune pépite trouvée pour cette recherche." });
+      }
+
+      // Journalisation anonyme des recherches pour le tableau de bord
+      // admin — permet de savoir quels livres sont cherchés et non
+      // trouvés, pour enrichir la base en priorité. Aucune donnée
+      // personnelle : uniquement le terme, la date et si des résultats
+      // ont été trouvés. Silencieux en cas d'échec.
+      if (db) {
+        addDoc(collection(db, "searchLogs"), {
+          query: searchVal,
+          resultsCount: allResults.length,
+          hasResults: allResults.length > 0,
+          searchMode,
+          createdAt: serverTimestamp(),
+        }).catch(() => {}); // jamais bloquant
       }
     } finally {
       // Garantit que le spinner s'arrête toujours, quoi qu'il arrive
@@ -589,14 +627,28 @@ export default function AddBookPage() {
         {visibleResults.map((book) => (
           <Card key={book.id} className="glass-card overflow-hidden hover:shadow-lg transition-shadow">
             <CardContent className="p-0 flex flex-col sm:flex-row">
-              <div className="relative w-32 aspect-[2/3] bg-secondary/5 shrink-0">
+              <div className="relative w-32 aspect-[2/3] bg-secondary/5 shrink-0 overflow-hidden">
                 {book.source === 'master' ? (
                   <Link href={`/master-book/${book.id}`} className="block w-full h-full">
-                    <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                    {book.cover ? (
+                      <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-primary/5 to-secondary/10 p-2">
+                        <span className="text-2xl">📖</span>
+                        <span className="text-[8px] text-center italic opacity-40 leading-tight">Couverture<br/>bientôt</span>
+                      </div>
+                    )}
                   </Link>
                 ) : (
                   <button onClick={() => setPreviewBook(book)} className="block w-full h-full">
-                    <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                    {book.cover ? (
+                      <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-primary/5 to-secondary/10 p-2">
+                        <span className="text-2xl">📖</span>
+                        <span className="text-[8px] text-center italic opacity-40 leading-tight">Couverture<br/>bientôt</span>
+                      </div>
+                    )}
                   </button>
                 )}
               </div>
