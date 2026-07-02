@@ -86,7 +86,13 @@
   scrollbar-width: none;
 }
 
-/* PWA specific fixes */
+/* Compensation barre système Android et encoche iOS — s'applique
+   en mode navigateur ET en mode PWA installée. On utilise dvh
+   (dynamic viewport height) là où c'est supporté pour éviter le
+   décalage dû à la barre d'adresse de Chrome Android. */
+.pb-32 {
+  padding-bottom: calc(theme(spacing.32) + env(safe-area-inset-bottom));
+}
 @media (display-mode: standalone) {
   .pb-32 {
     padding-bottom: calc(theme(spacing.32) + env(safe-area-inset-bottom));

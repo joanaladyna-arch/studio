@@ -51,7 +51,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased bg-background text-foreground min-h-screen overflow-x-hidden relative flex flex-col">
+      <body className="font-body antialiased bg-background text-foreground min-h-[100dvh] overflow-x-hidden relative flex flex-col">
         <FirebaseClientProvider>
           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
           
@@ -62,7 +62,7 @@ export default function RootLayout({
               <AdminModeProvider>
                 <Navigation />
                 <AdminModeBar />
-                <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-32 md:pt-28 md:pb-16 w-full">
+                <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-36 md:pt-28 md:pb-16 w-full" style={{ paddingBottom: "calc(9rem + env(safe-area-inset-bottom))" }}>
                   {children}
                 </main>
               </AdminModeProvider>

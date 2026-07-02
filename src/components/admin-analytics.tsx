@@ -189,9 +189,17 @@ export function AdminAnalytics() {
             {loadingLogs ? (
               <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin opacity-40" /></div>
             ) : !searchLogs || searchLogs.length === 0 ? (
-              <p className="text-sm italic opacity-50 text-center py-10">
-                Aucune recherche enregistrée pour l'instant — les logs se rempliront au fur et à mesure des recherches.
-              </p>
+              <div className="space-y-4 text-center py-10">
+                <p className="text-sm italic opacity-50">
+                  Aucune recherche enregistrée pour l'instant.
+                </p>
+                <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 text-left space-y-2 max-w-lg mx-auto">
+                  <p className="text-xs font-bold text-amber-700">⚠️ Vérifie que la règle Firestore est bien publiée</p>
+                  <p className="text-xs text-amber-600 italic">Dans la console Firebase → Firestore → Règles, assure-toi que ce bloc est présent et publié :</p>
+                  <code className="block text-[10px] bg-amber-100 rounded-xl p-3 text-amber-800 whitespace-pre">{`match /searchLogs/{id} {\n  allow create: if request.auth != null;\n  allow read, delete: if isAdmin();\n}`}</code>
+                  <p className="text-xs text-amber-600 italic">Les logs se rempliront automatiquement dès la prochaine recherche d'une lectrice.</p>
+                </div>
+              </div>
             ) : (
               <>
                 {/* Recherches sans résultat = livres à ajouter en priorité */}

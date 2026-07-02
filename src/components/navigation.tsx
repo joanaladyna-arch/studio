@@ -154,7 +154,15 @@ export function Navigation() {
         </button>
       </nav>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 py-3 flex justify-around items-center lg:hidden h-24 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
+      {/* Barre de navigation mobile — fixée en bas avec support de la
+          barre système Android (boutons retour/accueil/multitâche) et de
+          l'encoche/home indicator iOS via env(safe-area-inset-bottom).
+          Sans ce padding, les icônes sont cachées sous la barre système
+          sur les appareils Android avec navigation par boutons. */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 pt-3 flex justify-around items-center lg:hidden shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]"
+        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
+      >
         {allNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;

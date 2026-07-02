@@ -1,0 +1,87 @@
+diff --git a/src/app/globals.css b/src/app/globals.css
+index b73a4ad..d106152 100644
+--- a/src/app/globals.css
++++ b/src/app/globals.css
+@@ -86,7 +86,13 @@
+   scrollbar-width: none;
+ }
+ 
+-/* PWA specific fixes */
++/* Compensation barre système Android et encoche iOS — s'applique
++   en mode navigateur ET en mode PWA installée. On utilise dvh
++   (dynamic viewport height) là où c'est supporté pour éviter le
++   décalage dû à la barre d'adresse de Chrome Android. */
++.pb-32 {
++  padding-bottom: calc(theme(spacing.32) + env(safe-area-inset-bottom));
++}
+ @media (display-mode: standalone) {
+   .pb-32 {
+     padding-bottom: calc(theme(spacing.32) + env(safe-area-inset-bottom));
+diff --git a/src/app/layout.tsx b/src/app/layout.tsx
+index 24ee263..bd01d03 100644
+--- a/src/app/layout.tsx
++++ b/src/app/layout.tsx
+@@ -51,7 +51,7 @@ export default function RootLayout({
+         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
+       </head>
+-      <body className="font-body antialiased bg-background text-foreground min-h-screen overflow-x-hidden relative flex flex-col">
++      <body className="font-body antialiased bg-background text-foreground min-h-[100dvh] overflow-x-hidden relative flex flex-col">
+         <FirebaseClientProvider>
+           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
+           
+@@ -62,7 +62,7 @@ export default function RootLayout({
+               <AdminModeProvider>
+                 <Navigation />
+                 <AdminModeBar />
+-                <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-32 md:pt-28 md:pb-16 w-full">
++                <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-36 md:pt-28 md:pb-16 w-full" style={{ paddingBottom: "calc(9rem + env(safe-area-inset-bottom))" }}>
+                   {children}
+                 </main>
+               </AdminModeProvider>
+diff --git a/src/components/admin-analytics.tsx b/src/components/admin-analytics.tsx
+index c0a111d..d3eb3b5 100644
+--- a/src/components/admin-analytics.tsx
++++ b/src/components/admin-analytics.tsx
+@@ -189,9 +189,17 @@ export function AdminAnalytics() {
+             {loadingLogs ? (
+               <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin opacity-40" /></div>
+             ) : !searchLogs || searchLogs.length === 0 ? (
+-              <p className="text-sm italic opacity-50 text-center py-10">
+-                Aucune recherche enregistrée pour l'instant — les logs se rempliront au fur et à mesure des recherches.
+-              </p>
++              <div className="space-y-4 text-center py-10">
++                <p className="text-sm italic opacity-50">
++                  Aucune recherche enregistrée pour l'instant.
++                </p>
++                <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 text-left space-y-2 max-w-lg mx-auto">
++                  <p className="text-xs font-bold text-amber-700">⚠️ Vérifie que la règle Firestore est bien publiée</p>
++                  <p className="text-xs text-amber-600 italic">Dans la console Firebase → Firestore → Règles, assure-toi que ce bloc est présent et publié :</p>
++                  <code className="block text-[10px] bg-amber-100 rounded-xl p-3 text-amber-800 whitespace-pre">{`match /searchLogs/{id} {\n  allow create: if request.auth != null;\n  allow read, delete: if isAdmin();\n}`}</code>
++                  <p className="text-xs text-amber-600 italic">Les logs se rempliront automatiquement dès la prochaine recherche d'une lectrice.</p>
++                </div>
++              </div>
+             ) : (
+               <>
+                 {/* Recherches sans résultat = livres à ajouter en priorité */}
+diff --git a/src/components/navigation.tsx b/src/components/navigation.tsx
+index 6c080ba..90c6f15 100644
+--- a/src/components/navigation.tsx
++++ b/src/components/navigation.tsx
+@@ -154,7 +154,15 @@ export function Navigation() {
+         </button>
+       </nav>
+ 
+-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 py-3 flex justify-around items-center lg:hidden h-24 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
++      {/* Barre de navigation mobile — fixée en bas avec support de la
++          barre système Android (boutons retour/accueil/multitâche) et de
++          l'encoche/home indicator iOS via env(safe-area-inset-bottom).
++          Sans ce padding, les icônes sont cachées sous la barre système
++          sur les appareils Android avec navigation par boutons. */}
++      <nav
++        className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 pt-3 flex justify-around items-center lg:hidden shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]"
++        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
++      >
+         {allNavItems.map((item) => {
+           const Icon = item.icon;
+           const isActive = pathname === item.href;
