@@ -160,7 +160,7 @@ export function Navigation() {
           Sans ce padding, les icônes sont cachées sous la barre système
           sur les appareils Android avec navigation par boutons. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-2 pt-3 flex justify-around items-center lg:hidden shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-3xl border-t border-white/40 px-1 pt-2 flex items-end lg:hidden shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 12px)" }}
       >
         {allNavItems.map((item) => {
@@ -171,15 +171,13 @@ export function Navigation() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1.5 transition-all duration-700 p-2 rounded-2xl min-w-[60px]",
-                isActive 
-                  ? "text-primary" 
-                  : "text-muted-foreground"
+                "flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 py-1 px-0 rounded-xl",
+                isActive ? "text-primary" : "text-muted-foreground"
               )}
             >
               <div className={cn(
-                "relative p-2 rounded-xl transition-all duration-500",
-                isActive ? "bg-primary/10 scale-125 shadow-sm" : "bg-transparent"
+                "relative p-1.5 rounded-xl transition-all duration-300",
+                isActive ? "bg-primary/10 scale-110 shadow-sm" : "bg-transparent"
               )}>
                 <Icon className={cn("h-5 w-5", isActive && "fill-primary/20")} />
                 {item.id === "actualites" && hasUnseenActuality && (
@@ -187,7 +185,7 @@ export function Navigation() {
                 )}
               </div>
               <span className={cn(
-                "text-[10px] font-headline italic tracking-tight font-bold transition-all",
+                "text-[8px] font-headline italic font-bold transition-all leading-tight text-center w-full truncate px-0.5",
                 isActive ? "opacity-100" : "opacity-40"
               )}>{item.label}</span>
             </Link>
@@ -195,12 +193,12 @@ export function Navigation() {
         })}
         <button
           onClick={handleLogout}
-          className="flex flex-col items-center justify-center gap-1.5 transition-all duration-700 p-2 rounded-2xl min-w-[60px] text-muted-foreground"
+          className="flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 py-1 px-0 rounded-xl text-muted-foreground"
         >
-          <div className="relative p-2 rounded-xl bg-transparent">
+          <div className="relative p-1.5 rounded-xl bg-transparent">
             <LogOut className="h-5 w-5" />
           </div>
-          <span className="text-[10px] font-headline italic tracking-tight font-bold opacity-40">Quitter</span>
+          <span className="text-[8px] font-headline italic font-bold opacity-40 leading-tight truncate w-full text-center px-0.5">Quitter</span>
         </button>
       </nav>
     </>
