@@ -147,9 +147,11 @@ export default function JournalPage() {
       </header>
 
       <section className="space-y-6">
-        <h2 className="text-2xl font-headline italic flex items-center gap-3">
-          <Heart className="h-6 w-6 text-primary/40" /> Mes Recommandations
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-headline italic flex items-center gap-3">
+            <Heart className="h-6 w-6 text-primary/40" /> Mes Recommandations
+          </h2>
+        </div>
         {recommendedBooks.length > 0 ? (
           <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
             {recommendedBooks.map((book: any) => {
@@ -157,12 +159,12 @@ export default function JournalPage() {
               return (
                 <Card key={book.id} className="glass-card min-w-[220px] border-none shadow-sm shrink-0">
                   <CardContent className="p-5 space-y-3">
-                    <div className="flex gap-3 items-start">
+                    <Link href={`/book/${book.id}`} className="flex gap-3 items-start group">
                       <div className="relative h-24 w-16 shrink-0 rounded-lg overflow-hidden shadow-sm">
                         <BookCover src={book.cover} alt={book.title} className="object-cover" />
                       </div>
                       <div className="space-y-1 overflow-hidden">
-                        <h4 className="font-headline italic text-sm leading-tight line-clamp-2">{cleanBookTitle(book.title)}</h4>
+                        <h4 className="font-headline italic text-sm leading-tight line-clamp-2 group-hover:text-primary transition-colors">{cleanBookTitle(book.title)}</h4>
                         <p className="text-[9px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{cleanAuthorName(book.author)}</p>
                         {rank && (
                           <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide opacity-70">
@@ -170,7 +172,7 @@ export default function JournalPage() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </Link>
                     <Button onClick={() => shareBook(book)} variant="outline" size="sm" className="w-full rounded-xl text-[10px] font-bold uppercase tracking-widest border-primary/10 h-9">
                       <Share2 className="h-3 w-3 mr-2" /> Partager
                     </Button>
@@ -187,19 +189,28 @@ export default function JournalPage() {
       </section>
 
       <section className="space-y-6">
-        <h2 className="text-2xl font-headline italic flex items-center gap-3">
-          <Quote className="h-6 w-6 text-primary/40" /> Carnet de Citations
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-headline italic flex items-center gap-3">
+            <Quote className="h-6 w-6 text-primary/40" /> Carnet de Citations
+          </h2>
+          {quotedBooks.length > 0 && (
+            <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">
+              <Link href="/journal/citations">Voir tout <Plus className="ml-2 h-4 w-4" /></Link>
+            </Button>
+          )}
+        </div>
         {quotedBooks.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            {quotedBooks.map((book: any) => (
+            {quotedBooks.slice(0, 4).map((book: any) => (
               <Card key={book.id} className="glass-card border-none shadow-sm bg-white/60">
                 <CardContent className="p-6 space-y-3">
-                  <p className="text-sm italic leading-relaxed">"{book.favoriteQuote}"</p>
+                  <Link href={`/book/${book.id}`}>
+                    <p className="text-sm italic leading-relaxed hover:text-primary transition-colors">"{book.favoriteQuote}"</p>
+                  </Link>
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 line-clamp-1">
+                    <Link href={`/book/${book.id}`} className="text-[10px] font-bold uppercase tracking-widest opacity-50 line-clamp-1 hover:opacity-100 transition-opacity">
                       {cleanBookTitle(book.title)} — {cleanAuthorName(book.author)}
-                    </p>
+                    </Link>
                     <button onClick={() => shareQuote(book)} className="shrink-0 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform" title="Partager la citation">
                       <Share2 className="h-3.5 w-3.5" />
                     </button>
@@ -234,34 +245,43 @@ export default function JournalPage() {
             <h2 className="text-2xl font-headline italic flex items-center gap-3">
                 <Sparkles className="h-6 w-6 text-primary/40" /> Avis de lecture récents
             </h2>
-            <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">
-                <Link href="/library">Rédiger un avis <Plus className="ml-2 h-4 w-4" /></Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              {books.filter(b => b.review).length > 0 && (
+                <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">
+                  <Link href="/journal/avis">Voir tout <Plus className="ml-2 h-4 w-4" /></Link>
+                </Button>
+              )}
+              <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">
+                  <Link href="/library">Rédiger un avis <Plus className="ml-2 h-4 w-4" /></Link>
+              </Button>
+            </div>
         </div>
         
         <div className="flex gap-6 overflow-x-auto pb-6 no-scrollbar">
-            {books.filter(b => b.review).map((book) => (
-                <Card key={book.id} className="glass-card min-w-[300px] border-none shadow-sm hover:shadow-md transition-shadow group shrink-0">
+            {books.filter(b => b.review).slice(0, 6).map((book) => (
+                <Link key={book.id} href={`/book/${book.id}`}>
+                  <Card className="glass-card min-w-[300px] border-none shadow-sm hover:shadow-md transition-shadow group shrink-0">
                     <CardContent className="p-6 space-y-4">
                         <div className="flex gap-4 items-start">
                             <div className="relative h-20 w-14 shrink-0 rounded-lg overflow-hidden shadow-sm">
                                 <BookCover src={book.cover} alt={book.title} className="object-cover" />
                             </div>
                             <div className="space-y-1 overflow-hidden">
-                                <h4 className="font-headline italic text-lg line-clamp-1">
+                                <h4 className="font-headline italic text-lg line-clamp-1 group-hover:text-primary transition-colors">
                                   {cleanBookTitle(book.title)}{(book as any).volume ? ` — ${(book as any).volume}` : ""}
                                 </h4>
                                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{cleanAuthorName(book.author)}</p>
                                 <div className="flex gap-1 pt-1">
                                     {[1,2,3,4,5].map(s => (
-                                        <Star key={s} className={cn("h-3 w-3", s <= (book.rating || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20")} />
+                                        <Star key={s} className={cn("h-3 w-3", s <= (book.rating || 0) ? "text-copper fill-copper" : "text-muted-foreground/20")} />
                                     ))}
                                 </div>
                             </div>
                         </div>
                         <p className="text-sm italic text-muted-foreground line-clamp-3 leading-relaxed">"{book.review}"</p>
                     </CardContent>
-                </Card>
+                  </Card>
+                </Link>
             ))}
             {books.filter(b => b.review).length === 0 && (
                 <div className="w-full py-12 text-center glass-card border-dashed border-primary/20 bg-white/20">
@@ -272,9 +292,16 @@ export default function JournalPage() {
       </section>
 
       <div className="space-y-8">
-        <div className="flex items-center gap-3">
-            <MessageCircle className="h-6 w-6 text-primary/40" />
-            <h2 className="text-2xl font-headline italic">Notes au fil de l'eau</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+              <MessageCircle className="h-6 w-6 text-primary/40" />
+              <h2 className="text-2xl font-headline italic">Notes au fil de l'eau</h2>
+          </div>
+          {pastEntries.length > 0 && (
+            <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">
+              <Link href="/journal/notes">Voir tout <Plus className="ml-2 h-4 w-4" /></Link>
+            </Button>
+          )}
         </div>
 
         <Tabs defaultValue="reading" className="w-full">
