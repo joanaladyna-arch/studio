@@ -44,8 +44,8 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#1B2430" />
         
-        <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
-        <link rel="icon" type="image/png" href="/icon-512-v2.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon-v3.png" />
+        <link rel="icon" type="image/png" href="/icon-512-v3.png" />
         
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

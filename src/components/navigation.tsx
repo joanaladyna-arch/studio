@@ -117,7 +117,7 @@ export function Navigation() {
       <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-8 px-10 shadow-sm">
         <div className="flex items-center gap-3 mr-10 cursor-pointer group" onClick={() => router.push("/")}>
           <div className="relative h-10 w-10 rounded-full overflow-hidden group-hover:scale-110 transition-transform">
-             <Image src="/brand/logo-lectoria-v2.png" alt="" fill className="object-cover" unoptimized />
+             <Image src="/brand/logo-lectoria-v3.png" alt="" fill className="object-cover" unoptimized />
           </div>
           <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">LECTORIA</span>
         </div>
