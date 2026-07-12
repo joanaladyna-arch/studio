@@ -38,7 +38,8 @@ import {
   Medal,
   Award,
   Heart,
-  Feather
+  Feather,
+  Users
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
@@ -274,6 +275,9 @@ export default function ProfilePage() {
             <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
                 <Link href="/share"><Share2 className="h-5 w-5 mr-3" /> Exporter vers les réseaux</Link>
             </Button>
+            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+                <Link href="/community"><Users className="h-5 w-5 mr-3" /> Communauté de lectrices</Link>
+            </Button>
             {(profile?.wattpadUrl || profile?.amazonUrl) && (
               <div className="flex gap-3 justify-center md:justify-start px-2">
                 {profile?.wattpadUrl && (
@@ -506,6 +510,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
   const [favoriteTropes, setFavoriteTropes] = useState<string[]>([]);
   const [wattpadUrl, setWattpadUrl] = useState('');
   const [amazonUrl, setAmazonUrl] = useState('');
+  const [communityVisible, setCommunityVisible] = useState(false);
 
   useEffect(() => {
     if (profile && open) {
@@ -522,6 +527,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       setFavoriteTropes(toArray<string>(profile.favoriteTropes));
       setWattpadUrl(profile.wattpadUrl || '');
       setAmazonUrl(profile.amazonUrl || '');
+      setCommunityVisible(Boolean(profile.communityVisible));
     }
   }, [profile, open]);
 
@@ -533,10 +539,26 @@ function EditProfileDialog({ profile }: { profile: any }) {
       annualGoal, monthlyGoal, annualGoalPages, annualAudioGoal,
       favoriteFormat, favoriteGenres, favoriteTropes,
       wattpadUrl: wattpadUrl.trim(), amazonUrl: amazonUrl.trim(),
+      communityVisible,
       lastUpdated: serverTimestamp()
     };
     try {
       await setDoc(doc(db, 'users', user.uid), data, { merge: true });
+      // Miroir public minimal, uniquement si la lectrice a coché la
+      // visibilité communauté — sans ça, aucune donnée personnelle ne
+      // doit être lisible par d'autres lectrices. On n'y copie jamais
+      // les objectifs, la bibliothèque ou quoi que ce soit d'autre.
+      if (communityVisible) {
+        await setDoc(doc(db, 'publicProfiles', user.uid), {
+          name: name || 'Lectrice Lectoria',
+          avatarUrl: profile?.avatarUrl || '',
+          bio,
+          favoriteGenres,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } else {
+        await setDoc(doc(db, 'publicProfiles', user.uid), { hidden: true, updatedAt: serverTimestamp() }, { merge: true });
+      }
       toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées avec succès.' });
       setOpen(false);
     } catch (e) {
@@ -597,6 +619,19 @@ function EditProfileDialog({ profile }: { profile: any }) {
                     <Input value={amazonUrl} onChange={(e) => setAmazonUrl(e.target.value)} placeholder="https://www.amazon.fr/..." className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
                   </div>
                 </div>
+                <label className="flex items-start gap-4 p-5 rounded-2xl bg-rose/5 border border-rose/10 cursor-pointer">
+                  <Checkbox
+                    checked={communityVisible}
+                    onCheckedChange={(v) => setCommunityVisible(Boolean(v))}
+                    className="mt-0.5 border-rose/30 data-[state=checked]:bg-rose data-[state=checked]:border-rose"
+                  />
+                  <span className="space-y-1">
+                    <span className="block font-headline italic text-lg">Visible dans la communauté Lectoria</span>
+                    <span className="block text-xs text-muted-foreground leading-relaxed">
+                      D'autres lectrices pourront te trouver et te suivre. Seuls ton pseudo, ta photo, ta bio et tes genres favoris sont partagés — jamais ta bibliothèque, tes objectifs ou tes avis.
+                    </span>
+                  </span>
+                </label>
               </div>
             </div>
 
