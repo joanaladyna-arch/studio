@@ -29,14 +29,21 @@ export function BookCover({
   if (src && !failed) {
     return <Image src={src} alt={alt} fill className={className} onError={() => setFailed(true)} unoptimized />;
   }
+  // Repli visuel premium quand aucune couverture n'a pu être trouvée
+  // (base Lectoria, fiche partagée, puis Google Books en direct, toutes
+  // interrogées avant d'arriver ici) : silhouette de dos de livre sur
+  // fond nuit, avec le titre, plutôt qu'une icône générique.
   return (
     <div
       className={cn(
-        "absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/10 via-secondary/15 to-primary/5",
+        "absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary via-primary to-[#2A3644] p-3 text-center",
         className
       )}
     >
-      <BookOpen className="h-10 w-10 text-primary/30" />
+      <BookOpen className="h-6 w-6 text-rose/70 shrink-0" />
+      <span className="font-headline italic text-[11px] leading-tight text-primary-foreground/80 line-clamp-3">
+        {alt}
+      </span>
     </div>
   );
 }

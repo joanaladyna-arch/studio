@@ -199,6 +199,13 @@ export const RANKS: Record<RankType, { label: string, icon: any, color: string }
   dnf: { label: "DNF", icon: DoorOpen, color: "text-rose-500" },
 };
 
+// Sélection proposée à l'attribution d'un rang : 5 niveaux + DNF au lieu des
+// 8 niveaux d'origine (retour bêta : "trop de niveaux"). "doree" et
+// "froissee" restent dans RANKS ci-dessus pour continuer à afficher
+// correctement les livres déjà tagués avec — on ne les propose simplement
+// plus au moment du choix, aucune donnée existante n'est perdue.
+export const SELECTABLE_RANKS: RankType[] = ['diamant', 'royale', 'argentee', 'simple', 'brisee', 'dnf'];
+
 // Émotions ressenties à la lecture, utilisées par la fiche de partage BookTok.
 export const EMOTIONS: Record<string, { icon: string, label: string }> = {
   coupdecoeur: { icon: "😍", label: "Coup de cœur" },

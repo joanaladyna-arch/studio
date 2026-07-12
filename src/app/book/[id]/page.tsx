@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useFirestore, useDoc } from "@/firebase";
-import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where, onSnapshot } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where, onSnapshot, setDoc } from "firebase/firestore";
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -43,9 +43,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey } from "@/lib/utils";
+import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey, fetchWithTimeout } from "@/lib/utils";
 import { TagDropdown } from "@/components/tag-dropdown";
-import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
+import { UserBook, MasterBook, STATUSES, RANKS, SELECTABLE_RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
@@ -320,6 +320,34 @@ export default function BookDetailPage() {
       if (toArray<string>(editedData.tropes).length === 0 && toArray<string>(fresh.tropes).length > 0) updates.tropes = fresh.tropes;
       if (toArray<string>((editedData as any).themes).length === 0 && toArray<string>((fresh as any).themes).length > 0) updates.themes = (fresh as any).themes;
       if (!(editedData as any).volume?.trim() && fresh.volume?.trim()) updates.volume = fresh.volume;
+
+      // Filet de sécurité "zéro couverture manquante" : si ni votre
+      // exemplaire ni la fiche partagée n'ont de couverture, on tente un
+      // dernier recours en direct auprès de Google Books avant d'abandonner.
+      // Le résultat est aussi réécrit sur la fiche partagée pour que les
+      // prochaines lectrices en profitent sans avoir à refaire la recherche.
+      if (!updates.cover && !editedData.cover?.trim()) {
+        try {
+          const query = `${editedData.title || ""} ${editedData.author || ""}`.trim();
+          if (query) {
+            const gRes = await fetchWithTimeout(
+              `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`,
+              {},
+              8000
+            );
+            if (gRes.ok) {
+              const gData = await gRes.json();
+              const thumb = gData.items?.[0]?.volumeInfo?.imageLinks?.thumbnail?.replace("http://", "https://");
+              if (thumb) {
+                updates.cover = thumb;
+                await setDoc(doc(db, "masterBooks", resolvedId), { cover: thumb }, { merge: true });
+              }
+            }
+          }
+        } catch (fallbackErr) {
+          console.error("Cover Fallback Error:", fallbackErr);
+        }
+      }
 
       if (Object.keys(updates).length === 0) {
         toast({ title: "Déjà à jour", description: "Votre fiche est complète, ou la fiche partagée n'a rien de plus à offrir pour l'instant." });
@@ -608,7 +636,8 @@ export default function BookDetailPage() {
            <div className="space-y-4 pt-4 border-t border-primary/5">
              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label>
              <div className="flex flex-wrap gap-2">
-               {Object.entries(RANKS).map(([k, v]) => {
+               {SELECTABLE_RANKS.map((k) => {
+                 const v = RANKS[k];
                  const isActive = editedData.plumeRank === k;
                  const RankIcon = v.icon;
                  return (
