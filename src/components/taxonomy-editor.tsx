@@ -106,7 +106,7 @@ export function TaxonomyEditor() {
     // Entrées de base actuellement masquées (donc absentes de `active`).
     const hidden = baseList.filter((b) => !active.some((a) => a.toLowerCase() === b.toLowerCase()));
     const colorActive = FIELD_MAP[cat].color === "secondary"
-      ? "bg-secondary/10 text-secondary border-secondary/20"
+      ? "bg-rose/10 text-rose border-rose/25"
       : "bg-primary/10 text-primary border-primary/20";
 
     return (

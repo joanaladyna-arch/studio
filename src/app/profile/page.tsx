@@ -45,6 +45,7 @@ import { useRouter } from 'next/navigation';
 import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
 import { BookCover } from '@/components/book-cover';
+import { BookShelf } from '@/components/book-shelf';
 import { doc, collection, setDoc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
@@ -385,12 +386,12 @@ export default function ProfilePage() {
 
           <Card className="glass-card border-none bg-white/40 p-8 space-y-6">
             <h3 className="font-headline italic text-2xl flex items-center gap-3">
-              <Medal className="h-6 w-6 text-secondary/60" /> Tropes Favoris
+              <Medal className="h-6 w-6 text-rose" /> Tropes Favoris
             </h3>
             {toArray<string>(profile?.favoriteTropes).length > 0 && (
               <div className="flex flex-wrap gap-1.5 -mt-2">
                 {toArray<string>(profile?.favoriteTropes).map((t: string) => (
-                  <Badge key={t} variant="outline" className="rounded-full border-secondary/20 text-secondary/70 text-[9px] px-2.5 py-0.5 italic font-normal">
+                  <Badge key={t} variant="outline" className="rounded-full border-rose/25 text-rose text-[9px] px-2.5 py-0.5 italic font-normal">
                     {t}
                   </Badge>
                 ))}
@@ -399,8 +400,8 @@ export default function ProfilePage() {
             <div className="flex flex-wrap gap-4">
               {stats.unlockedTropes.length > 0 ? (
                 stats.unlockedTropes.slice(0, 6).map(([trope]) => (
-                  <div key={trope} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-secondary/5">
-                    <Medal className="h-8 w-8 text-secondary" />
+                  <div key={trope} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-rose/10">
+                    <Medal className="h-8 w-8 text-rose" />
                     <span className="text-[10px] font-bold uppercase text-center truncate w-full">{trope}</span>
                   </div>
                 ))
@@ -422,26 +423,7 @@ export default function ProfilePage() {
           </Button>
         </div>
         {stats.palBooks.length > 0 ? (
-          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
-            {stats.palBooks.slice(0, 14).map((book: any, i: number) => (
-              <Link
-                key={book.id}
-                href={`/book/${book.id}`}
-                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
-                style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
-              >
-                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
-              </Link>
-            ))}
-            {stats.palBooks.length > 14 && (
-              <Link
-                href="/library"
-                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl border-2 border-dashed border-primary/20 bg-white/40 flex items-center justify-center -ml-7 text-primary/60 font-bold text-sm italic hover:bg-white/70 transition-colors"
-              >
-                +{stats.palBooks.length - 14}
-              </Link>
-            )}
-          </div>
+          <BookShelf books={stats.palBooks} />
         ) : (
           <div className="w-full text-center py-16 opacity-40">
             <p className="italic font-headline text-xl">Votre étagère PAL est encore vide.</p>
@@ -459,26 +441,7 @@ export default function ProfilePage() {
           </Button>
         </div>
         {stats.wishlistBooks.length > 0 ? (
-          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
-            {stats.wishlistBooks.slice(0, 14).map((book: any, i: number) => (
-              <Link
-                key={book.id}
-                href={`/book/${book.id}`}
-                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
-                style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
-              >
-                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
-              </Link>
-            ))}
-            {stats.wishlistBooks.length > 14 && (
-              <Link
-                href="/library"
-                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl border-2 border-dashed border-primary/20 bg-white/40 flex items-center justify-center -ml-7 text-primary/60 font-bold text-sm italic hover:bg-white/70 transition-colors"
-              >
-                +{stats.wishlistBooks.length - 14}
-              </Link>
-            )}
-          </div>
+          <BookShelf books={stats.wishlistBooks} />
         ) : (
           <div className="w-full text-center py-16 opacity-40">
             <p className="italic font-headline text-xl">Les livres à acheter ou à lire plus tard s'empileront ici — choisissez "Envie" en les ajoutant.</p>

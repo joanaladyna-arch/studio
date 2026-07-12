@@ -25,6 +25,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { BookCover } from '@/components/book-cover';
+import { BookShelf } from '@/components/book-shelf';
 import { cleanBookTitle, cleanAuthorName, cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
@@ -227,26 +228,7 @@ export default function Home() {
           )}
         </div>
         {readBooks.length > 0 ? (
-          <div className="flex items-end overflow-x-auto pb-6 pt-6 px-4 -mx-2">
-            {readBooks.slice(0, 14).map((book, i) => (
-              <Link
-                key={book.id}
-                href={`/book/${book.id}`}
-                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-7 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
-                style={{ transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`, zIndex: i }}
-              >
-                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
-              </Link>
-            ))}
-            {readBooks.length > 14 && (
-              <Link
-                href="/library"
-                className="relative shrink-0 w-20 aspect-[2/3] rounded-xl border-2 border-dashed border-primary/20 bg-white/40 flex items-center justify-center -ml-7 text-primary/60 font-bold text-sm italic hover:bg-white/70 transition-colors"
-              >
-                +{readBooks.length - 14}
-              </Link>
-            )}
-          </div>
+          <BookShelf books={readBooks} />
         ) : (
           <p className="text-muted-foreground italic px-2">Vos lectures terminées s'empileront ici, une à une.</p>
         )}

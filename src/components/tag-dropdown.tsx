@@ -75,7 +75,7 @@ export function TagDropdown({
               className={cn(
                 "text-xs italic px-3 py-1 rounded-full border transition-colors",
                 accent === "secondary"
-                  ? "bg-secondary/10 text-secondary/70 border-secondary/20 hover:bg-secondary/20"
+                  ? "bg-rose/10 text-rose border-rose/25 hover:bg-rose/20"
                   : "bg-primary/10 text-primary/70 border-primary/20 hover:bg-primary/20"
               )}
             >

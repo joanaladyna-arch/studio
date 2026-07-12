@@ -657,7 +657,7 @@ export default function AddBookPage() {
                   <h3 className="text-xl font-headline italic leading-tight">{book.title}</h3>
                   <p className="text-xs text-muted-foreground font-bold uppercase">{book.author}</p>
                   {book.publisher && <p className="text-[10px] text-primary/50 italic">{book.publisher}</p>}
-                  <Badge variant="secondary" className="bg-secondary/5 text-secondary/60 border-none text-[8px] mt-1">
+                  <Badge variant="secondary" className="bg-muted text-muted-foreground border-none text-[8px] mt-1">
                     {languageLabel(book.language)}
                   </Badge>
                   {book.source === 'master' && (

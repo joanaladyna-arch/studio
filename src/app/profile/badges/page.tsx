@@ -120,7 +120,7 @@ export default function BadgesMedalsPage() {
 
       <section className="space-y-6">
         <div className="flex items-center gap-3">
-          <Medal className="h-6 w-6 text-secondary" />
+          <Medal className="h-6 w-6 text-rose" />
           <h2 className="text-2xl font-headline italic">Médailles de Tropes</h2>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
