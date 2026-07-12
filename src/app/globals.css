@@ -5,26 +5,30 @@
 
 @layer base {
   :root {
-    --background: 30 45% 98%; /* Ivoire Crème Chaleureux */
-    --foreground: 25 10% 20%;
-    --card: 0 0% 100%;
-    --card-foreground: 25 10% 20%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 25 10% 20%;
-    --primary: 341 58% 60%; /* Rose Poudré accentué */
-    --primary-foreground: 0 0% 98%;
-    --secondary: 205 60% 72%; /* Bleu Horizon accentué */
-    --secondary-foreground: 25 10% 20%;
-    --muted: 30 30% 96%;
-    --muted-foreground: 25 10% 45%;
-    --accent: 260 30% 96%; /* Lilas très clair */
-    --accent-foreground: 260 20% 20%;
-    --destructive: 0 84.2% 60.2%;
+    --background: 42 32% 94%; /* Crème */
+    --foreground: 213 26% 15%; /* Anthracite proche du Nuit */
+    --card: 36 40% 99%; /* Blanc chaud */
+    --card-foreground: 213 26% 15%;
+    --popover: 36 40% 99%;
+    --popover-foreground: 213 26% 15%;
+    --primary: 213 30% 14%; /* Nuit — couleur dominante de marque */
+    --primary-foreground: 42 32% 94%;
+    --secondary: 30 22% 90%; /* Sable doux, neutre */
+    --secondary-foreground: 213 26% 15%;
+    --muted: 36 24% 92%;
+    --muted-foreground: 213 12% 42%;
+    --accent: 36 22% 90%; /* Survols/menus — neutre, pas de couleur de marque */
+    --accent-foreground: 213 26% 15%;
+    --rose: 340 46% 68%; /* Rose — signature de marque, usage volontaire uniquement */
+    --rose-foreground: 213 30% 14%;
+    --copper: 28 33% 47%; /* Cuivre — progression, palmes, réussite */
+    --copper-foreground: 42 32% 94%;
+    --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 98%;
-    --border: 30 20% 90%;
-    --input: 30 20% 90%;
-    --ring: 341 58% 60%;
-    --radius: 1.5rem;
+    --border: 36 20% 87%;
+    --input: 36 20% 87%;
+    --ring: 340 46% 68%;
+    --radius: 1.25rem;
   }
 }
 
@@ -35,12 +39,11 @@
   }
   body {
     @apply bg-background text-foreground font-body antialiased transition-colors duration-500;
-    /* Effet Papier et Aquarelle combiné */
+    /* Grain discret, sans halo rose envahissant */
     background-image: 
-      radial-gradient(at 0% 0%, hsla(341, 58%, 60%, 0.08) 0, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(30, 40%, 90%, 0.1) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(213, 30%, 14%, 0.04) 0, transparent 45%),
       url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-    background-blend-mode: normal, normal, overlay;
+    background-blend-mode: normal, overlay;
     background-attachment: fixed;
     opacity: 0.98;
     
@@ -53,11 +56,11 @@
 }
 
 .bg-watercolor {
-  background: radial-gradient(circle at 50% 50%, rgba(253, 242, 245, 0.9) 0%, rgba(255, 255, 255, 0) 100%);
+  background: radial-gradient(circle at 50% 50%, hsla(213, 30%, 14%, 0.04) 0%, rgba(255, 255, 255, 0) 100%);
 }
 
 .glass-card {
-  @apply bg-white/70 backdrop-blur-md border border-white/50 shadow-sm rounded-[2rem];
+  @apply bg-card/80 backdrop-blur-md border border-white/50 shadow-sm rounded-[1.5rem];
 }
 
 @keyframes feather-float {

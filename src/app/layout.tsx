@@ -42,14 +42,14 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Lectoria" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#fdf2f5" />
+        <meta name="theme-color" content="#1B2430" />
         
         <link rel="apple-touch-icon" href="/apple-touch-icon-v2.png" />
         <link rel="icon" type="image/png" href="/icon-512-v2.png" />
         
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=PT+Sans:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-[100dvh] overflow-x-hidden relative flex flex-col">
         <FirebaseClientProvider>

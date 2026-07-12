@@ -10,9 +10,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['PT Sans', 'sans-serif'],
-        headline: ['Playfair Display', 'serif'],
-        code: ['monospace'],
+        body: ['Work Sans', 'sans-serif'],
+        headline: ['Fraunces', 'serif'],
+        code: ['JetBrains Mono', 'monospace'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -40,6 +40,14 @@ export default {
         accent: {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
+        },
+        rose: {
+          DEFAULT: 'hsl(var(--rose))',
+          foreground: 'hsl(var(--rose-foreground))',
+        },
+        copper: {
+          DEFAULT: 'hsl(var(--copper))',
+          foreground: 'hsl(var(--copper-foreground))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--destructive))',
