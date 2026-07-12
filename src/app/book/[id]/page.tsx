@@ -29,7 +29,10 @@ import {
   CalendarDays,
   Gift,
   Sun,
-  Users
+  Users,
+  FileText,
+  Paperclip,
+  Download
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -48,7 +51,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey, fetchWithTimeout } from "@/lib/utils";
 import { TagDropdown } from "@/components/tag-dropdown";
 import { UserBook, MasterBook, STATUSES, RANKS, SELECTABLE_RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { useStorage } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { useTaxonomy } from "@/hooks/use-taxonomy";
@@ -576,6 +579,55 @@ export default function BookDetailPage() {
       toast({ variant: "destructive", title: "Erreur d'importation", description: "Le fichier n'a pas pu être envoyé." });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  // Documents & revues attachés à la fiche — coupure de presse, capture
+  // d'une critique lue ailleurs, ou son propre avis rédigé dans un autre
+  // outil (Word, Notes...). Stockage privé (users/{uid}/...), jamais
+  // partagé, même avec la communauté. Écrit immédiatement (pas seulement
+  // au clic sur "Enregistrer") pour ne jamais perdre un envoi si la
+  // lectrice quitte la page juste après.
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const handleDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !storage || !user || !bookId || !userBookRef) return;
+    if (file.size > 15 * 1024 * 1024) {
+      toast({ variant: "destructive", title: "Fichier trop volumineux", description: "15 Mo maximum par fichier." });
+      return;
+    }
+    setIsUploadingDoc(true);
+    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+    const path = `users/${user.uid}/book-documents/${bookId}/${Date.now()}-${safeName}`;
+    const storageRef = ref(storage, path);
+    try {
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
+      const newDoc = { name: file.name, url, path, uploadedAt: Date.now(), type: file.type || "" };
+      const updatedDocs = [...(toArray<any>((editedData as any).reviewDocuments)), newDoc];
+      setEditedData((prev) => ({ ...prev, reviewDocuments: updatedDocs } as any));
+      await updateDoc(userBookRef, { reviewDocuments: updatedDocs });
+      toast({ title: "Document ajouté", description: file.name });
+    } catch (err) {
+      console.error("Doc Upload Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'importation", description: "Le fichier n'a pas pu être envoyé." });
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  const handleDocDelete = async (docToDelete: { path: string }) => {
+    if (!storage || !userBookRef) return;
+    const updatedDocs = toArray<any>((editedData as any).reviewDocuments).filter((d: any) => d.path !== docToDelete.path);
+    setEditedData((prev) => ({ ...prev, reviewDocuments: updatedDocs } as any));
+    try {
+      await updateDoc(userBookRef, { reviewDocuments: updatedDocs });
+      await deleteObject(ref(storage, docToDelete.path));
+    } catch (err) {
+      // Non bloquant : même si la suppression du fichier de stockage
+      // échoue (ex: déjà supprimé), la fiche ne doit plus référencer un
+      // document que la lectrice vient de retirer.
+      console.error("Doc Delete Error:", err);
     }
   };
 
@@ -1165,6 +1217,49 @@ export default function BookDetailPage() {
                      Active "Visible dans la communauté" dans ton profil pour que ton avis apparaisse ici pour les autres lectrices.
                    </p>
                  )}
+               </div>
+
+               <div className="space-y-4">
+                 <Label className="italic text-2xl font-headline flex items-center gap-3">
+                   <Paperclip className="h-5 w-5 text-primary/40" /> Documents & Revues
+                 </Label>
+                 <p className="text-[11px] text-muted-foreground italic">
+                   Coupure de presse, capture d'une critique lue ailleurs, ou ton propre avis rédigé dans un autre outil — attache-le ici. Uniquement visible par toi, même avec la communauté activée.
+                 </p>
+                 {toArray<any>((editedData as any).reviewDocuments).length > 0 && (
+                   <div className="grid sm:grid-cols-2 gap-3">
+                     {toArray<any>((editedData as any).reviewDocuments).map((doc: any) => (
+                       <div key={doc.path} className="flex items-center gap-3 bg-white/40 rounded-2xl p-4 border border-primary/5">
+                         {doc.type?.startsWith("image/") ? (
+                           <div className="relative h-12 w-12 rounded-lg overflow-hidden shrink-0 bg-primary/5">
+                             <img src={doc.url} alt={doc.name} className="w-full h-full object-cover" />
+                           </div>
+                         ) : (
+                           <div className="h-12 w-12 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
+                             <FileText className="h-5 w-5 text-primary/50" />
+                           </div>
+                         )}
+                         <div className="min-w-0 flex-1 space-y-0.5">
+                           <p className="text-xs font-bold truncate">{doc.name}</p>
+                           <p className="text-[9px] text-muted-foreground uppercase tracking-widest">
+                             {new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}
+                           </p>
+                         </div>
+                         <a href={doc.url} target="_blank" rel="noopener noreferrer" className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary shrink-0 hover:scale-110 transition-transform" title="Ouvrir">
+                           <Download className="h-3.5 w-3.5" />
+                         </a>
+                         <button onClick={() => handleDocDelete(doc)} className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-destructive shrink-0 hover:scale-110 transition-transform" title="Supprimer">
+                           <Trash2 className="h-3.5 w-3.5" />
+                         </button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+                 <label className="flex items-center justify-center gap-3 h-14 rounded-2xl border-2 border-dashed border-primary/15 text-primary/60 italic text-sm cursor-pointer hover:bg-primary/5 transition-colors">
+                   {isUploadingDoc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                   {isUploadingDoc ? "Envoi en cours..." : "Ajouter un document (PDF ou image, 15 Mo max)"}
+                   <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleDocUpload} disabled={isUploadingDoc} />
+                 </label>
                </div>
 
                {otherReaderReviews.length > 0 && (

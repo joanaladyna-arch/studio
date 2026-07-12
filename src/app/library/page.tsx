@@ -124,6 +124,7 @@ export interface UserBook {
   favoriteCharacter?: string;
   readStartDate?: string;
   readEndDate?: string;
+  reviewDocuments?: { name: string; url: string; path: string; uploadedAt: number; type: string }[];
 }
 
 export type Book = UserBook;
