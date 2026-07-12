@@ -186,7 +186,7 @@ export function Navigation() {
               </div>
               <span className={cn(
                 "text-[8px] font-headline italic font-bold transition-all leading-tight text-center w-full truncate px-0.5",
-                isActive ? "opacity-100" : "opacity-40"
+                isActive ? "opacity-100" : "opacity-75"
               )}>{item.label}</span>
             </Link>
           );
@@ -198,7 +198,7 @@ export function Navigation() {
           <div className="relative p-1.5 rounded-xl bg-transparent">
             <LogOut className="h-5 w-5" />
           </div>
-          <span className="text-[8px] font-headline italic font-bold opacity-40 leading-tight truncate w-full text-center px-0.5">Quitter</span>
+          <span className="text-[8px] font-headline italic font-bold opacity-75 leading-tight truncate w-full text-center px-0.5">Quitter</span>
         </button>
       </nav>
     </>
