@@ -142,14 +142,14 @@ export default function JournalPage() {
   return (
     <div className="space-y-12 animate-in fade-in duration-700 pb-20">
       <header className="pt-8">
-        <h1 className="text-5xl font-headline italic tracking-tight">Journal de bord</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline italic tracking-tight">Journal de bord</h1>
         <p className="text-primary/60 italic font-medium">Capturez l'essence de vos voyages littéraires.</p>
       </header>
 
       <section className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-headline italic flex items-center gap-3">
-            <Heart className="h-6 w-6 text-primary/40" /> Mes Recommandations
+          <h2 className="text-base md:text-2xl font-headline italic flex items-center gap-2 md:gap-3">
+            <Heart className="h-4 w-4 md:h-6 md:w-6 text-primary/40" /> Mes Recommandations
           </h2>
         </div>
         {recommendedBooks.length > 0 ? (
@@ -190,8 +190,8 @@ export default function JournalPage() {
 
       <section className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-headline italic flex items-center gap-3">
-            <Quote className="h-6 w-6 text-primary/40" /> Carnet de Citations
+          <h2 className="text-base md:text-2xl font-headline italic flex items-center gap-2 md:gap-3">
+            <Quote className="h-4 w-4 md:h-6 md:w-6 text-primary/40" /> Carnet de Citations
           </h2>
           {quotedBooks.length > 0 && (
             <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">
@@ -242,8 +242,8 @@ export default function JournalPage() {
 
       <section className="space-y-6">
         <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-headline italic flex items-center gap-3">
-                <Sparkles className="h-6 w-6 text-primary/40" /> Mon Avis & Réflexions
+            <h2 className="text-base md:text-2xl font-headline italic flex items-center gap-2 md:gap-3">
+                <Sparkles className="h-4 w-4 md:h-6 md:w-6 text-primary/40" /> Mon Avis & Réflexions
             </h2>
             <div className="flex items-center gap-2">
               {books.filter(b => b.review).length > 0 && (
@@ -293,9 +293,9 @@ export default function JournalPage() {
 
       <div className="space-y-8">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-              <MessageCircle className="h-6 w-6 text-primary/40" />
-              <h2 className="text-2xl font-headline italic">Notes au fil de l'eau</h2>
+          <div className="flex items-center gap-2 md:gap-3">
+              <MessageCircle className="h-4 w-4 md:h-6 md:w-6 text-primary/40" />
+              <h2 className="text-base md:text-2xl font-headline italic">Notes au fil de l'eau</h2>
           </div>
           {pastEntries.length > 0 && (
             <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">

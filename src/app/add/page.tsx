@@ -497,7 +497,7 @@ export default function AddBookPage() {
   return (
     <div className="space-y-12 animate-paper pb-32">
       <header className="text-center space-y-4 pt-8">
-        <h1 className="text-6xl font-headline italic">Nouvelles Pépites</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline italic">Nouvelles Pépites</h1>
         <p className="text-primary/60 italic">Recherchez dans la base Lectoria ou sur le web.</p>
       </header>
 

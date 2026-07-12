@@ -183,12 +183,12 @@ export default function CoupsDeCoeurPage() {
 
   return (
     <div className="space-y-10 animate-in fade-in duration-1000 pb-20">
-      <header className="text-center space-y-4 py-12">
+      <header className="text-center space-y-3 md:space-y-4 py-6 md:py-12">
         <div className="flex justify-center gap-3 mb-2">
-          <Heart className="h-8 w-8 text-primary/40 animate-pulse" />
+          <Heart className="h-6 w-6 md:h-8 md:w-8 text-primary/40 animate-pulse" />
         </div>
-        <h1 className="text-6xl font-headline tracking-tight">Coups de Cœur</h1>
-        <p className="text-primary/60 max-w-md mx-auto italic text-lg font-medium">
+        <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight">Coups de Cœur</h1>
+        <p className="text-primary/60 max-w-md mx-auto italic text-sm md:text-lg font-medium">
           L'écrin de vos lectures, classées selon la Palme que vous leur avez attribuée.
         </p>
       </header>

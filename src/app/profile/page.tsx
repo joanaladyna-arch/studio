@@ -221,12 +221,12 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-16 animate-paper pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-center pt-8 gap-10">
-        <div className="flex flex-col md:flex-row items-center gap-8">
+      <header className="flex flex-col md:flex-row justify-between items-center pt-4 md:pt-8 gap-6 md:gap-10">
+        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
           <div className="relative group">
-            <Avatar className="h-44 w-44 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
+            <Avatar className="h-28 w-28 md:h-44 md:w-44 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
               <AvatarImage src={userPhoto} className="object-cover" />
-              <AvatarFallback className="font-headline italic text-3xl">PL</AvatarFallback>
+              <AvatarFallback className="font-headline italic text-xl md:text-3xl">PL</AvatarFallback>
             </Avatar>
             {/* Overlay desktop (hover) */}
             <button
@@ -241,42 +241,42 @@ export default function ProfilePage() {
                 invisible à jamais pour les lectrices sur iPhone/Android. */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="md:hidden absolute -bottom-2 -left-2 bg-primary text-white rounded-full p-2.5 border-4 border-white shadow-xl z-20 flex items-center justify-center"
+              className="md:hidden absolute -bottom-1.5 -left-1.5 bg-primary text-white rounded-full p-2 border-4 border-white shadow-xl z-20 flex items-center justify-center"
               disabled={uploading}
             >
-              {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Camera className="h-5 w-5" />}
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-            <div className="absolute -bottom-2 -right-2 bg-amber-500 text-white rounded-full p-3 border-4 border-white shadow-xl z-20">
-              <Crown className="h-7 w-7" />
+            <div className="absolute -bottom-1.5 -right-1.5 md:-bottom-2 md:-right-2 bg-amber-500 text-white rounded-full p-2 md:p-3 border-4 border-white shadow-xl z-20">
+              <Crown className="h-5 w-5 md:h-7 md:w-7" />
             </div>
           </div>
-          <div className="space-y-3 text-center md:text-left">
-            <h1 className="text-6xl font-headline italic tracking-tight">{userName}</h1>
-            <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1.5 italic font-headline text-sm gap-2">
+          <div className="space-y-2 md:space-y-3 text-center md:text-left">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline italic tracking-tight break-words">{userName}</h1>
+            <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2">
               <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
             </Badge>
-            {profile?.bio && <p className="text-muted-foreground italic text-xl max-w-xl leading-relaxed">{profile.bio}</p>}
+            {profile?.bio && <p className="text-muted-foreground italic text-sm md:text-xl max-w-xl leading-relaxed">{profile.bio}</p>}
           </div>
         </div>
         <div className="flex flex-col gap-4 w-full md:w-auto">
-            <div className="flex gap-3 items-center justify-center md:justify-start">
+            <div className="flex gap-3 items-center justify-center md:justify-start flex-wrap">
               <EditProfileDialog profile={profile} />
               <ContactAdminDialog />
             </div>
             <div className="flex justify-center md:justify-start">
               <PublisherSubmissionDialog />
             </div>
-            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
                 <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
             </Button>
-            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
                 <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Bilan de lecture</Link>
             </Button>
-            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
                 <Link href="/share"><Share2 className="h-5 w-5 mr-3" /> Exporter vers les réseaux</Link>
             </Button>
-            <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
                 <Link href="/community"><Users className="h-5 w-5 mr-3" /> Communauté de lectrices</Link>
             </Button>
             {(profile?.wattpadUrl || profile?.amazonUrl) && (
@@ -303,7 +303,7 @@ export default function ProfilePage() {
               </div>
             )}
             {user?.email && ADMIN_EMAILS.includes(user.email) && (
-              <Button variant="ghost" asChild className="rounded-full h-14 px-8 text-primary hover:bg-primary/5 font-headline italic text-lg transition-colors">
+              <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
                   <Link href="/admin"><ShieldCheck className="h-5 w-5 mr-3" /> Administration</Link>
               </Button>
             )}
@@ -552,8 +552,8 @@ function EditProfileDialog({ profile }: { profile: any }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="h-16 px-12 rounded-[2rem] bg-primary text-white font-headline italic text-2xl shadow-xl transition-transform active:scale-95">
-          <Pencil className="h-6 w-6 mr-4" /> Modifier le Profil
+        <Button className="h-11 px-5 text-sm md:h-16 md:px-12 rounded-2xl md:rounded-[2rem] bg-primary text-white font-headline italic md:text-2xl shadow-xl transition-transform active:scale-95">
+          <Pencil className="h-4 w-4 md:h-6 md:w-6 mr-2 md:mr-4" /> Modifier le Profil
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl w-[calc(100vw-1rem)] h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">

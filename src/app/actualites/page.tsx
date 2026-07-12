@@ -68,7 +68,7 @@ export default function ActualitesPage() {
     <div className="space-y-12 animate-paper pb-32 max-w-3xl mx-auto px-4">
       <header className="text-center space-y-4 pt-8">
         <Newspaper className="h-10 w-10 mx-auto text-primary/40" />
-        <h1 className="text-6xl font-headline tracking-tight italic">Actualités</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight italic">Actualités</h1>
         <p className="text-primary/60 italic font-medium">Les dernières nouvelles de vos auteurs, et du monde littéraire.</p>
       </header>
 

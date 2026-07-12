@@ -419,7 +419,7 @@ export default function LibraryPage() {
     <div className="space-y-10 animate-paper pb-32">
       <header className="space-y-8 pt-4">
         <div className="text-center space-y-4">
-          <h1 className="text-6xl font-headline tracking-tight italic">Ma Bibliothèque</h1>
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight italic">Ma Bibliothèque</h1>
           <p className="text-primary/60 italic font-medium">Votre univers littéraire centralisé.</p>
         </div>
         

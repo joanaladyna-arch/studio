@@ -55,11 +55,11 @@ export function ContactAdminDialog() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="h-14 rounded-full bg-rose/10 hover:bg-rose/20 shadow-sm border border-rose/20 flex items-center gap-2 px-6 text-foreground transition-colors font-headline italic"
+        className="h-11 md:h-14 rounded-full bg-rose/10 hover:bg-rose/20 shadow-sm border border-rose/20 flex items-center gap-2 px-4 md:px-6 text-foreground transition-colors font-headline italic"
         title="Envoyer un message à l'administratrice"
       >
-        <Mail className="h-5 w-5 text-rose" />
-        <span className="text-sm">Contacter l'équipe</span>
+        <Mail className="h-4 w-4 md:h-5 md:w-5 text-rose" />
+        <span className="text-xs md:text-sm">Contacter l'équipe</span>
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
