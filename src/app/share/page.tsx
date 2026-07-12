@@ -19,71 +19,20 @@ import { collection, query, where, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 /**
- * Ambiances de couleur pour la carte de partage, choisies pour rester
- * "jolies et soignées" tout en se démarquant visuellement selon le ton
- * du livre — une carte Dark Romance ne doit pas ressembler à une carte
- * Romance Contemporaine. Couleurs en valeurs explicites (pas de
- * variables CSS du thème) pour un rendu fiable lors de l'export en
- * image. `genres` sert à la suggestion automatique ; la lectrice garde
- * toujours la main pour changer manuellement via les pastilles.
+ * Un seul gabarit de carte, aligné sur l'identité Lectoria (nuit / crème
+ * / rose signature / cuivre) plutôt qu'un thème pastel différent par
+ * genre — l'ancien thème "Romance Douce" (fond rose clair) est ce qui
+ * rendait l'export très "girly" indépendamment du livre partagé. Le
+ * fil vertical rose en haut à droite est la signature visuelle commune
+ * à toute l'app (cf. mockup validé).
  */
-const SHARE_THEMES: Record<string, { label: string; genres: string[]; gradient: string; text: string; accent: string; badge: string; swatch: string }> = {
-  dark_romance: {
-    label: "Dark Romance",
-    genres: ["Dark romance"],
-    gradient: "linear-gradient(150deg, #160c10 0%, #2d0f1a 55%, #160c10 100%)",
-    text: "#f5e6e8",
-    accent: "#d65d83",
-    badge: "rgba(245,230,232,0.12)",
-    swatch: "#2d0f1a",
-  },
-  thriller: {
-    label: "Thriller & Suspense",
-    genres: ["Thriller", "Suspense", "Policier", "Mystère"],
-    gradient: "linear-gradient(150deg, #0c121f 0%, #1c2740 55%, #0c121f 100%)",
-    text: "#e8edf5",
-    accent: "#7da3d6",
-    badge: "rgba(232,237,245,0.12)",
-    swatch: "#1c2740",
-  },
-  fantasy: {
-    label: "Fantasy & Romantasy",
-    genres: ["Fantasy", "Romantasy"],
-    gradient: "linear-gradient(150deg, #170f28 0%, #2e1f4d 55%, #170f28 100%)",
-    text: "#f0e8fa",
-    accent: "#c2a15b",
-    badge: "rgba(240,232,250,0.12)",
-    swatch: "#2e1f4d",
-  },
-  romance: {
-    label: "Romance Douce",
-    genres: ["Romance contemporaine", "New romance", "New adult", "Young adult"],
-    gradient: "linear-gradient(150deg, #fdf2f5 0%, #fbe4ea 55%, #fdf2f5 100%)",
-    text: "#4a2c35",
-    accent: "#d68fa3",
-    badge: "rgba(74,44,53,0.07)",
-    swatch: "#fbe4ea",
-  },
-  default: {
-    label: "Lectoria",
-    genres: [],
-    gradient: "linear-gradient(150deg, #fdf8f5 0%, #f7e7ce 55%, #fdf8f5 100%)",
-    text: "#2b2b2b",
-    accent: "#d68fa3",
-    badge: "rgba(43,43,43,0.06)",
-    swatch: "#f7e7ce",
-  },
+const CARD_THEME = {
+  gradient: "linear-gradient(165deg, #1B2430 0%, #2A3644 60%, #B08457 140%)",
+  text: "#F5F1E8",
+  accent: "#D98BA0",
+  copper: "#B08457",
+  badge: "rgba(245,241,232,0.12)",
 };
-
-const THEME_ORDER = ["dark_romance", "thriller", "fantasy", "romance", "default"];
-
-function detectTheme(genres: string[]): string {
-  for (const key of THEME_ORDER) {
-    if (key === "default") continue;
-    if (SHARE_THEMES[key].genres.some((g) => genres.includes(g))) return key;
-  }
-  return "default";
-}
 
 
 export default function SharePage() {
@@ -134,6 +83,30 @@ export default function SharePage() {
 
   const effectiveCoverUrl = (selectedBook as any)?.cover || masterCoverUrl || "";
 
+  // Filet de sécurité "zéro couverture manquante" — même principe que sur
+  // la fiche livre : si ni l'exemplaire personnel ni la fiche partagée
+  // n'ont de couverture, on tente Google Books en direct avant d'afficher
+  // "Couverture indisponible" sur la carte.
+  const [liveCoverUrl, setLiveCoverUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!selectedBook) { setLiveCoverUrl(null); return; }
+    if ((selectedBook as any)?.cover || masterCoverUrl) { setLiveCoverUrl(null); return; }
+    let cancelled = false;
+    const query = `${selectedBook.title || ""} ${selectedBook.author || ""}`.trim();
+    if (!query) return;
+    fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const thumb = data.items?.[0]?.volumeInfo?.imageLinks?.thumbnail?.replace("http://", "https://");
+        if (thumb) setLiveCoverUrl(thumb);
+      })
+      .catch(() => { if (!cancelled) setLiveCoverUrl(null); });
+    return () => { cancelled = true; };
+  }, [selectedBook, masterCoverUrl]);
+
+  const finalCoverUrl = effectiveCoverUrl || liveCoverUrl || "";
+
   // Tronque l'avis de lecture pour qu'il tienne dans la carte de
   // partage sans la faire exploser — 180 caractères est un bon
   // compromis entre lisibilité sur story (petit texte) et densité
@@ -157,14 +130,14 @@ export default function SharePage() {
   const [coverError, setCoverError] = useState<string | null>(null);
   const [coverRetryCount, setCoverRetryCount] = useState(0);
   useEffect(() => {
-    if (!effectiveCoverUrl) { setCoverDataUri(null); setCoverError(null); return; }
+    if (!finalCoverUrl) { setCoverDataUri(null); setCoverError(null); return; }
     let cancelled = false;
     setCoverLoading(true);
     setCoverDataUri(null);
     setCoverError(null);
     (async () => {
       try {
-        const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(effectiveCoverUrl)}`);
+        const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(finalCoverUrl)}`);
         const data = await res.json();
         if (cancelled) return;
         if (data.error || !data.dataUri) {
@@ -192,18 +165,9 @@ export default function SharePage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [effectiveCoverUrl, coverRetryCount]);
+  }, [finalCoverUrl, coverRetryCount]);
 
-  // Ambiance suggérée automatiquement selon le(s) genre(s) du livre
-  // sélectionné, mais jamais imposée : la lectrice change le rendu via
-  // les pastilles de couleur sous la carte à tout moment.
-  const [selectedTheme, setSelectedTheme] = useState<string>("default");
-  const [themeManuallySet, setThemeManuallySet] = useState(false);
-  useEffect(() => {
-    if (!selectedBook || themeManuallySet) return;
-    setSelectedTheme(detectTheme(toArray<string>((selectedBook as any).genres)));
-  }, [selectedBook, themeManuallySet]);
-  const theme = SHARE_THEMES[selectedTheme];
+  const theme = CARD_THEME;
 
   const cardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -312,6 +276,7 @@ export default function SharePage() {
               style={{ background: theme.gradient, color: theme.text }}
             >
               <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-white/10 to-transparent" />
+              <div className="absolute top-0 right-12 w-1.5 h-11 rounded-b-sm" style={{ background: theme.accent }} />
               
               <div className="relative z-10 space-y-6 w-full flex flex-col items-center">
                 <div className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>Mon Carnet Lectoria</div>
@@ -331,7 +296,7 @@ export default function SharePage() {
                           <p className="text-[9px] italic opacity-50 leading-tight">Couverture indisponible</p>
                         </div>
                       ) : (
-                        <BookCover src={effectiveCoverUrl} alt={selectedBook.title} className="object-cover" />
+                        <BookCover src={finalCoverUrl} alt={selectedBook.title} className="object-cover" />
                       )}
                     </div>
 
@@ -359,22 +324,31 @@ export default function SharePage() {
                       ))}
                     </div>
 
-                    {(selectedBook as any).review && (
+                    {(selectedBook as any).review ? (
                       <div className="pt-3 border-t w-full" style={{ borderColor: theme.badge }}>
                         <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-50" style={{ color: theme.accent }}>Mon Avis</p>
                         <p className="text-[10px] italic leading-relaxed opacity-80 px-2 text-left">
                           {truncateReview((selectedBook as any).review)}
                         </p>
                       </div>
-                    )}
-
-                    {selectedBook.favoriteQuote && !(selectedBook as any).review && (
+                    ) : selectedBook.favoriteQuote ? (
                       <div className="pt-4 border-t w-full" style={{ borderColor: theme.badge }}>
                         <p className="text-xs italic leading-relaxed opacity-70 px-4">
                           "{selectedBook.favoriteQuote}"
                         </p>
                       </div>
-                    )}
+                    ) : (selectedBook as any).description ? (
+                      // Repli résumé : sans ça, un livre sans avis ni citation
+                      // personnelle produisait une carte quasi vide de texte —
+                      // c'est ce qui donnait l'impression que "le résumé ne
+                      // s'affiche pas" lors de l'export.
+                      <div className="pt-3 border-t w-full" style={{ borderColor: theme.badge }}>
+                        <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-50" style={{ color: theme.accent }}>Résumé</p>
+                        <p className="text-[10px] italic leading-relaxed opacity-80 px-2 text-left">
+                          {truncateReview((selectedBook as any).description)}
+                        </p>
+                      </div>
+                    ) : null}
                   </>
                 )}
 
@@ -382,21 +356,6 @@ export default function SharePage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-center gap-3">
-              {THEME_ORDER.map((key) => (
-                <button
-                  key={key}
-                  onClick={() => { setSelectedTheme(key); setThemeManuallySet(true); }}
-                  title={SHARE_THEMES[key].label}
-                  className={cn(
-                    "h-8 w-8 rounded-full border-2 transition-all shadow-sm",
-                    selectedTheme === key ? "border-primary scale-110" : "border-white/60 hover:scale-105"
-                  )}
-                  style={{ background: SHARE_THEMES[key].swatch }}
-                />
-              ))}
-            </div>
-            <p className="text-center text-[10px] italic opacity-40 -mt-2">{theme.label}{!themeManuallySet && " (suggéré selon le genre)"}</p>
             {coverError && (
               <p className="text-center text-[11px] italic text-amber-600 -mt-1">
                 Couverture indisponible pour ce livre ({coverError}). L'export se fera sans, sauf si tu{" "}

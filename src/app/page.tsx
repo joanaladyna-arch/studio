@@ -172,7 +172,7 @@ export default function Home() {
           >
             <Bell className="h-6 w-6 text-primary/70" />
             {unseenActualitesCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+              <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-rose text-primary text-[10px] font-bold flex items-center justify-center border-2 border-white">
                 {unseenActualitesCount > 9 ? "9+" : unseenActualitesCount}
               </span>
             )}
@@ -197,18 +197,18 @@ export default function Home() {
         </div>
         <Card className="glass-card p-6 border-none bg-white/60">
           <div className="flex flex-wrap items-center gap-6">
-            <Trophy className="h-7 w-7 text-amber-500 shrink-0" />
+            <Trophy className="h-7 w-7 text-copper shrink-0" />
             <div className="flex-1 min-w-[160px] space-y-2">
               <div className="flex justify-between items-baseline">
                 <h3 className="text-xl font-headline italic">{stats.annualCount} / {stats.goals.annual} <span className="text-xs font-sans not-italic opacity-50">livres cette année</span></h3>
-                <span className="text-xs font-bold text-primary/60">{stats.annualProgress}%</span>
+                <span className="text-xs font-bold text-copper">{stats.annualProgress}%</span>
               </div>
-              <Progress value={stats.annualProgress} className="h-2 bg-primary/5" />
+              <Progress value={stats.annualProgress} className="h-2 bg-primary/5" indicatorClassName="bg-copper" />
             </div>
             <div className="flex gap-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground shrink-0">
-              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-blue-400" /> {stats.monthlyCount}/{stats.goals.monthly} ce mois</span>
-              <span className="hidden sm:flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-emerald-500" /> {stats.pagesCount.toLocaleString()} pages</span>
-              <span className="hidden sm:flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5 text-purple-400" /> {stats.audioCount}h</span>
+              <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-copper/70" /> {stats.monthlyCount}/{stats.goals.monthly} ce mois</span>
+              <span className="hidden sm:flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-copper/70" /> {stats.pagesCount.toLocaleString()} pages</span>
+              <span className="hidden sm:flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5 text-copper/70" /> {stats.audioCount}h</span>
             </div>
           </div>
         </Card>
@@ -358,21 +358,21 @@ export default function Home() {
               <TrendingUp className="h-8 w-8 text-primary/40" /> Raccourcis
             </h2>
             <div className="grid gap-6">
-              <Link href="/library" className="flex items-center gap-8 p-8 rounded-[3rem] bg-secondary/10 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+              <Link href="/library" className="flex items-center gap-8 p-8 rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
                 <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <BookOpen className="h-8 w-8 text-secondary" />
+                  <BookOpen className="h-8 w-8 text-primary" />
                 </div>
                 <span className="font-headline text-3xl italic">Bibliothèque</span>
               </Link>
-              <Link href="/profile/badges" className="flex items-center gap-8 p-8 rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+              <Link href="/profile/badges" className="flex items-center gap-8 p-8 rounded-[3rem] bg-copper/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
                 <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Trophy className="h-8 w-8 text-primary" />
+                  <Trophy className="h-8 w-8 text-copper" />
                 </div>
                 <span className="font-headline text-3xl italic">Mes Badges</span>
               </Link>
-              <Link href="/coups-de-coeur" className="flex items-center gap-8 p-8 rounded-[3rem] bg-amber-50 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+              <Link href="/coups-de-coeur" className="flex items-center gap-8 p-8 rounded-[3rem] bg-rose/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
                 <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Sparkles className="h-8 w-8 text-amber-500" />
+                  <Sparkles className="h-8 w-8 text-rose" />
                 </div>
                 <span className="font-headline text-3xl italic">Coups de Cœur</span>
               </Link>
@@ -401,7 +401,7 @@ export default function Home() {
                     {[1, 2, 3, 4, 5].map((s) => (
                       <Star
                         key={s}
-                        className={cn("h-3 w-3", s <= (lastReviewedBook.rating || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/20")}
+                        className={cn("h-3 w-3", s <= (lastReviewedBook.rating || 0) ? "text-copper fill-copper" : "text-muted-foreground/20")}
                       />
                     ))}
                   </div>
