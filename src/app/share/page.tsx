@@ -111,7 +111,7 @@ export default function SharePage() {
   // partage sans la faire exploser — 180 caractères est un bon
   // compromis entre lisibilité sur story (petit texte) et densité
   // d'information. On coupe proprement au mot, jamais au milieu.
-  const truncateReview = (text: string, max = 180) => {
+  const truncateReview = (text: string, max = 100) => {
     if (!text || text.length <= max) return text;
     const cut = text.slice(0, max).lastIndexOf(" ");
     return text.slice(0, cut > 0 ? cut : max) + "…";
@@ -278,12 +278,12 @@ export default function SharePage() {
               <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-white/10 to-transparent" />
               <div className="absolute top-0 right-12 w-1.5 h-11 rounded-b-sm" style={{ background: theme.accent }} />
               
-              <div className="relative z-10 space-y-6 w-full flex flex-col items-center">
+              <div className="relative z-10 space-y-3 w-full flex flex-col items-center">
                 <div className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>Mon Carnet Lectoria</div>
                 
                 {selectedBook && (
                   <>
-                    <div className="relative w-44 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border-4 border-white rotate-1">
+                    <div className="relative w-32 aspect-[2/3] rounded-2xl overflow-hidden shadow-2xl border-4 border-white rotate-1">
                       {coverDataUri ? (
                         <img src={coverDataUri} alt={selectedBook.title} className="w-full h-full object-cover" />
                       ) : coverLoading ? (
@@ -300,14 +300,14 @@ export default function SharePage() {
                       )}
                     </div>
 
-                    <div className="space-y-1">
-                      <h3 className="text-2xl font-headline italic leading-tight">{selectedBook.title}</h3>
+                    <div className="space-y-0.5">
+                      <h3 className="text-xl font-headline italic leading-tight">{selectedBook.title}</h3>
                       <p className="text-xs font-bold uppercase tracking-widest opacity-70">{selectedBook.author}</p>
                     </div>
 
                     {rank && (
-                      <div className="flex flex-col items-center gap-1 py-2">
-                        <rank.icon className="h-8 w-8" style={{ color: theme.accent }} />
+                      <div className="flex flex-col items-center gap-0.5 py-1">
+                        <rank.icon className="h-6 w-6" style={{ color: theme.accent }} />
                         <span className="text-[10px] font-bold uppercase tracking-tighter opacity-70">{rank.label}</span>
                       </div>
                     )}
@@ -325,15 +325,18 @@ export default function SharePage() {
                     </div>
 
                     {(selectedBook as any).review ? (
-                      <div className="pt-3 border-t w-full" style={{ borderColor: theme.badge }}>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-50" style={{ color: theme.accent }}>Mon Avis</p>
-                        <p className="text-[10px] italic leading-relaxed opacity-80 px-2 text-left">
+                      <div className="pt-2 border-t w-full space-y-1.5" style={{ borderColor: theme.badge }}>
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: theme.accent }}>Mon Avis</p>
+                        <p className="text-[10px] italic leading-snug opacity-80 px-2 text-left">
                           {truncateReview((selectedBook as any).review)}
+                        </p>
+                        <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: theme.accent }}>
+                          Lire l'avis complet sur Lectoria →
                         </p>
                       </div>
                     ) : selectedBook.favoriteQuote ? (
-                      <div className="pt-4 border-t w-full" style={{ borderColor: theme.badge }}>
-                        <p className="text-xs italic leading-relaxed opacity-70 px-4">
+                      <div className="pt-3 border-t w-full" style={{ borderColor: theme.badge }}>
+                        <p className="text-xs italic leading-snug opacity-70 px-4">
                           "{selectedBook.favoriteQuote}"
                         </p>
                       </div>
@@ -342,17 +345,20 @@ export default function SharePage() {
                       // personnelle produisait une carte quasi vide de texte —
                       // c'est ce qui donnait l'impression que "le résumé ne
                       // s'affiche pas" lors de l'export.
-                      <div className="pt-3 border-t w-full" style={{ borderColor: theme.badge }}>
-                        <p className="text-[10px] font-bold uppercase tracking-widest mb-1 opacity-50" style={{ color: theme.accent }}>Résumé</p>
-                        <p className="text-[10px] italic leading-relaxed opacity-80 px-2 text-left">
+                      <div className="pt-2 border-t w-full space-y-1.5" style={{ borderColor: theme.badge }}>
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-50" style={{ color: theme.accent }}>Résumé</p>
+                        <p className="text-[10px] italic leading-snug opacity-80 px-2 text-left">
                           {truncateReview((selectedBook as any).description)}
+                        </p>
+                        <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: theme.accent }}>
+                          Lire la fiche complète sur Lectoria →
                         </p>
                       </div>
                     ) : null}
                   </>
                 )}
 
-                <div className="absolute bottom-3 text-[9px] font-headline italic tracking-widest opacity-30">@Lectoria</div>
+                <div className="pt-1 text-[9px] font-headline italic tracking-widest opacity-30">@Lectoria</div>
               </div>
             </div>
 

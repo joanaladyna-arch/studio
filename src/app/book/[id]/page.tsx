@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useUser, useFirestore, useDoc } from "@/firebase";
+import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where, onSnapshot, setDoc } from "firebase/firestore";
 import { 
   ArrowLeft, 
@@ -28,7 +28,8 @@ import {
   RefreshCw,
   CalendarDays,
   Gift,
-  Sun
+  Sun,
+  Users
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -38,6 +39,7 @@ import { BookCover } from "@/components/book-cover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -113,6 +115,19 @@ export default function BookDetailPage() {
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [editionsOpen, setEditionsOpen] = useState(false);
   const [recommendations, setRecommendations] = useState<any[] | null>(null);
+
+  // Avis/notes des autres lectrices ayant activé "Visible dans la
+  // communauté" — mêmes garde-fous de confidentialité que /community :
+  // seules les lectrices ayant explicitement opté in y apparaissent.
+  const communityReviewsQuery = useMemo(() => {
+    if (!db || !masterBook?.id) return null;
+    return collection(db, "bookReviews", masterBook.id, "entries");
+  }, [db, masterBook?.id]);
+  const { data: communityReviews = [] } = useCollection(communityReviewsQuery);
+  const otherReaderReviews = useMemo(
+    () => communityReviews.filter((r: any) => r.id !== user?.uid && (r.review || r.rating)),
+    [communityReviews, user]
+  );
 
   // Petite photo de l'auteur près de son nom, si elle a été renseignée à
   // la main via la fiche auteur (mode admin). Échoue toujours
@@ -489,6 +504,38 @@ export default function BookDetailPage() {
         updatedAt: serverTimestamp()
       });
       proposeMasterCompletion({ description: (editedData as any).description });
+
+      // Miroir vers la collection publique bookReviews, pour afficher les
+      // avis/notes des autres lectrices sur la fiche — uniquement si la
+      // lectrice a activé "Visible dans la communauté" (même opt-in que
+      // pour /community, aucune donnée supplémentaire exposée sans son
+      // accord). Un avis vide + une note à 0 retire l'entrée plutôt que de
+      // laisser une carte vide traîner.
+      if (db && user && masterBook?.id) {
+        const hasContent = ((editedData as any).review || "").toString().trim() || (editedData.rating || 0) > 0;
+        const reviewRef = doc(db, "bookReviews", masterBook.id, "entries", user.uid);
+        try {
+          if (profile?.communityVisible && hasContent) {
+            await setDoc(reviewRef, {
+              userId: user.uid,
+              userName: profile?.name || "Lectrice Lectoria",
+              avatarUrl: profile?.avatarUrl || "",
+              rating: editedData.rating || 0,
+              review: ((editedData as any).review || "").toString().trim(),
+              updatedAt: serverTimestamp(),
+            }, { merge: false });
+          } else {
+            await deleteDoc(reviewRef);
+          }
+        } catch (mirrorErr) {
+          // Non bloquant : la sauvegarde principale du livre a réussi,
+          // seul le miroir communautaire a pu échouer (ex: règle
+          // Firestore pas encore publiée) — on ne fait pas échouer toute
+          // la sauvegarde pour ça.
+          console.error("Book Review Mirror Error:", mirrorErr);
+        }
+      }
+
       toast({ title: "Journal gravé", description: "Vos réflexions ont été enregistrées." });
     } catch (err: any) {
       console.error("HandleSave Error:", err);
@@ -1113,7 +1160,41 @@ export default function BookDetailPage() {
                   placeholder="Qu'est-ce que cette lecture a gravé en vous ?"
                   className="min-h-[250px] rounded-[2rem] bg-white/40 border-none p-10 italic text-xl shadow-inner resize-none focus-visible:ring-1 focus-visible:ring-primary/20" 
                  />
+                 {profile && !profile.communityVisible && (
+                   <p className="text-[10px] text-muted-foreground italic">
+                     Active "Visible dans la communauté" dans ton profil pour que ton avis apparaisse ici pour les autres lectrices.
+                   </p>
+                 )}
                </div>
+
+               {otherReaderReviews.length > 0 && (
+                 <div className="space-y-6 pt-6 border-t border-primary/5">
+                   <Label className="italic text-2xl font-headline flex items-center gap-3">
+                     <Users className="h-5 w-5 text-rose" /> Avis des lectrices ({otherReaderReviews.length})
+                   </Label>
+                   <div className="grid sm:grid-cols-2 gap-4">
+                     {otherReaderReviews.map((r: any) => (
+                       <Link key={r.id} href={`/profile/${r.id}`} className="glass-card bg-white/50 border-none shadow-sm rounded-2xl p-5 space-y-2 block hover:bg-white/70 transition-colors">
+                         <div className="flex items-center gap-2">
+                           <Avatar className="h-7 w-7 shrink-0">
+                             <AvatarImage src={r.avatarUrl} className="object-cover" />
+                             <AvatarFallback className="text-[10px] font-headline italic">{(r.userName || "?").charAt(0).toUpperCase()}</AvatarFallback>
+                           </Avatar>
+                           <span className="font-headline italic text-sm truncate">{r.userName || "Lectrice Lectoria"}</span>
+                           {r.rating > 0 && (
+                             <div className="flex gap-0.5 ml-auto shrink-0">
+                               {[1,2,3,4,5].map((s) => (
+                                 <Star key={s} className={cn("h-3 w-3", s <= r.rating ? "text-copper fill-copper" : "text-muted-foreground/15")} />
+                               ))}
+                             </div>
+                           )}
+                         </div>
+                         {r.review && <p className="text-xs italic text-muted-foreground leading-relaxed line-clamp-4">"{r.review}"</p>}
+                       </Link>
+                     ))}
+                   </div>
+                 </div>
+               )}
 
                <div className="grid sm:grid-cols-2 gap-6">
                  <div className="space-y-3">
