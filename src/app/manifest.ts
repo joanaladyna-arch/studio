@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Votre réserve littéraire précieuse et authentique.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#fdf2f5',
-    theme_color: '#d68fa3',
+    background_color: '#F5F1E8',
+    theme_color: '#1B2430',
     icons: [
       {
         src: '/icon-192-v2.png',
