@@ -45,7 +45,7 @@ import { useRouter } from 'next/navigation';
 import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
 import { BookCover } from '@/components/book-cover';
-import { doc, collection, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
 import { signOut, updateProfile } from 'firebase/auth';
@@ -555,9 +555,21 @@ function EditProfileDialog({ profile }: { profile: any }) {
           bio,
           favoriteGenres,
           updatedAt: serverTimestamp(),
-        }, { merge: true });
+        }, { merge: false });
       } else {
-        await setDoc(doc(db, 'publicProfiles', user.uid), { hidden: true, updatedAt: serverTimestamp() }, { merge: true });
+        // Suppression complète (pas un simple merge avec hidden:true) :
+        // la collection publicProfiles est lisible par n'importe qui
+        // (allow read: if true), donc laisser les anciens champs
+        // nom/photo/bio dessous d'un indicateur "hidden" les rendrait
+        // quand même récupérables par une lecture directe de la
+        // collection. Un document absent ne peut rien révéler.
+        try {
+          await deleteDoc(doc(db, 'publicProfiles', user.uid));
+        } catch (delErr) {
+          // Le document n'existait peut-être simplement pas encore —
+          // rien d'anormal, on ne bloque jamais la sauvegarde du
+          // profil pour ça.
+        }
       }
       toast({ title: 'Profil mis à jour', description: 'Vos préférences ont été enregistrées avec succès.' });
       setOpen(false);
