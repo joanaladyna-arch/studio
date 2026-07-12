@@ -147,61 +147,61 @@ export default function Home() {
   );
 
   return (
-    <div className="space-y-16 animate-paper">
-      <header className="flex flex-col md:flex-row items-center justify-between gap-10 pt-10">
-        <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+    <div className="space-y-8 md:space-y-16 animate-paper">
+      <header className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 pt-4 md:pt-10">
+        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
           <Link href="/profile" className="relative group">
-            <Avatar className="h-32 w-32 border-4 border-white shadow-2xl group-hover:scale-110 transition-transform duration-500">
+            <Avatar className="h-20 w-20 sm:h-28 sm:w-28 md:h-32 md:w-32 border-4 border-white shadow-2xl group-hover:scale-110 transition-transform duration-500">
               <AvatarImage src={userPhoto} className="object-cover" />
-              <AvatarFallback className="bg-primary/5 text-primary text-3xl font-headline">PL</AvatarFallback>
+              <AvatarFallback className="bg-primary/5 text-primary text-xl md:text-3xl font-headline">PL</AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-2 -right-2 bg-primary text-white p-2.5 rounded-full border-2 border-white shadow-xl animate-pulse">
-              <Sparkles className="h-5 w-5" />
+            <div className="absolute -bottom-1.5 -right-1.5 md:-bottom-2 md:-right-2 bg-primary text-white p-1.5 md:p-2.5 rounded-full border-2 border-white shadow-xl animate-pulse">
+              <Sparkles className="h-3.5 w-3.5 md:h-5 md:w-5" />
             </div>
           </Link>
-          <div className="space-y-2">
-            <h1 className="text-4xl sm:text-5xl font-headline italic text-foreground tracking-tight leading-tight break-words">Bonjour, {userName}</h1>
-            <p className="text-muted-foreground italic text-lg opacity-80">“Chaque page tournée est un souvenir gravé.”</p>
+          <div className="space-y-1 md:space-y-2">
+            <h1 className="text-2xl sm:text-3xl md:text-5xl font-headline italic text-foreground tracking-tight leading-tight break-words">Bonjour, {userName}</h1>
+            <p className="text-muted-foreground italic text-sm md:text-lg opacity-80">“Chaque page tournée est un souvenir gravé.”</p>
           </div>
         </div>
         
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-2 md:gap-4 items-center">
           <Link
             href="/actualites"
-            className="relative h-16 w-16 rounded-2xl border border-primary/10 bg-white/60 hover:bg-white shadow-sm flex items-center justify-center transition-colors shrink-0"
+            className="relative h-11 w-11 md:h-16 md:w-16 rounded-xl md:rounded-2xl border border-primary/10 bg-white/60 hover:bg-white shadow-sm flex items-center justify-center transition-colors shrink-0"
             title="Actualités"
           >
-            <Bell className="h-6 w-6 text-primary/70" />
+            <Bell className="h-4 w-4 md:h-6 md:w-6 text-primary/70" />
             {unseenActualitesCount > 0 && (
               <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-rose text-primary text-[10px] font-bold flex items-center justify-center border-2 border-white">
                 {unseenActualitesCount > 9 ? "9+" : unseenActualitesCount}
               </span>
             )}
           </Link>
-          <Button asChild variant="outline" className="rounded-2xl border-primary/10 hover:bg-white h-16 px-10 font-headline italic text-xl shadow-sm">
+          <Button asChild variant="outline" className="rounded-xl md:rounded-2xl border-primary/10 hover:bg-white h-11 px-4 text-sm md:h-16 md:px-10 font-headline italic md:text-xl shadow-sm">
             <Link href="/journal">Mon Journal</Link>
           </Button>
-          <Button asChild className="rounded-2xl bg-primary hover:bg-primary/90 h-16 px-12 font-headline italic text-xl shadow-2xl shadow-primary/20 transition-transform active:scale-95">
-            <Link href="/add"><Plus className="mr-3 h-6 w-6" /> Ajouter</Link>
+          <Button asChild className="rounded-xl md:rounded-2xl bg-primary hover:bg-primary/90 h-11 px-4 text-sm md:h-16 md:px-12 font-headline italic md:text-xl shadow-2xl shadow-primary/20 transition-transform active:scale-95">
+            <Link href="/add"><Plus className="mr-1.5 md:mr-3 h-4 w-4 md:h-6 md:w-6" /> Ajouter</Link>
           </Button>
         </div>
       </header>
 
       <section className="space-y-4">
         <div className="flex items-center justify-between px-2">
-          <h2 className="text-2xl font-headline flex items-center gap-3 italic">
-            <Target className="h-6 w-6 text-primary/40" /> Objectif de lecture
+          <h2 className="text-lg md:text-2xl font-headline flex items-center gap-2 md:gap-3 italic">
+            <Target className="h-4 w-4 md:h-6 md:w-6 text-primary/40" /> Objectif de lecture
           </h2>
           <Link href="/stats" className="text-[10px] font-bold uppercase tracking-widest text-primary/50 hover:text-primary transition-colors">
             Détails
           </Link>
         </div>
-        <Card className="glass-card p-6 border-none bg-white/60">
-          <div className="flex flex-wrap items-center gap-6">
-            <Trophy className="h-7 w-7 text-copper shrink-0" />
+        <Card className="glass-card p-4 md:p-6 border-none bg-white/60">
+          <div className="flex flex-wrap items-center gap-4 md:gap-6">
+            <Trophy className="h-5 w-5 md:h-7 md:w-7 text-copper shrink-0" />
             <div className="flex-1 min-w-[160px] space-y-2">
               <div className="flex justify-between items-baseline">
-                <h3 className="text-xl font-headline italic">{stats.annualCount} / {stats.goals.annual} <span className="text-xs font-sans not-italic opacity-50">livres cette année</span></h3>
+                <h3 className="text-base md:text-xl font-headline italic">{stats.annualCount} / {stats.goals.annual} <span className="text-xs font-sans not-italic opacity-50">livres cette année</span></h3>
                 <span className="text-xs font-bold text-copper">{stats.annualProgress}%</span>
               </div>
               <Progress value={stats.annualProgress} className="h-2 bg-primary/5" indicatorClassName="bg-copper" />
@@ -216,14 +216,14 @@ export default function Home() {
       </section>
 
 
-      <section className="space-y-8">
+      <section className="space-y-6 md:space-y-8">
         <div className="flex justify-between items-center px-2">
-          <h2 className="text-4xl font-headline flex items-center gap-4 italic">
-            <BookOpen className="h-8 w-8 text-primary/40" /> Votre pile de lectures
+          <h2 className="text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic">
+            <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Votre pile de lectures
           </h2>
           {readBooks.length > 0 && (
-            <Button asChild variant="link" className="text-primary italic text-lg group">
-              <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-2 transition-transform" /></Link>
+            <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
+              <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-1 md:ml-2 group-hover:translate-x-2 transition-transform" /></Link>
             </Button>
           )}
         </div>
@@ -235,36 +235,36 @@ export default function Home() {
       </section>
 
       {(lastRead || nextRead) && (
-        <div className="grid grid-cols-2 gap-6">
-          <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
-            <div className="relative h-20 w-14 rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
+        <div className="grid grid-cols-2 gap-3 md:gap-6">
+          <div className="flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-2xl md:rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
+            <div className="relative h-14 w-10 md:h-20 md:w-14 rounded-lg md:rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
               {lastRead && <BookCover src={(lastRead as any).cover} alt={(lastRead as any).title || ""} className="object-cover" />}
             </div>
-            <div className="min-w-0 space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Tu viens de terminer</p>
+            <div className="min-w-0 space-y-0.5 md:space-y-1">
+              <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary/40">Tu viens de terminer</p>
               {lastRead ? (
                 <Link href={`/book/${(lastRead as any).id}`} className="block">
-                  <p className="font-headline italic text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((lastRead as any).title)}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{cleanAuthorName((lastRead as any).author)}</p>
+                  <p className="font-headline italic text-sm md:text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((lastRead as any).title)}</p>
+                  <p className="text-[10px] md:text-[11px] text-muted-foreground truncate">{cleanAuthorName((lastRead as any).author)}</p>
                 </Link>
               ) : (
-                <p className="text-sm italic opacity-40">Aucune lecture terminée pour le moment.</p>
+                <p className="text-xs md:text-sm italic opacity-40">Aucune lecture terminée pour le moment.</p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-4 p-5 rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
-            <div className="relative h-20 w-14 rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
+          <div className="flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-2xl md:rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
+            <div className="relative h-14 w-10 md:h-20 md:w-14 rounded-lg md:rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
               {nextRead && <BookCover src={(nextRead as any).cover} alt={(nextRead as any).title || ""} className="object-cover" />}
             </div>
-            <div className="min-w-0 space-y-1">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">À suivre</p>
+            <div className="min-w-0 space-y-0.5 md:space-y-1">
+              <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary/40">À suivre</p>
               {nextRead ? (
                 <Link href={`/book/${(nextRead as any).id}`} className="block">
-                  <p className="font-headline italic text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((nextRead as any).title)}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{cleanAuthorName((nextRead as any).author)}</p>
+                  <p className="font-headline italic text-sm md:text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((nextRead as any).title)}</p>
+                  <p className="text-[10px] md:text-[11px] text-muted-foreground truncate">{cleanAuthorName((nextRead as any).author)}</p>
                 </Link>
               ) : (
-                <Link href="/library" className="text-sm italic text-primary/50 hover:text-primary transition-colors">
+                <Link href="/library" className="text-xs md:text-sm italic text-primary/50 hover:text-primary transition-colors">
                   Épingle un livre de ta PAL →
                 </Link>
               )}
@@ -273,15 +273,15 @@ export default function Home() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-[1.8fr_1fr] gap-12">
-        <section className="space-y-8">
+      <div className="grid md:grid-cols-[1.8fr_1fr] gap-8 md:gap-12">
+        <section className="space-y-4 md:space-y-8">
           <div className="flex justify-between items-center">
-            <h2 className="text-4xl font-headline flex items-center gap-4 italic">
-              <Sparkles className="h-8 w-8 text-primary/40" /> Lecture Actuelle
+            <h2 className="text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic">
+              <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Lecture Actuelle
             </h2>
             {currentRead && (
-               <Button asChild variant="link" className="text-primary italic text-lg group">
-                 <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-2 group-hover:translate-x-2 transition-transform" /></Link>
+               <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
+                 <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-1 md:ml-2 group-hover:translate-x-2 transition-transform" /></Link>
                </Button>
             )}
           </div>
@@ -290,7 +290,7 @@ export default function Home() {
           ) : currentRead ? (
             <Card className="glass-card overflow-hidden border-none group transition-all duration-1000 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)]">
               <div className="grid sm:grid-cols-[280px_1fr] gap-0">
-                <div className="relative aspect-[2/3] overflow-hidden">
+                <div className="relative aspect-[3/2] sm:aspect-[2/3] overflow-hidden">
                   <BookCover
                     src={currentRead.cover}
                     alt={currentRead.title}
@@ -298,65 +298,65 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent mix-blend-overlay" />
                 </div>
-                <CardContent className="p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
-                  <div className="space-y-8">
+                <CardContent className="p-5 md:p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
+                  <div className="space-y-4 md:space-y-8">
                     <div>
-                      <h3 className="text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
+                      <h3 className="text-xl md:text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
                         {cleanBookTitle(currentRead.title)}{currentRead.volume ? ` — ${currentRead.volume}` : ""}
                       </h3>
-                      <p className="text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-3">{cleanAuthorName(currentRead.author)}</p>
+                      <p className="text-xs md:text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1.5 md:mt-3">{cleanAuthorName(currentRead.author)}</p>
                     </div>
-                    <div className="space-y-5">
+                    <div className="space-y-2 md:space-y-5">
                       <div className="flex justify-between text-xs font-bold uppercase tracking-widest opacity-60 italic">
                         <span>Progression</span>
                         <span>{currentRead.progress || 0}%</span>
                       </div>
-                      <Progress value={currentRead.progress || 0} className="h-3 bg-primary/5" />
+                      <Progress value={currentRead.progress || 0} className="h-2 md:h-3 bg-primary/5" />
                     </div>
                   </div>
-                  <Button asChild className="mt-10 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 h-16 text-xl font-headline italic transition-transform active:scale-95">
+                  <Button asChild className="mt-6 md:mt-10 rounded-xl md:rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 h-11 md:h-16 text-sm md:text-xl font-headline italic transition-transform active:scale-95">
                     <Link href={`/book/${currentRead.id}`}>
-                      <PenTool className="mr-3 h-6 w-6" /> Reprendre le voyage
+                      <PenTool className="mr-2 md:mr-3 h-4 w-4 md:h-6 md:w-6" /> Reprendre le voyage
                     </Link>
                   </Button>
                 </CardContent>
               </div>
             </Card>
           ) : (
-            <Card className="glass-card p-24 text-center border-dashed border-primary/20 bg-white/20 group">
-              <BookOpen className="h-20 w-20 mx-auto text-primary/20 mb-6 group-hover:scale-110 group-hover:text-primary/40 transition-all duration-700" />
-              <p className="text-primary/60 italic font-headline text-3xl mb-2">Réserve paisible.</p>
-              <p className="text-muted-foreground italic text-xl">Aucune lecture en cours pour le moment.</p>
-              <Button asChild variant="outline" className="mt-10 rounded-2xl border-primary/20 text-primary h-14 px-12 text-lg shadow-sm hover:bg-white">
+            <Card className="glass-card p-10 md:p-24 text-center border-dashed border-primary/20 bg-white/20 group">
+              <BookOpen className="h-12 w-12 md:h-20 md:w-20 mx-auto text-primary/20 mb-4 md:mb-6 group-hover:scale-110 group-hover:text-primary/40 transition-all duration-700" />
+              <p className="text-primary/60 italic font-headline text-lg md:text-3xl mb-2">Réserve paisible.</p>
+              <p className="text-muted-foreground italic text-sm md:text-xl">Aucune lecture en cours pour le moment.</p>
+              <Button asChild variant="outline" className="mt-6 md:mt-10 rounded-xl md:rounded-2xl border-primary/20 text-primary h-10 md:h-14 px-6 md:px-12 text-sm md:text-lg shadow-sm hover:bg-white">
                 <Link href="/add">Explorer vos étagères</Link>
               </Button>
             </Card>
           )}
         </section>
 
-        <section className="space-y-12">
-          <div className="space-y-8">
-            <h2 className="text-4xl font-headline flex items-center gap-4 italic">
-              <TrendingUp className="h-8 w-8 text-primary/40" /> Raccourcis
+        <section className="space-y-6 md:space-y-12">
+          <div className="space-y-4 md:space-y-8">
+            <h2 className="text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic">
+              <TrendingUp className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Raccourcis
             </h2>
-            <div className="grid gap-6">
-              <Link href="/library" className="flex items-center gap-8 p-8 rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <BookOpen className="h-8 w-8 text-primary" />
+            <div className="grid gap-3 md:gap-6">
+              <Link href="/library" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-primary" />
                 </div>
-                <span className="font-headline text-3xl italic">Bibliothèque</span>
+                <span className="font-headline text-lg md:text-3xl italic">Bibliothèque</span>
               </Link>
-              <Link href="/profile/badges" className="flex items-center gap-8 p-8 rounded-[3rem] bg-copper/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Trophy className="h-8 w-8 text-copper" />
+              <Link href="/profile/badges" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-copper/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Trophy className="h-5 w-5 md:h-8 md:w-8 text-copper" />
                 </div>
-                <span className="font-headline text-3xl italic">Mes Badges</span>
+                <span className="font-headline text-lg md:text-3xl italic">Mes Badges</span>
               </Link>
-              <Link href="/coups-de-coeur" className="flex items-center gap-8 p-8 rounded-[3rem] bg-rose/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-5 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Sparkles className="h-8 w-8 text-rose" />
+              <Link href="/coups-de-coeur" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-rose/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-rose" />
                 </div>
-                <span className="font-headline text-3xl italic">Coups de Cœur</span>
+                <span className="font-headline text-lg md:text-3xl italic">Coups de Cœur</span>
               </Link>
             </div>
           </div>
@@ -364,18 +364,18 @@ export default function Home() {
       </div>
 
       {lastReviewedBook && (
-        <section className="space-y-6 pt-4 border-t border-primary/5">
-          <h2 className="text-3xl font-headline flex items-center gap-4 italic px-2">
-            <Quote className="h-7 w-7 text-primary/40" /> Mon dernier avis
+        <section className="space-y-4 md:space-y-6 pt-4 border-t border-primary/5">
+          <h2 className="text-lg md:text-3xl font-headline flex items-center gap-2 md:gap-4 italic px-2">
+            <Quote className="h-4 w-4 md:h-7 md:w-7 text-primary/40" /> Mon dernier avis
           </h2>
           <Link href={`/book/${lastReviewedBook.id}`}>
             <Card className="glass-card border-none bg-white/60 hover:shadow-xl transition-all duration-700 overflow-hidden">
-              <CardContent className="p-8 flex gap-6 items-start">
-                <div className="relative h-28 w-20 shrink-0 rounded-xl overflow-hidden shadow-md">
+              <CardContent className="p-4 md:p-8 flex gap-4 md:gap-6 items-start">
+                <div className="relative h-20 w-14 md:h-28 md:w-20 shrink-0 rounded-xl overflow-hidden shadow-md">
                   <BookCover src={lastReviewedBook.cover} alt={lastReviewedBook.title || ""} className="object-cover" />
                 </div>
-                <div className="space-y-2 min-w-0">
-                  <h3 className="font-headline italic text-xl leading-tight">
+                <div className="space-y-1.5 md:space-y-2 min-w-0">
+                  <h3 className="font-headline italic text-base md:text-xl leading-tight">
                     {cleanBookTitle(lastReviewedBook.title)}{lastReviewedBook.volume ? ` — ${lastReviewedBook.volume}` : ""}
                   </h3>
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">{cleanAuthorName(lastReviewedBook.author)}</p>
@@ -387,7 +387,7 @@ export default function Home() {
                       />
                     ))}
                   </div>
-                  <p className="text-sm italic text-muted-foreground leading-relaxed line-clamp-3">"{lastReviewedBook.review}"</p>
+                  <p className="text-xs md:text-sm italic text-muted-foreground leading-relaxed line-clamp-3">"{lastReviewedBook.review}"</p>
                 </div>
               </CardContent>
             </Card>
