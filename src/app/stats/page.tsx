@@ -5,9 +5,11 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star, Landmark, Download, Loader2 } from "lucide-react";
+import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star, Landmark, Download, Loader2, Feather, UserRound, Gauge, DoorOpen } from "lucide-react";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
+import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from "recharts";
+import { FORMATS } from "@/app/library/page";
 
 export default function StatsPage() {
   const { user } = useUser();
@@ -33,7 +35,10 @@ export default function StatsPage() {
     const dnf = books.filter(b => b.status === 'dnf');
     const totalPages = books.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
     const favorites = books.filter(b => b.favorite || b.dePlume).length;
-    
+    const audioHours = Math.round(
+      books.reduce((acc, b: any) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.pagesRead) || 0) / 50 : 0), 0)
+    );
+
     // Most read publisher
     const publisherCounts: Record<string, number> = {};
     read.forEach(b => {
@@ -43,13 +48,70 @@ export default function StatsPage() {
     });
     const topPublisher = Object.entries(publisherCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Aucun";
 
+    // Genre dominant — comptabilise chaque genre présent sur les livres
+    // lus (un livre peut cumuler plusieurs genres, chacun compte pour lui).
+    const genreCounts: Record<string, number> = {};
+    read.forEach((b: any) => {
+      (Array.isArray(b.genres) ? b.genres : []).forEach((g: string) => {
+        genreCounts[g] = (genreCounts[g] || 0) + 1;
+      });
+    });
+    const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Aucun";
+
+    // Auteur le plus lu
+    const authorCounts: Record<string, number> = {};
+    read.forEach((b: any) => {
+      if (b.author) authorCounts[b.author] = (authorCounts[b.author] || 0) + 1;
+    });
+    const topAuthor = Object.entries(authorCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Aucun";
+
+    // Format préféré
+    const formatCounts: Record<string, number> = {};
+    read.forEach((b: any) => {
+      if (b.format) formatCounts[b.format] = (formatCounts[b.format] || 0) + 1;
+    });
+    const topFormat = Object.entries(formatCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "Aucun";
+
+    // Rythme de lecture — moyenne mensuelle depuis le premier livre marqué
+    // lu, pour donner un rythme réaliste plutôt qu'une simple division par
+    // 12 qui pénaliserait une lectrice arrivée en cours d'année.
+    const readDates = read
+      .map((b: any) => {
+        const raw = b.dateRead || b.dateAdded;
+        return raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
+      })
+      .filter(Boolean) as Date[];
+    let monthlyPace = 0;
+    if (readDates.length > 0) {
+      const earliest = new Date(Math.min(...readDates.map(d => d.getTime())));
+      const now = new Date();
+      const monthsElapsed = Math.max(1, (now.getFullYear() - earliest.getFullYear()) * 12 + (now.getMonth() - earliest.getMonth()) + 1);
+      monthlyPace = Math.round((read.length / monthsElapsed) * 10) / 10;
+    }
+
+    // Répartition des 6 derniers mois — alimente le petit graphique du
+    // bilan, pour visualiser la régularité plutôt qu'un seul total.
+    const now = new Date();
+    const monthlyBreakdown = Array.from({ length: 6 }).map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const label = d.toLocaleDateString("fr-FR", { month: "short" });
+      const count = readDates.filter(rd => rd.getFullYear() === d.getFullYear() && rd.getMonth() === d.getMonth()).length;
+      return { month: label, livres: count };
+    });
+
     return {
       readCount: read.length,
       progressCount: progress.length,
       dnfCount: dnf.length,
       totalPages,
       favorites,
-      topPublisher
+      topPublisher,
+      topGenre,
+      topAuthor,
+      topFormat,
+      monthlyPace,
+      audioHours,
+      monthlyBreakdown,
     };
   }, [books]);
 
@@ -87,10 +149,15 @@ export default function StatsPage() {
       const lines: [string, string][] = [
         ["Livres lus", String(stats.readCount)],
         ["Objectif annuel", `${stats.readCount} / ${annualGoal} (${progressPct}%)`],
+        ["Rythme de lecture", `${stats.monthlyPace} livre(s)/mois`],
         ["Pages parcourues", stats.totalPages.toLocaleString("fr-FR")],
+        ["Genre dominant", stats.topGenre],
+        ["Auteur le plus lu", stats.topAuthor],
+        ["Format préféré", stats.topFormat],
         ["Maison d'édition favorite", stats.topPublisher],
         ["Coups de cœur", String(stats.favorites)],
         ["Lectures en cours", String(stats.progressCount)],
+        ["Abandons (DNF)", String(stats.dnfCount)],
       ];
 
       let y = 70;
@@ -123,8 +190,13 @@ export default function StatsPage() {
 
   const cards = [
     { label: "Livres lus", value: stats.readCount, icon: BookOpen, color: "text-primary", bg: "bg-primary/5" },
-    { label: "Pages parcourues", value: stats.totalPages.toLocaleString(), icon: FileText, color: "text-emerald-500", bg: "bg-emerald-50" },
-    { label: "Maison d'édition favorite", value: stats.topPublisher, icon: Landmark, color: "text-indigo-500", bg: "bg-indigo-50" },
+    { label: "Pages parcourues", value: stats.totalPages.toLocaleString(), icon: FileText, color: "text-copper", bg: "bg-copper/5" },
+    { label: "Rythme de lecture", value: `${stats.monthlyPace}/mois`, icon: Gauge, color: "text-rose", bg: "bg-rose/5" },
+    { label: "Genre dominant", value: stats.topGenre, icon: Feather, color: "text-primary", bg: "bg-primary/5" },
+    { label: "Auteur le plus lu", value: stats.topAuthor, icon: UserRound, color: "text-copper", bg: "bg-copper/5" },
+    { label: "Format préféré", value: FORMATS[stats.topFormat as keyof typeof FORMATS]?.label || stats.topFormat, icon: Headphones, color: "text-rose", bg: "bg-rose/5" },
+    { label: "Maison d'édition favorite", value: stats.topPublisher, icon: Landmark, color: "text-primary", bg: "bg-primary/5" },
+    { label: "DNF", value: stats.dnfCount, icon: DoorOpen, color: "text-copper", bg: "bg-copper/5" },
   ];
 
   return (
@@ -141,7 +213,7 @@ export default function StatsPage() {
         <div className="py-20 text-center italic text-muted-foreground">Analyse de votre bibliothèque en cours...</div>
       ) : (
         <>
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <section className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {cards.map((card, i) => (
               <Card key={i} className="glass-card border-none shadow-sm group hover:shadow-md transition-all">
                 <CardContent className="pt-8 flex flex-col items-center text-center gap-4">
@@ -173,7 +245,7 @@ export default function StatsPage() {
                     <p className="text-[10px] font-bold uppercase tracking-tighter opacity-40">Complété</p>
                   </div>
                 </div>
-                <Progress value={(stats.readCount / annualGoal) * 100} className="h-3 bg-primary/5" />
+                <Progress value={(stats.readCount / annualGoal) * 100} className="h-3 bg-primary/5" indicatorClassName="bg-copper" />
                 <p className="text-center text-xs text-muted-foreground italic pt-4">
                   {stats.readCount >= annualGoal 
                     ? "Félicitations ! Votre objectif est atteint." 
@@ -184,7 +256,7 @@ export default function StatsPage() {
 
             <Card className="glass-card p-8 border-none shadow-sm flex flex-col justify-center text-center space-y-6">
                <div className="space-y-2">
-                  <Star className="h-10 w-10 mx-auto text-amber-300" />
+                  <Star className="h-10 w-10 mx-auto text-copper" />
                   <h3 className="text-xl font-headline italic">Coups de cœur</h3>
                   <p className="text-4xl font-headline italic text-primary/80">{stats.favorites}</p>
                   <p className="text-xs text-muted-foreground italic">Lectures gravées dans votre cœur de lectrice.</p>
@@ -192,6 +264,26 @@ export default function StatsPage() {
                <div className="pt-6 border-t border-primary/5">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Statistiques basées sur vos pépites personnelles</p>
                </div>
+            </Card>
+          </section>
+
+          <section>
+            <Card className="glass-card p-8 border-none shadow-sm space-y-6">
+              <h2 className="text-2xl font-headline flex items-center gap-3 italic">
+                <BarChart3 className="h-6 w-6 text-primary/40" /> Régularité — 6 derniers mois
+              </h2>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.monthlyBreakdown}>
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(213 12% 42%)" }} />
+                    <Tooltip
+                      cursor={{ fill: "hsl(36 22% 90%)" }}
+                      contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 8px 24px rgba(0,0,0,0.08)", fontSize: 12 }}
+                    />
+                    <Bar dataKey="livres" fill="hsl(28 33% 47%)" radius={[8, 8, 0, 0]} maxBarSize={36} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </Card>
           </section>
         </>
