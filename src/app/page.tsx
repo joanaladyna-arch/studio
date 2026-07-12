@@ -159,7 +159,7 @@ export default function Home() {
             </div>
           </Link>
           <div className="space-y-2">
-            <h1 className="text-5xl font-headline italic text-foreground tracking-tight">Bonjour, {userName}</h1>
+            <h1 className="text-4xl sm:text-5xl font-headline italic text-foreground tracking-tight leading-tight break-words">Bonjour, {userName}</h1>
             <p className="text-muted-foreground italic text-lg opacity-80">“Chaque page tournée est un souvenir gravé.”</p>
           </div>
         </div>
