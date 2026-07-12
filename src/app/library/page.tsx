@@ -132,7 +132,7 @@ export const GENRES_LIST = [
   "Romance contemporaine", "Dark romance", "Fantasy", "Romantasy", "New romance", 
   "Young adult", "New adult", "Thriller", "Suspense", "Policier", "Mystère", 
   "Science-fiction", "Dystopie", "Historique", "Drame", "Développement personnel", 
-  "Témoignage", "Biographie", "Manga", "BD", "Poésie"
+  "Témoignage", "Biographie", "Manga", "BD", "Poésie", "Cowboy romance"
 ];
 
 export const TROPES_LIST = [
@@ -143,7 +143,7 @@ export const TROPES_LIST = [
   "Billionaire", "Mafia", "Royal romance", "Single parent", "Roommates", 
   "Academic rivals", "Love triangle", "Soulmates", "Protector", "Revenge", 
   "Secret identity", "Childhood friends", "Opposites attract", "He falls first", 
-  "She falls first", "Touch her and you die"
+  "She falls first", "Touch her and you die", "Héros", "Musicien"
 ];
 
 // Les thèmes principaux décrivent de QUOI parle le livre sur le fond
