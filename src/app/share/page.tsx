@@ -7,7 +7,7 @@ import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2, Check, BookOpen } from "lucide-react";
-import { siInstagram, siTiktok } from "simple-icons";
+import { siInstagram, siTiktok, siTwitch, siSnapchat, siFacebook } from "simple-icons";
 import { toPng } from "html-to-image";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -369,28 +369,36 @@ export default function SharePage() {
               </p>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={() => handleShareToSocial("Instagram")}
-                disabled={isExporting || !selectedBook || coverLoading}
-                className="w-full rounded-2xl shadow-lg shadow-pink-200 border-none h-12"
-                style={{ background: "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)" }}
-              >
-                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4 fill-white"><path d={siInstagram.path} /></svg>} Insta
-              </Button>
-              <Button
-                onClick={() => handleShareToSocial("TikTok")}
-                disabled={isExporting || !selectedBook || coverLoading}
-                className="w-full rounded-2xl shadow-lg shadow-slate-200 border-none h-12"
-                style={{ backgroundColor: `#${siTiktok.hex}` }}
-              >
-                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <svg viewBox="0 0 24 24" className="mr-2 h-4 w-4 fill-white"><path d={siTiktok.path} /></svg>} TikTok
-              </Button>
+            <div className="space-y-3">
+              <div className="flex items-center justify-center gap-3">
+                {[
+                  { name: "Instagram", icon: siInstagram, bg: "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)" },
+                  { name: "TikTok", icon: siTiktok, bg: `#${siTiktok.hex}` },
+                  { name: "Twitch", icon: siTwitch, bg: `#${siTwitch.hex}` },
+                  { name: "Snapchat", icon: siSnapchat, bg: `#${siSnapchat.hex}` },
+                  { name: "Facebook", icon: siFacebook, bg: `#${siFacebook.hex}` },
+                ].map((p) => (
+                  <button
+                    key={p.name}
+                    onClick={() => handleShareToSocial(p.name)}
+                    disabled={isExporting || !selectedBook || coverLoading}
+                    title={`Partager sur ${p.name}`}
+                    className="h-10 w-10 rounded-full shadow-md flex items-center justify-center shrink-0 transition-transform hover:scale-110 disabled:opacity-40 disabled:hover:scale-100"
+                    style={{ background: p.bg }}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white"><path d={p.icon.path} /></svg>
+                    )}
+                  </button>
+                ))}
+              </div>
               <Button
                 variant="outline"
                 onClick={handleExport}
                 disabled={isExporting || !selectedBook || coverLoading}
-                className="w-full col-span-2 rounded-2xl border-primary/20 text-primary h-12"
+                className="w-full rounded-2xl border-primary/20 text-primary h-12"
               >
                 {isExporting ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Génération...</>

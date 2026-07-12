@@ -32,7 +32,7 @@ export default function AllReviewsPage() {
       </Link>
       <header>
         <h1 className="text-4xl font-headline italic flex items-center gap-4">
-          <Sparkles className="h-8 w-8 text-rose" /> Tous mes avis de lecture
+          <Sparkles className="h-8 w-8 text-rose" /> Mon Avis & Réflexions
         </h1>
         <p className="text-muted-foreground italic">{reviewedBooks.length} avis rédigé{reviewedBooks.length > 1 ? "s" : ""}.</p>
       </header>

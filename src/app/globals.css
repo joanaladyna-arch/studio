@@ -89,6 +89,16 @@
   scrollbar-width: none;
 }
 
+/* Motif arabesque/floral très discret derrière les étagères de livres —
+   donne du caractère sans alourdir : fond crème, trait fin cuivre à
+   très faible opacité, tuile assez grande pour ne jamais distraire du
+   contenu (les couvertures) qui reste toujours au premier plan. */
+.shelf-pattern {
+  background-color: hsl(var(--background));
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'%3E%3Cg fill='none' stroke='%23B08457' stroke-width='1' opacity='0.14'%3E%3Cpath d='M20 80c0-16 12-28 28-28s28 12 28 28-12 28-28 28'/%3E%3Ccircle cx='20' cy='80' r='3'/%3E%3Cpath d='M140 20c0 16-12 28-28 28s-28-12-28-28 12-28 28-28'/%3E%3Ccircle cx='140' cy='20' r='3'/%3E%3Cpath d='M100 140c0-16 12-28 28-28s28 12 28 28-12 28-28 28'/%3E%3Ccircle cx='100' cy='140' r='3'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
 /* Compensation barre système Android et encoche iOS — s'applique
    en mode navigateur ET en mode PWA installée. On utilise dvh
    (dynamic viewport height) là où c'est supporté pour éviter le

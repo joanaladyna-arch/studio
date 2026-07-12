@@ -243,7 +243,7 @@ export default function JournalPage() {
       <section className="space-y-6">
         <div className="flex items-center justify-between">
             <h2 className="text-2xl font-headline italic flex items-center gap-3">
-                <Sparkles className="h-6 w-6 text-primary/40" /> Avis de lecture récents
+                <Sparkles className="h-6 w-6 text-primary/40" /> Mon Avis & Réflexions
             </h2>
             <div className="flex items-center gap-2">
               {books.filter(b => b.review).length > 0 && (

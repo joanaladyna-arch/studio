@@ -594,19 +594,26 @@ function EditProfileDialog({ profile }: { profile: any }) {
                     <Input value={amazonUrl} onChange={(e) => setAmazonUrl(e.target.value)} placeholder="https://www.amazon.fr/..." className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
                   </div>
                 </div>
-                <label className="flex items-start gap-4 p-5 rounded-2xl bg-rose/5 border border-rose/10 cursor-pointer">
-                  <Checkbox
-                    checked={communityVisible}
-                    onCheckedChange={(v) => setCommunityVisible(Boolean(v))}
-                    className="mt-0.5 border-rose/30 data-[state=checked]:bg-rose data-[state=checked]:border-rose"
-                  />
-                  <span className="space-y-1">
-                    <span className="block font-headline italic text-lg">Visible dans la communauté Lectoria</span>
-                    <span className="block text-xs text-muted-foreground leading-relaxed">
-                      D'autres lectrices pourront te trouver et te suivre. Seuls ton pseudo, ta photo, ta bio et tes genres favoris sont partagés — jamais ta bibliothèque, tes objectifs ou tes avis.
+                <div className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-rose/5 border border-rose/10">
+                  <div className="space-y-0.5">
+                    <span className="block font-headline italic text-lg">
+                      {communityVisible ? "Profil visible" : "Profil bloqué"}
                     </span>
-                  </span>
-                </label>
+                    <span className="block text-[11px] text-muted-foreground">
+                      {communityVisible ? "Les autres lectrices peuvent te trouver et te suivre." : "Invisible pour les autres lectrices."}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCommunityVisible(!communityVisible)}
+                    className={cn(
+                      "shrink-0 rounded-full px-6 h-11 font-headline italic text-sm transition-colors",
+                      communityVisible ? "bg-rose text-primary" : "bg-white/60 text-muted-foreground border border-rose/20"
+                    )}
+                  >
+                    {communityVisible ? "Visible" : "Bloqué"}
+                  </button>
+                </div>
               </div>
             </div>
 
