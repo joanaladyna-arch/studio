@@ -4,7 +4,6 @@
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -237,10 +236,6 @@ export default function LibraryPage() {
   const { toast } = useToast();
   const { adminMode } = useAdminMode();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState(() => {
-    const filterParam = searchParams?.get("filter");
-    return CATEGORIES.some((c) => c.id === filterParam) ? filterParam! : "all";
-  });
   const [searchQuery, setSearchQuery] = useState("");
   const [sortMode, setSortMode] = useState<"saga" | "author" | "manual">("saga");
   const [isReordering, setIsReordering] = useState<string | null>(null);
@@ -302,7 +297,7 @@ export default function LibraryPage() {
   // plutôt que de valeurs vides désordonnées.
   const moveBookInPal = async (bookId: string, direction: "up" | "down") => {
     if (!db || !user || isReordering) return;
-    const palBooks = filteredBooks;
+    const palBooks = getBooksForStatus("pal");
     const index = palBooks.findIndex((b) => b.id === bookId);
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (index === -1 || targetIndex < 0 || targetIndex >= palBooks.length) return;
@@ -378,14 +373,17 @@ export default function LibraryPage() {
     setSortModeChecked(true);
   }, [userBooks, sortModeChecked]);
 
-  const filteredBooks = useMemo(() => {
+  // Une liste triée + filtrée par recherche, par statut — calculée une
+  // fois pour chaque bloc plutôt que pour un seul onglet actif, puisque
+  // tous les blocs s'affichent désormais simultanément (PAL, Lu, En
+  // cours, Wishlist, DNF), comme les paliers de Palme sur Coups de Cœur.
+  const getBooksForStatus = (status: string) => {
     const matched = userBooks.filter(b => {
-      const matchesSearch = (b.title || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch = (b.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
                            (b.author || "").toLowerCase().includes(searchQuery.toLowerCase());
-      if (activeTab === "all") return matchesSearch;
-      return b.status === activeTab && matchesSearch;
+      return b.status === status && matchesSearch;
     });
-    if (sortMode === "manual" && activeTab === "pal") {
+    if (sortMode === "manual" && status === "pal") {
       // Ordre personnalisé : palOrder en priorité, puis date d'ajout pour
       // les livres jamais encore réordonnés à la main (sinon ils se
       // retrouveraient tous mélangés en tête, palOrder valant 0 partout).
@@ -399,17 +397,21 @@ export default function LibraryPage() {
       });
     }
     return sortMode === "author" ? sortByAuthor(matched) : sortBySaga(matched);
-  }, [userBooks, activeTab, searchQuery, sortMode]);
+  };
 
-  // Quand l'onglet "Lu" est actif, on regroupe les livres par mois de
-  // lecture (dateRead si renseigné, sinon dateAdded en fallback) pour
-  // afficher un journal chronologique style Book Nova. Les mois sont
-  // triés du plus récent au plus ancien. Les livres sans date connue
-  // tombent dans un groupe séparé affiché en toute fin.
-  const booksByMonth = useMemo(() => {
-    if (activeTab !== "read") return null;
-    const groups: Record<string, { label: string; books: typeof filteredBooks }> = {};
-    filteredBooks.forEach((b) => {
+  const palBlockBooks = useMemo(() => getBooksForStatus("pal"), [userBooks, searchQuery, sortMode]);
+  const progressBlockBooks = useMemo(() => getBooksForStatus("progress"), [userBooks, searchQuery, sortMode]);
+  const readBlockBooks = useMemo(() => getBooksForStatus("read"), [userBooks, searchQuery, sortMode]);
+  const envieBlockBooks = useMemo(() => getBooksForStatus("envie"), [userBooks, searchQuery, sortMode]);
+  const dnfBlockBooks = useMemo(() => getBooksForStatus("dnf"), [userBooks, searchQuery, sortMode]);
+
+  // Bloc "Lu" : regroupé par mois de lecture (dateRead si renseigné,
+  // sinon dateAdded en repli) pour un journal chronologique style Book
+  // Nova. Mois triés du plus récent au plus ancien ; les livres sans
+  // date connue tombent dans un groupe séparé affiché en toute fin.
+  const readByMonth = useMemo(() => {
+    const groups: Record<string, { label: string; books: typeof readBlockBooks }> = {};
+    readBlockBooks.forEach((b) => {
       const raw = b.dateRead || b.dateAdded;
       const date = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
       const key = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` : "unknown";
@@ -418,7 +420,28 @@ export default function LibraryPage() {
       groups[key].books.push(b);
     });
     return Object.entries(groups).sort(([a], [b]) => (a === "unknown" ? 1 : b === "unknown" ? -1 : b.localeCompare(a)));
-  }, [activeTab, filteredBooks]);
+  }, [readBlockBooks]);
+
+  const BLOCKS = [
+    { id: "progress", label: "En cours", books: progressBlockBooks },
+    { id: "pal", label: "PAL", books: palBlockBooks },
+    { id: "read", label: "Lu", books: readBlockBooks },
+    { id: "envie", label: "Wishlist", books: envieBlockBooks },
+    { id: "dnf", label: "DNF", books: dnfBlockBooks },
+  ];
+
+  // Un lien externe (ex: le raccourci Wishlist de l'Accueil, ?filter=envie)
+  // fait défiler jusqu'au bloc correspondant au chargement, plutôt que de
+  // basculer un onglet qui n'existe plus dans cette version par blocs.
+  useEffect(() => {
+    const filterParam = searchParams?.get("filter");
+    if (!filterParam || loading) return;
+    const el = document.getElementById(`block-${filterParam}`);
+    if (el) {
+      const t = setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
+      return () => clearTimeout(t);
+    }
+  }, [searchParams, loading]);
 
   return (
     <div className="space-y-10 animate-paper pb-32">
@@ -455,7 +478,7 @@ export default function LibraryPage() {
             {sortMode === "author" ? <Layers className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
             {sortMode === "author" ? "Revenir au tri par saga" : "Classer par auteur"}
           </button>
-          {activeTab === "pal" && (
+          {(
             <>
               <button
                 onClick={() => setSortMode(sortMode === "manual" ? "saga" : "manual")}
@@ -465,7 +488,7 @@ export default function LibraryPage() {
                 )}
               >
                 <ListOrdered className="h-4 w-4" />
-                {sortMode === "manual" ? "Quitter l'ordre personnalisé" : "Ranger moi-même"}
+                {sortMode === "manual" ? "Quitter l'ordre personnalisé" : "Ranger moi-même (PAL)"}
               </button>
               <button
                 onClick={drawRandomNextRead}
@@ -505,104 +528,121 @@ export default function LibraryPage() {
         </DialogContent>
       </Dialog>
 
-      <Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
+      {isAdmin && (
+        <div className="space-y-6">
+          <MasterBookManager />
+          <AdminCatalogView />
+        </div>
+      )}
 
-        {isAdmin && (
-          <div className="mb-10 space-y-6">
-            <MasterBookManager />
-            <AdminCatalogView />
-          </div>
-        )}
-
-        <TabsList className="w-full justify-start overflow-x-auto h-auto bg-transparent border-b border-primary/5 p-0 mb-10 gap-10 no-scrollbar">
-          {CATEGORIES.map((cat) => (
-            <TabsTrigger 
-              key={cat.id} 
-              value={cat.id}
-              className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-4 font-headline text-xl px-2 opacity-40 data-[state=active]:opacity-100"
+      {/* Bandeau en tête : navigation rapide vers chaque bloc (ancre de
+          défilement, pas un filtre) — tous les blocs restent visibles
+          en permanence, contrairement à l'ancien système d'onglets qui
+          n'affichait qu'une catégorie à la fois. */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-background/90 backdrop-blur-lg border-b border-primary/5">
+        <div className="flex justify-start md:justify-center overflow-x-auto no-scrollbar gap-3">
+          {BLOCKS.map((block) => (
+            <a
+              key={block.id}
+              href={`#block-${block.id}`}
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-headline italic bg-white/50 hover:bg-white text-primary/70 hover:text-primary transition-colors border border-primary/5"
             >
-              {cat.label}
-            </TabsTrigger>
+              {block.label}
+              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{block.books.length}</span>
+            </a>
           ))}
-        </TabsList>
+        </div>
+      </div>
 
-        <TabsContent value={activeTab} className="mt-0">
-          {loading ? (
-            <div className="py-40 text-center flex flex-col items-center gap-6">
-              <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
-              <p className="font-headline italic text-primary/40 text-xl">Exploration de la réserve...</p>
-            </div>
-          ) : booksByMonth ? (
-            // Onglet "Lu" : livres regroupés par mois de lecture
-            <div className="space-y-4">
-              {booksByMonth.map(([key, { label, books }]) => (
-                <MonthGroup key={key} label={label} books={books} isAdmin={isAdmin} isLoadingEditBook={isLoadingEditBook} openMasterEditor={openMasterEditor} />
-              ))}
-              {booksByMonth.length === 0 && (
-                <div className="py-40 text-center glass-card border-dashed bg-white/20">
-                  <Bookmark className="h-20 w-20 mx-auto text-primary/10" />
-                  <p className="text-primary/60 italic font-headline text-2xl mt-4">Aucun livre lu pour le moment.</p>
+      {loading ? (
+        <div className="py-40 text-center flex flex-col items-center gap-6">
+          <Loader2 className="h-12 w-12 animate-spin text-primary/20" />
+          <p className="font-headline italic text-primary/40 text-xl">Exploration de la réserve...</p>
+        </div>
+      ) : (
+        <div className="space-y-16">
+          {BLOCKS.map((block) => (
+            <section key={block.id} id={`block-${block.id}`} className="space-y-6 scroll-mt-24">
+              <div className="flex items-center gap-4 px-2">
+                <h2 className="font-headline italic text-2xl md:text-3xl">{block.label}</h2>
+                <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">{block.books.length}</span>
+              </div>
+
+              {block.id === "read" ? (
+                readByMonth.length > 0 ? (
+                  <div className="space-y-4">
+                    {readByMonth.map(([key, { label, books }]) => (
+                      <MonthGroup key={key} label={label} books={books} isAdmin={isAdmin} isLoadingEditBook={isLoadingEditBook} openMasterEditor={openMasterEditor} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-16 text-center glass-card border-dashed bg-white/20 rounded-[2rem]">
+                    <Bookmark className="h-14 w-14 mx-auto text-primary/10" />
+                    <p className="text-primary/60 italic font-headline text-lg mt-3">Aucun livre lu pour le moment.</p>
+                  </div>
+                )
+              ) : block.books.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
+                  {block.books.map((book) => (
+                    <div key={book.id} className="relative">
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); openMasterEditor((book as any).masterBookId); }}
+                          className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
+                          title="Éditer la fiche partagée (admin)"
+                        >
+                          {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
+                        </button>
+                      )}
+                      {block.id === "pal" && sortMode !== "manual" && (
+                        <button
+                          onClick={(e) => { e.preventDefault(); togglePinNextRead(book.id, !!(book as any).isNextRead); }}
+                          disabled={isPinning === book.id}
+                          title={(book as any).isNextRead ? "Retirer de Prochaine lecture" : "Épingler comme Prochaine lecture"}
+                          className={cn(
+                            "absolute top-2 right-2 z-10 h-9 w-9 rounded-full shadow-lg flex items-center justify-center transition-colors",
+                            (book as any).isNextRead ? "bg-primary text-white" : "bg-white/80 text-primary/40 hover:text-primary"
+                          )}
+                        >
+                          {isPinning === book.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className={cn("h-4 w-4", (book as any).isNextRead && "fill-white")} />}
+                        </button>
+                      )}
+                      {block.id === "pal" && sortMode === "manual" && (
+                        <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
+                          <button
+                            onClick={(e) => { e.preventDefault(); moveBookInPal(book.id, "up"); }}
+                            disabled={!!isReordering || palBlockBooks.findIndex((b) => b.id === book.id) === 0}
+                            className="h-8 w-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary/60 hover:text-primary disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.preventDefault(); moveBookInPal(book.id, "down"); }}
+                            disabled={!!isReordering || palBlockBooks.findIndex((b) => b.id === book.id) === palBlockBooks.length - 1}
+                            className="h-8 w-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary/60 hover:text-primary disabled:opacity-30 transition-colors"
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                      <Link href={`/book/${book.id}`} className="group block">
+                        <BookCard book={book} />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-16 text-center glass-card border-dashed bg-white/20 rounded-[2rem]">
+                  <Bookmark className="h-14 w-14 mx-auto text-primary/10" />
+                  <p className="text-primary/60 italic font-headline text-lg mt-3">
+                    {searchQuery ? "Aucun résultat dans ce bloc." : `Aucun livre dans "${block.label}" pour le moment.`}
+                  </p>
                 </div>
               )}
-            </div>
-          ) : filteredBooks.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
-              {filteredBooks.map((book) => (
-                <div key={book.id} className="relative">
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => { e.preventDefault(); openMasterEditor((book as any).masterBookId); }}
-                      className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
-                      title="Éditer la fiche partagée (admin)"
-                    >
-                      {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
-                    </button>
-                  )}
-                  {activeTab === "pal" && sortMode !== "manual" && (
-                    <button
-                      onClick={(e) => { e.preventDefault(); togglePinNextRead(book.id, !!(book as any).isNextRead); }}
-                      disabled={isPinning === book.id}
-                      title={(book as any).isNextRead ? "Retirer de Prochaine lecture" : "Épingler comme Prochaine lecture"}
-                      className={cn(
-                        "absolute top-2 right-2 z-10 h-9 w-9 rounded-full shadow-lg flex items-center justify-center transition-colors",
-                        (book as any).isNextRead ? "bg-primary text-white" : "bg-white/80 text-primary/40 hover:text-primary"
-                      )}
-                    >
-                      {isPinning === book.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className={cn("h-4 w-4", (book as any).isNextRead && "fill-white")} />}
-                    </button>
-                  )}
-                  {activeTab === "pal" && sortMode === "manual" && (
-                    <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
-                      <button
-                        onClick={(e) => { e.preventDefault(); moveBookInPal(book.id, "up"); }}
-                        disabled={!!isReordering || filteredBooks.findIndex((b) => b.id === book.id) === 0}
-                        className="h-8 w-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary/60 hover:text-primary disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronUp className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.preventDefault(); moveBookInPal(book.id, "down"); }}
-                        disabled={!!isReordering || filteredBooks.findIndex((b) => b.id === book.id) === filteredBooks.length - 1}
-                        className="h-8 w-8 rounded-full bg-white/90 shadow-lg flex items-center justify-center text-primary/60 hover:text-primary disabled:opacity-30 transition-colors"
-                      >
-                        <ChevronDown className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                  <Link href={`/book/${book.id}`} className="group block">
-                    <BookCard book={book} />
-                  </Link>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="py-40 text-center glass-card border-dashed bg-white/20">
-               <Bookmark className="h-20 w-20 mx-auto text-primary/10" />
-               <p className="text-primary/60 italic font-headline text-2xl mt-4">Votre bibliothèque est paisible.</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+            </section>
+          ))}
+        </div>
+      )}
 
       {isAdmin && (
         <Dialog open={!!editingMasterBook} onOpenChange={(open) => !open && setEditingMasterBook(null)}>
