@@ -90,11 +90,7 @@ export default function ActualitesPage() {
         <p className="text-primary/60 italic font-medium">Les dernières nouvelles de vos auteurs, et du monde littéraire.</p>
       </header>
 
-      {adminMode && (
-        <div className="rounded-[2rem] border-2 border-rose/20 bg-rose/5 p-6">
-          <PendingActualitesManager />
-        </div>
-      )}
+      {adminMode && <PendingActualitesManager />}
 
       {adminMode && (
         <div className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6">

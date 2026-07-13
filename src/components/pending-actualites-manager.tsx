@@ -5,7 +5,7 @@ import { useFirestore } from "@/firebase";
 import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, X, Sparkles, Inbox } from "lucide-react";
+import { Loader2, Check, X, Sparkles } from "lucide-react";
 
 /**
  * File d'attente des actualités proposées automatiquement (détection de
@@ -85,21 +85,12 @@ export function PendingActualitesManager({ onCountChange }: { onCountChange?: (c
     }
   };
 
-  if (pending === null) {
-    return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin opacity-40" /></div>;
-  }
-
-  if (pending.length === 0) {
-    return (
-      <div className="text-center py-8 space-y-2">
-        <Inbox className="h-8 w-8 mx-auto text-primary/20" />
-        <p className="text-sm italic opacity-50">Aucune proposition en attente.</p>
-      </div>
-    );
+  if (pending === null || pending.length === 0) {
+    return null;
   }
 
   return (
-    <div className="space-y-4">
+    <div className="rounded-[2rem] border-2 border-rose/20 bg-rose/5 p-6 space-y-4">
       <h3 className="text-lg font-headline italic flex items-center gap-3">
         <Sparkles className="h-5 w-5 text-rose" /> À valider ({pending.length})
       </h3>
