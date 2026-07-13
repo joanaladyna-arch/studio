@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { 
@@ -11,7 +11,9 @@ import {
   X,
   Pencil,
   Magnet,
-  HelpCircle
+  HelpCircle,
+  ScanBarcode,
+  History
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -25,6 +27,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { IsbnImporter } from "@/components/isbn-importer";
+import { IsbnScannerDialog } from "@/components/isbn-scanner-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga, isFrenchLanguage, languageLabel } from "@/lib/utils";
@@ -68,10 +71,17 @@ export default function AddBookPage() {
   const [selectedFormat, setSelectedFormat] = useState<BookFormat>("papier");
   const [countTowardGoals, setCountTowardGoals] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
+  const [lastSearch, setLastSearch] = useState<string | null>(null);
+  const [showScanner, setShowScanner] = useState(false);
 
-  const searchBooks = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const searchVal = queryStr.trim();
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLastSearch(localStorage.getItem("lectoria_last_search"));
+    }
+  }, []);
+
+  const runSearch = async (searchValOverride?: string) => {
+    const searchVal = (searchValOverride ?? queryStr).trim();
     if (!searchVal) {
       toast({ title: "Champ vide", description: "Veuillez saisir un titre, un auteur, un éditeur ou un ISBN." });
       return;
@@ -304,10 +314,29 @@ export default function AddBookPage() {
           createdAt: serverTimestamp(),
         }).catch(() => {}); // jamais bloquant
       }
+
+      // Mémorise la dernière recherche pour l'accès rapide "Ma précédente
+      // recherche" — en local uniquement (pas de valeur pour la partager
+      // entre appareils, et ça évite une écriture Firestore superflue).
+      if (typeof window !== "undefined" && searchValOverride === undefined) {
+        localStorage.setItem("lectoria_last_search", searchVal);
+        setLastSearch(searchVal);
+      }
     } finally {
       // Garantit que le spinner s'arrête toujours, quoi qu'il arrive
       setIsSearching(false);
     }
+  };
+
+  const searchBooks = (e: React.FormEvent) => {
+    e.preventDefault();
+    runSearch();
+  };
+
+  const handleIsbnScanned = (isbn: string) => {
+    setQueryStr(isbn);
+    setSearchMode("general");
+    runSearch(isbn);
   };
 
   const handleAddClick = (book: any) => {
@@ -491,6 +520,15 @@ export default function AddBookPage() {
       )}
 
       <div className="max-w-2xl mx-auto space-y-4">
+        <button
+          type="button"
+          onClick={() => setShowScanner(true)}
+          className="w-full h-16 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-3 font-headline italic text-xl hover:scale-[1.01] active:scale-[0.99] transition-transform"
+        >
+          <ScanBarcode className="h-7 w-7" />
+          Scanner un livre (ISBN)
+        </button>
+
         <div className="flex justify-center gap-2">
           <Button
             type="button"
@@ -526,6 +564,17 @@ export default function AddBookPage() {
             {isSearching ? <Loader2 className="animate-spin h-6 w-6" /> : <Search className="h-6 w-6" />}
           </Button>
         </form>
+        {lastSearch && (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => { setQueryStr(lastSearch); runSearch(lastSearch); }}
+              className="inline-flex items-center gap-2 text-xs italic text-primary/60 hover:text-primary transition-colors bg-white/40 hover:bg-white/70 rounded-full px-4 py-2"
+            >
+              <History className="h-3.5 w-3.5" /> Ma précédente recherche : <span className="font-bold not-italic">{lastSearch}</span>
+            </button>
+          </div>
+        )}
         <div className="text-center pt-3">
           <button
             onClick={() => setShowManualEntry(true)}
@@ -535,6 +584,8 @@ export default function AddBookPage() {
           </button>
         </div>
       </div>
+
+      <IsbnScannerDialog open={showScanner} onOpenChange={setShowScanner} onScan={handleIsbnScanned} />
 
       <Dialog open={showManualEntry} onOpenChange={(o) => { setShowManualEntry(o); if (!o) setManualForm({ title: "", author: "", referenceLink: "", description: "", cover: "" }); }}>
         <DialogContent className="glass-card border-none max-w-lg p-10 bg-white/95 backdrop-blur-3xl max-h-[85vh] overflow-y-auto">
