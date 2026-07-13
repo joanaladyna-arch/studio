@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, ArrowLeft, UserPlus, UserCheck, Users } from "lucide-react";
 import { useFirestore, useDoc, useUser } from "@/firebase";
-import { doc, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, setDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { toArray } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -55,6 +55,17 @@ export default function PublicProfilePage() {
         { followedUsers: isFollowing ? arrayRemove(uid) : arrayUnion(uid) },
         { merge: true }
       );
+      // Miroir dans followers/{uid}/entries/{monUid} — permet à la
+      // lectrice suivie de connaître son nombre d'abonnées sans avoir à
+      // lire le document privé de chaque autre utilisatrice (impossible
+      // avec les règles actuelles). Chacune n'écrit jamais que sa PROPRE
+      // entrée, jamais le compteur d'une autre.
+      const followerEntryRef = doc(db, "followers", uid, "entries", user.uid);
+      if (isFollowing) {
+        await deleteDoc(followerEntryRef);
+      } else {
+        await setDoc(followerEntryRef, { followedAt: serverTimestamp() });
+      }
       toast({
         title: isFollowing ? "Lectrice retirée du suivi" : "Lectrice suivie",
         description: isFollowing ? undefined : "Elle apparaîtra dans tes recommandations.",

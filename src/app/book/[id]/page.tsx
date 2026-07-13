@@ -32,7 +32,8 @@ import {
   Users,
   FileText,
   Paperclip,
-  Download
+  Download,
+  ChevronRight
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -824,6 +825,7 @@ export default function BookDetailPage() {
             </span>
           )}
           {cleanAuthorName(masterBook?.author || userBook.author)}
+          <ChevronRight className="h-5 w-5 opacity-40 shrink-0" />
         </Link>
         {masterBook?.translator && (
           <p className="text-sm text-muted-foreground italic">Traduit par {cleanAuthorName(masterBook.translator)}</p>

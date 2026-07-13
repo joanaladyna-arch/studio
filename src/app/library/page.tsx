@@ -3,6 +3,7 @@
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -235,7 +236,11 @@ export default function LibraryPage() {
   const db = useFirestore();
   const { toast } = useToast();
   const { adminMode } = useAdminMode();
-  const [activeTab, setActiveTab] = useState("all");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState(() => {
+    const filterParam = searchParams?.get("filter");
+    return CATEGORIES.some((c) => c.id === filterParam) ? filterParam! : "all";
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [sortMode, setSortMode] = useState<"saga" | "author" | "manual">("saga");
   const [isReordering, setIsReordering] = useState<string | null>(null);

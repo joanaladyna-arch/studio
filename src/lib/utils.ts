@@ -72,6 +72,15 @@ export async function searchBnF(
  */
 export const ADMIN_EMAILS = ["joanaladyna@gmail.com"];
 
+// Bêta-testeuses de la toute première heure (questionnaire de juillet
+// 2026) — badge "Lectrice Fondatrice" gravé sur leur profil, peu importe
+// une éventuelle offre payante future.
+export const FOUNDER_EMAILS = [
+  "joanaladyna@gmail.com",
+  "bouquinsandchill@orange.fr",
+  "inreallife_reads@hotmail.com",
+];
+
 /**
  * Transforme un texte libre en identifiant de document Firestore sûr
  * (minuscules, sans accents/espaces/caractères spéciaux). Centralisé ici

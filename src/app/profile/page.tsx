@@ -42,11 +42,11 @@ import {
   Users
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { cn, toArray, ADMIN_EMAILS } from '@/lib/utils';
+import { cn, toArray, ADMIN_EMAILS, FOUNDER_EMAILS } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
 import { BookCover } from '@/components/book-cover';
 import { BookShelf } from '@/components/book-shelf';
-import { doc, collection, setDoc, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp, updateDoc, deleteDoc, getDoc, getCountFromServer } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
 import { signOut, updateProfile } from 'firebase/auth';
@@ -145,6 +145,7 @@ export default function ProfilePage() {
 
     const unlockedGenres = Object.entries(genreCounts).filter(([_, count]) => count >= 5);
     const unlockedTropes = Object.entries(tropeCounts).filter(([_, count]) => count >= 5);
+    const topGenre = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
     return {
       readCount: readBooks.length,
@@ -160,9 +161,39 @@ export default function ProfilePage() {
       pagesProgress: Math.min(100, Math.round((pagesRead / (goals.pages || 1)) * 100)),
       audioProgress: Math.min(100, Math.round((audioHours / (goals.audio || 1)) * 100)),
       unlockedGenres,
-      unlockedTropes
+      unlockedTropes,
+      topGenre
     };
   }, [booksRaw, profile]);
+
+  // Nombre d'abonnées : lu depuis followers/{monUid}/entries plutôt que
+  // depuis les documents privés d'autres utilisatrices (impossible avec
+  // les règles actuelles) — chaque entrée y a été écrite par la lectrice
+  // qui suit, jamais par la lectrice suivie.
+  const [followerCount, setFollowerCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!db || !user) return;
+    getCountFromServer(collection(db, "followers", user.uid, "entries"))
+      .then((snap) => setFollowerCount(snap.data().count))
+      .catch(() => setFollowerCount(null));
+  }, [db, user]);
+
+  // Résolution des auteurs suivis (slugs) vers leur fiche complète, pour
+  // un aperçu direct sur le profil — jusqu'ici il fallait déjà savoir
+  // quels auteurs on suivait pour retrouver leur fiche un par un.
+  const [followedAuthorsInfo, setFollowedAuthorsInfo] = useState<any[]>([]);
+  useEffect(() => {
+    if (!db) { setFollowedAuthorsInfo([]); return; }
+    const slugs = toArray<string>(profile?.followedAuthors);
+    if (slugs.length === 0) { setFollowedAuthorsInfo([]); return; }
+    let cancelled = false;
+    Promise.all(slugs.map((slug) => getDoc(doc(db, "authors", slug)).then((d) => (d.exists() ? { slug, ...d.data() } : { slug, name: slug }))))
+      .then((results) => { if (!cancelled) setFollowedAuthorsInfo(results); })
+      .catch(() => { if (!cancelled) setFollowedAuthorsInfo([]); });
+    return () => { cancelled = true; };
+  }, [db, profile?.followedAuthors]);
+
+  const isFounder = Boolean(user?.email && FOUNDER_EMAILS.includes(user.email));
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -250,12 +281,35 @@ export default function ProfilePage() {
             <div className="absolute -bottom-1.5 -right-1.5 md:-bottom-2 md:-right-2 bg-amber-500 text-white rounded-full p-2 md:p-3 border-4 border-white shadow-xl z-20">
               <Crown className="h-5 w-5 md:h-7 md:w-7" />
             </div>
+            {isFounder && (
+              <div className="absolute -top-1 -left-1 md:-top-2 md:-left-2 bg-copper text-primary-foreground rounded-full p-1.5 md:p-2 border-2 md:border-4 border-white shadow-xl z-20" title="Lectrice Fondatrice — bêta de la première heure">
+                <Sparkles className="h-3.5 w-3.5 md:h-5 md:w-5" />
+              </div>
+            )}
           </div>
           <div className="space-y-2 md:space-y-3 text-center md:text-left">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline italic tracking-tight break-words">{userName}</h1>
-            <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2">
-              <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
-            </Badge>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
+              <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2">
+                <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
+              </Badge>
+              {isFounder && (
+                <Badge className="rounded-full bg-copper/10 text-copper border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2">
+                  <Sparkles className="h-3.5 w-3.5" /> Lectrice Fondatrice
+                </Badge>
+              )}
+            </div>
+            <p className="text-muted-foreground italic text-sm md:text-lg leading-relaxed max-w-xl">
+              "{profile?.profileQuote || "Chaque page tournée est un souvenir gravé."}"
+            </p>
+            <div className="flex items-center justify-center md:justify-start gap-4 text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+              {user?.metadata?.creationTime && (
+                <span>Membre depuis {new Date(user.metadata.creationTime).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
+              )}
+              {followerCount !== null && followerCount > 0 && (
+                <Link href="/community" className="hover:text-rose transition-colors">{followerCount} abonnée{followerCount > 1 ? "s" : ""}</Link>
+              )}
+            </div>
             {profile?.bio && <p className="text-muted-foreground italic text-sm md:text-xl max-w-xl leading-relaxed">{profile.bio}</p>}
           </div>
         </div>
@@ -312,6 +366,103 @@ export default function ProfilePage() {
             </Button>
         </div>
       </header>
+
+      {/* Tableau de bord — aperçu condensé du Bilan/Passeport/Badges,
+          des genres & tropes favoris (fréquence réelle de lecture) et
+          des auteurs suivis, directement visible sans clic. Répond au
+          constat bêta : le suivi d'auteur notamment était largement
+          ignoré faute de visibilité. */}
+      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+        <Link href="/stats" className="block">
+          <Card className="glass-card border-none bg-white/60 p-5 md:p-6 hover:shadow-lg transition-shadow h-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-headline italic text-lg">Bilan de lecture</h3>
+              <ChevronRight className="h-4 w-4 text-primary/40" />
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1 text-center bg-primary/5 rounded-xl py-3">
+                <p className="font-headline italic text-xl text-copper">{stats.readCount}</p>
+                <p className="text-[8px] font-bold uppercase tracking-widest opacity-50 mt-1">Livres lus</p>
+              </div>
+              <div className="flex-1 text-center bg-primary/5 rounded-xl py-3 px-1">
+                <p className="font-headline italic text-sm text-copper truncate">{stats.topGenre || "—"}</p>
+                <p className="text-[8px] font-bold uppercase tracking-widest opacity-50 mt-1">Genre dominant</p>
+              </div>
+              <div className="flex-1 text-center bg-primary/5 rounded-xl py-3">
+                <p className="font-headline italic text-xl text-copper">{stats.monthlyReadCount}</p>
+                <p className="text-[8px] font-bold uppercase tracking-widest opacity-50 mt-1">Ce mois</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+
+        <Link href="/profile/badges" className="block">
+          <Card className="glass-card border-none bg-white/60 p-5 md:p-6 hover:shadow-lg transition-shadow h-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-headline italic text-lg">Derniers badges</h3>
+              <ChevronRight className="h-4 w-4 text-primary/40" />
+            </div>
+            {(stats.unlockedGenres.length + stats.unlockedTropes.length) > 0 ? (
+              <div className="flex gap-3">
+                {[...stats.unlockedTropes, ...stats.unlockedGenres]
+                  .sort((a, b) => b[1] - a[1])
+                  .slice(0, 3)
+                  .map(([label]) => (
+                    <div key={label} className="flex-1 text-center bg-copper/5 rounded-xl py-3 px-1">
+                      <Medal className="h-4 w-4 mx-auto text-copper mb-1" />
+                      <p className="text-[8px] font-bold uppercase tracking-wide leading-tight truncate">{label}</p>
+                    </div>
+                  ))}
+              </div>
+            ) : (
+              <p className="text-xs italic text-muted-foreground">5 livres d'un même genre ou trope débloquent votre premier badge.</p>
+            )}
+          </Card>
+        </Link>
+      </div>
+
+      {(stats.unlockedGenres.length + stats.unlockedTropes.length) > 0 && (
+        <div className="space-y-4">
+          <h3 className="font-headline italic text-lg px-2">Genres & tropes favoris</h3>
+          <Card className="glass-card border-none bg-white/40 p-6">
+            <div className="flex flex-wrap gap-2 items-center justify-center">
+              {[...stats.unlockedGenres, ...stats.unlockedTropes]
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10)
+                .map(([label, count], i) => (
+                  <span
+                    key={label}
+                    className={cn(
+                      "rounded-full font-headline italic px-3 py-1",
+                      i === 0 ? "bg-rose text-primary text-lg" : i < 3 ? "bg-copper/80 text-white text-sm" : "bg-primary/80 text-white text-xs"
+                    )}
+                  >
+                    {label}
+                  </span>
+                ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {followedAuthorsInfo.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h3 className="font-headline italic text-lg">Auteurs suivis ({followedAuthorsInfo.length})</h3>
+          </div>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar px-2 pb-1">
+            {followedAuthorsInfo.map((a) => (
+              <Link key={a.slug} href={`/author/${encodeURIComponent(a.name || a.slug)}`} className="shrink-0 w-16 text-center group">
+                <Avatar className="h-12 w-12 mx-auto border-2 border-white shadow-sm group-hover:scale-105 transition-transform">
+                  <AvatarImage src={a.avatarUrl} className="object-cover" />
+                  <AvatarFallback className="font-headline italic text-xs bg-primary/5">{(a.name || "?").charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <p className="text-[9px] mt-1.5 truncate leading-tight">{a.name}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {profile?.favoriteQuote && (
         <Card className="glass-card border-none bg-white/40 p-12 text-center space-y-6 shadow-sm">
@@ -462,6 +613,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
   
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
+  const [profileQuote, setProfileQuote] = useState('');
   const [favoriteQuote, setFavoriteQuote] = useState('');
   const [favoriteAuthor, setFavoriteAuthor] = useState('');
   const [annualGoal, setAnnualGoal] = useState(24);
@@ -479,6 +631,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
     if (profile && open) {
       setName(profile.name || '');
       setBio(profile.bio || '');
+      setProfileQuote(profile.profileQuote || '');
       setFavoriteQuote(profile.favoriteQuote || '');
       setFavoriteAuthor(profile.favoriteAuthor || '');
       setAnnualGoal(Number(profile.annualGoal) || 24);
@@ -498,7 +651,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
     if (!db || !user) return;
     setLoading(true);
     const data = {
-      name, bio, favoriteQuote, favoriteAuthor,
+      name, bio, profileQuote, favoriteQuote, favoriteAuthor,
       annualGoal, monthlyGoal, annualGoalPages, annualAudioGoal,
       favoriteFormat, favoriteGenres, favoriteTropes,
       wattpadUrl: wattpadUrl.trim(), amazonUrl: amazonUrl.trim(),
@@ -569,6 +722,16 @@ function EditProfileDialog({ profile }: { profile: any }) {
                 <div className="space-y-3">
                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Prénom ou Pseudo</Label>
                   <Input value={name} onChange={(e) => setName(e.target.value)} className="h-14 rounded-2xl bg-white/40 border-none italic text-lg focus-visible:ring-1 focus-visible:ring-primary/20" />
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Ma citation de profil</Label>
+                  <Input
+                    value={profileQuote}
+                    onChange={(e) => setProfileQuote(e.target.value)}
+                    placeholder="Chaque page tournée est un souvenir gravé."
+                    maxLength={120}
+                    className="h-14 rounded-2xl bg-white/40 border-none italic text-lg focus-visible:ring-1 focus-visible:ring-primary/20"
+                  />
                 </div>
                 <div className="space-y-3">
                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Bio de Lectrice</Label>

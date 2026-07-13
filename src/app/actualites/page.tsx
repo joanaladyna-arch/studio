@@ -52,16 +52,33 @@ export default function ActualitesPage() {
   // Une actualité sans date de publication connue (cas très rare) est
   // traitée comme récente par défaut, plutôt que de disparaître
   // silencieusement dans les archives.
-  const { recentItems, archivedItems } = useMemo(() => {
+  const { recentItems, archivedItems, weekReleases } = useMemo(() => {
     const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000;
     const recent: any[] = [];
     const archived: any[] = [];
+    const releases: any[] = [];
+
+    // "Cette semaine" = fenêtre glissante de 3 jours avant à 7 jours
+    // après aujourd'hui, pour couvrir aussi bien une sortie qui vient
+    // de paraître qu'une sortie annoncée pour dans quelques jours.
+    const now = new Date();
+    const windowStart = new Date(now); windowStart.setDate(now.getDate() - 3); windowStart.setHours(0, 0, 0, 0);
+    const windowEnd = new Date(now); windowEnd.setDate(now.getDate() + 7); windowEnd.setHours(23, 59, 59, 999);
+
     (items || []).forEach((item) => {
+      if (item.isRelease && item.releaseDate) {
+        const d = new Date(`${item.releaseDate}T12:00:00`);
+        if (!isNaN(d.getTime()) && d >= windowStart && d <= windowEnd) {
+          releases.push(item);
+          return; // épinglée dans le bandeau, pas dupliquée dans le flux
+        }
+      }
       const publishedMillis = item.publishedAt?.toMillis?.();
       if (publishedMillis !== undefined && publishedMillis < cutoff) archived.push(item);
       else recent.push(item);
     });
-    return { recentItems: recent, archivedItems: archived };
+    releases.sort((a, b) => (a.releaseDate || "").localeCompare(b.releaseDate || ""));
+    return { recentItems: recent, archivedItems: archived, weekReleases: releases };
   }, [items]);
 
   return (
@@ -75,6 +92,41 @@ export default function ActualitesPage() {
       {adminMode && (
         <div className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6">
           <ActualitesManager />
+        </div>
+      )}
+
+      {weekReleases.length > 0 && (
+        <div className="-mx-4 sm:mx-0 rounded-none sm:rounded-[2rem] bg-primary px-4 sm:px-8 py-6 sm:py-8 overflow-hidden">
+          <div className="flex items-center gap-2 mb-5">
+            <span className="h-1.5 w-1.5 rounded-full bg-rose" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-rose">Sorties de la semaine</p>
+          </div>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+            {weekReleases.map((item) => {
+              const d = new Date(`${item.releaseDate}T12:00:00`);
+              const dateLabel = isNaN(d.getTime()) ? "" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+              return (
+                <Link key={item.id} href={item.authorSlug ? `/author/${encodeURIComponent(item.authorName)}` : "#"} className="shrink-0 w-28 group">
+                  <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-xl bg-white/10">
+                    {item.cover ? (
+                      <img src={item.cover} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
+                        <Newspaper className="h-6 w-6 text-white/30" />
+                      </div>
+                    )}
+                  </div>
+                  <p className="font-headline italic text-xs text-primary-foreground mt-2 leading-tight line-clamp-2">{item.title}</p>
+                  {item.authorName && <p className="text-[9px] text-primary-foreground/50 mt-0.5 truncate">{item.authorName}</p>}
+                  {dateLabel && (
+                    <span className="inline-block mt-1 text-[8px] font-bold uppercase tracking-wide text-copper bg-copper/15 rounded-full px-2 py-0.5">
+                      {dateLabel}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </div>
       )}
 

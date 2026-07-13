@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Bell,
   Quote,
-  Star
+  Star,
+  Heart
 } from "lucide-react";
 import Image from 'next/image';
 import Link from 'next/link';
@@ -41,6 +42,23 @@ export default function Home() {
   }, [db, user]);
 
   const { data: profile } = useDoc(profileRef);
+
+  // Indice affiché une seule fois pour signaler ce à quoi sert la cloche
+  // — la moitié des testeuses bêta ne l'avait pas remarquée. Se ferme
+  // dès qu'on clique dessus (le lien vers /actualites) ou ailleurs sur
+  // la page, et ne réapparaît jamais une fois vue.
+  const [showBellHint, setShowBellHint] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!localStorage.getItem("lectoria_bell_hint_seen")) {
+      const t = setTimeout(() => setShowBellHint(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
+  const dismissBellHint = () => {
+    setShowBellHint(false);
+    if (typeof window !== "undefined") localStorage.setItem("lectoria_bell_hint_seen", "1");
+  };
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'cher lecteur';
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
@@ -168,6 +186,7 @@ export default function Home() {
         <div className="flex gap-2 md:gap-4 items-center">
           <Link
             href="/actualites"
+            onClick={dismissBellHint}
             className="relative h-11 w-11 md:h-16 md:w-16 rounded-xl md:rounded-2xl border border-primary/10 bg-white/60 hover:bg-white shadow-sm flex items-center justify-center transition-colors shrink-0"
             title="Actualités"
           >
@@ -176,6 +195,13 @@ export default function Home() {
               <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-rose text-primary text-[10px] font-bold flex items-center justify-center border-2 border-white">
                 {unseenActualitesCount > 9 ? "9+" : unseenActualitesCount}
               </span>
+            )}
+            {showBellHint && (
+              <div className="absolute top-full right-0 mt-2 w-52 bg-primary text-primary-foreground text-xs rounded-2xl p-3 shadow-2xl z-50 font-sans not-italic normal-case tracking-normal text-left animate-in fade-in slide-in-from-top-2 duration-300">
+                <button onClick={(e) => { e.preventDefault(); dismissBellHint(); }} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-white text-primary flex items-center justify-center text-[10px] shadow-md">✕</button>
+                🔔 Suis tes auteurs préférés depuis leur fiche pour être alertée ici de leurs prochaines sorties.
+                <div className="absolute -top-1.5 right-4 h-3 w-3 bg-primary rotate-45" />
+              </div>
             )}
           </Link>
           <Button asChild variant="outline" className="rounded-xl md:rounded-2xl border-primary/10 hover:bg-white h-11 px-4 text-sm md:h-16 md:px-10 font-headline italic md:text-xl shadow-sm">
@@ -357,6 +383,18 @@ export default function Home() {
                   <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-rose" />
                 </div>
                 <span className="font-headline text-lg md:text-3xl italic">Coups de Cœur</span>
+              </Link>
+              <Link href="/library?filter=envie" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-secondary/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Heart className="h-5 w-5 md:h-8 md:w-8 text-primary" />
+                </div>
+                <span className="font-headline text-lg md:text-3xl italic">Ma Wishlist</span>
+              </Link>
+              <Link href="/journal" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Quote className="h-5 w-5 md:h-8 md:w-8 text-primary" />
+                </div>
+                <span className="font-headline text-lg md:text-3xl italic">Mes Recommandations</span>
               </Link>
             </div>
           </div>

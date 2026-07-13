@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Newspaper, Loader2, Plus, Pencil, Trash2, X, Save, Sparkles } from "lucide-react";
 import { slugify, authorKey } from "@/lib/utils";
@@ -24,7 +25,7 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
   const { toast } = useToast();
   const [actualites, setActualites] = useState<any[] | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
-  const [form, setForm] = useState<any>({ title: "", authorName: "", content: "", cover: "" });
+  const [form, setForm] = useState<any>({ title: "", authorName: "", content: "", cover: "", isRelease: false, releaseDate: "" });
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -38,9 +39,9 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
       .catch((err) => { console.error("Load Actualites Error:", err); setActualites([]); });
   }, [db]);
 
-  const startNew = () => { setEditing({ isNew: true }); setForm({ title: "", authorName: "", content: "", cover: "" }); };
-  const startEdit = (item: any) => { setEditing(item); setForm({ title: item.title || "", authorName: item.authorName || "", content: item.content || "", cover: item.cover || "" }); };
-  const cancel = () => { setEditing(null); setForm({ title: "", authorName: "", content: "", cover: "" }); };
+  const startNew = () => { setEditing({ isNew: true }); setForm({ title: "", authorName: "", content: "", cover: "", isRelease: false, releaseDate: "" }); };
+  const startEdit = (item: any) => { setEditing(item); setForm({ title: item.title || "", authorName: item.authorName || "", content: item.content || "", cover: item.cover || "", isRelease: Boolean(item.isRelease), releaseDate: item.releaseDate || "" }); };
+  const cancel = () => { setEditing(null); setForm({ title: "", authorName: "", content: "", cover: "", isRelease: false, releaseDate: "" }); };
 
   const save = async () => {
     if (!db || !editing) return;
@@ -58,6 +59,8 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
         authorName,
         authorSlug: authorName ? authorKey(authorName) : "",
         cover: form.cover?.trim() || "",
+        isRelease: Boolean(form.isRelease),
+        releaseDate: form.isRelease ? (form.releaseDate || "") : "",
         publishedAt: editing.isNew ? serverTimestamp() : (editing.publishedAt || serverTimestamp()),
         updatedAt: serverTimestamp(),
       };
@@ -140,6 +143,25 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Image (optionnel)</Label>
             <Input value={form.cover || ""} onChange={(e) => setForm((p: any) => ({ ...p, cover: e.target.value }))} placeholder="URL de l'image" className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
           </div>
+          <label className="flex items-center gap-3 p-4 rounded-2xl bg-rose/5 border border-rose/10 cursor-pointer">
+            <Checkbox
+              checked={Boolean(form.isRelease)}
+              onCheckedChange={(v) => setForm((p: any) => ({ ...p, isRelease: Boolean(v) }))}
+              className="border-rose/30 data-[state=checked]:bg-rose data-[state=checked]:border-rose"
+            />
+            <span className="text-sm font-headline italic">C'est une sortie de livre — l'épingler dans "Sorties de la semaine"</span>
+          </label>
+          {form.isRelease && (
+            <div className="space-y-2">
+              <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de sortie</Label>
+              <Input
+                type="date"
+                value={form.releaseDate || ""}
+                onChange={(e) => setForm((p: any) => ({ ...p, releaseDate: e.target.value }))}
+                className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner"
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Contenu *</Label>
             <Textarea value={form.content || ""} onChange={(e) => setForm((p: any) => ({ ...p, content: e.target.value }))} className="min-h-40 italic bg-white/40 rounded-2xl border-none shadow-inner" />
