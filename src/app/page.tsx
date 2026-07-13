@@ -299,7 +299,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-[1.8fr_1fr] gap-8 md:gap-12">
+      <div className="grid lg:grid-cols-[1.8fr_1fr] gap-8 lg:gap-12">
         <section className="space-y-4 md:space-y-8">
           <div className="flex justify-between items-center">
             <h2 className="text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic">
