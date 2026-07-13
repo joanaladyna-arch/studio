@@ -523,9 +523,9 @@ export default function AddBookPage() {
         <button
           type="button"
           onClick={() => setShowScanner(true)}
-          className="w-full h-16 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-3 font-headline italic text-xl hover:scale-[1.01] active:scale-[0.99] transition-transform"
+          className="w-full h-12 md:h-16 rounded-2xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 flex items-center justify-center gap-2 md:gap-3 font-headline italic text-sm md:text-xl hover:scale-[1.01] active:scale-[0.99] transition-transform"
         >
-          <ScanBarcode className="h-7 w-7" />
+          <ScanBarcode className="h-5 w-5 md:h-7 md:w-7" />
           Scanner un livre (ISBN)
         </button>
 
