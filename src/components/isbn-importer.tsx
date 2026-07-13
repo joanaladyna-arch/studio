@@ -12,9 +12,15 @@ import { fetchWithTimeout, searchBnF, slugify, cleanIsbnValue, cleanDescriptionH
 
 /**
  * Import d'un livre dans la base partagée par son ISBN, pensé pour être
- * affiché en mode admin sur la page Ajouter. Interroge Google Books, puis
- * la BnF en repli (meilleure couverture des petites maisons françaises).
- * Ne crée jamais de doublon ni n'écrase une fiche existante enrichie.
+ * affiché en mode admin sur la page Ajouter.
+ *
+ * IMPORTANT (consigne explicite) : Google Books et Apple Books sont les
+ * deux seules sources utilisées pour TROUVER un livre — la BnF n'est
+ * plus jamais utilisée pour ça (elle ne fournit pas de couverture, ce
+ * qui donnait des fiches inachevées). La BnF n'intervient plus qu'en
+ * tout dernier lieu, uniquement pour compléter un résumé encore vide.
+ * Si Google et Apple échouent tous les deux à identifier l'ISBN, on
+ * arrête là plutôt que de créer une fiche sans couverture.
  */
 export function IsbnImporter() {
   const db = useFirestore();
@@ -37,48 +43,74 @@ export function IsbnImporter() {
         return;
       }
 
-      const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(cleanIsbn)}`;
-      const res = await fetchWithTimeout(gUrl, {}, 8000);
-      const data = await res.json();
-      const info = data.items?.[0]?.volumeInfo;
+      let title = "", author = "", cover = "", description = "", publisher = "", pageCount = 0, foundSource = "";
 
-      if (info) {
-        await setDoc(masterRef, {
-          title: info.title || "Titre inconnu",
-          author: info.authors ? info.authors.join(", ") : "Inconnu",
-          cover: info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
-          isbn13: cleanIsbn,
-          description: cleanDescriptionHtml(info.description),
-          publisher: info.publisher || "",
-          pageCount: info.pageCount || 0,
-          updatedAt: serverTimestamp(),
-          source: "admin-isbn-import"
-        }, { merge: true });
-        toast({ title: "Livre importé", description: `${info.title || "Le livre"} a été ajouté à la base (Google Books).` });
-        setIsbn("");
+      // 1. Google Books, source principale
+      try {
+        const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(cleanIsbn)}`;
+        const res = await fetchWithTimeout(gUrl, {}, 8000);
+        const data = await res.json();
+        const info = data.items?.[0]?.volumeInfo;
+        if (info) {
+          title = info.title || "";
+          author = info.authors ? info.authors.join(", ") : "";
+          cover = info.imageLinks?.thumbnail?.replace("http://", "https://") || "";
+          description = cleanDescriptionHtml(info.description) || "";
+          publisher = info.publisher || "";
+          pageCount = info.pageCount || 0;
+          foundSource = "google";
+        }
+      } catch { /* on tente Apple ensuite */ }
+
+      // 2. Apple Books en repli si Google n'a rien donné
+      if (!title) {
+        try {
+          const res = await fetchWithTimeout(`/api/itunes-search?q=${encodeURIComponent(cleanIsbn)}&isbn=1`, {}, 8000);
+          const data = await res.json();
+          const b = data.results?.[0];
+          if (b) {
+            title = b.title || "";
+            author = b.author || "";
+            cover = b.cover || "";
+            description = b.description || "";
+            foundSource = "apple";
+          }
+        } catch { /* aucune source n'a rien donné, on arrête plus bas */ }
+      }
+
+      if (!title) {
+        toast({ variant: "destructive", title: "ISBN introuvable", description: "Ni Google Books ni Apple Books n'ont ce livre. Tu peux le créer manuellement (Nouvelle fiche) depuis la Bibliothèque." });
         return;
       }
 
-      const bnfResults = await searchBnF(cleanIsbn, "isbn");
-      const bnfBook = bnfResults[0];
-      if (bnfBook) {
-        await setDoc(masterRef, {
-          title: bnfBook.title || "Titre inconnu",
-          author: bnfBook.author || "Inconnu",
-          translator: bnfBook.translator || "",
-          cover: "",
-          isbn13: cleanIsbn,
-          publisher: bnfBook.publisher || "",
-          language: bnfBook.language || "",
-          publishedDate: bnfBook.publishedDate || "",
-          updatedAt: serverTimestamp(),
-          source: "admin-isbn-import-bnf"
-        }, { merge: true });
-        toast({ title: "Livre importé (BnF)", description: `${bnfBook.title} a été ajouté. Pense à ajouter la couverture en l'éditant depuis la Bibliothèque.` });
-        setIsbn("");
-      } else {
-        toast({ variant: "destructive", title: "ISBN introuvable", description: "Ni Google Books ni la BnF n'ont ce livre. Tu peux le créer manuellement (Nouvelle fiche) depuis la Bibliothèque." });
+      // 3. Garantie couverture : Open Library en dernier recours si les
+      // deux sources principales n'en ont pas fourni.
+      if (!cover) {
+        cover = `https://covers.openlibrary.org/b/isbn/${cleanIsbn}-L.jpg`;
       }
+
+      // 4. BnF, uniquement pour combler un résumé encore vide — jamais
+      // pour la couverture, le titre ou l'auteur.
+      if (!description) {
+        try {
+          const bnfResults = await searchBnF(cleanIsbn, "isbn");
+          description = cleanDescriptionHtml(bnfResults[0]?.description) || "";
+        } catch { /* résumé optionnel, non bloquant */ }
+      }
+
+      await setDoc(masterRef, {
+        title: title || "Titre inconnu",
+        author: author || "Inconnu",
+        cover,
+        isbn13: cleanIsbn,
+        description,
+        publisher,
+        pageCount,
+        updatedAt: serverTimestamp(),
+        source: `admin-isbn-import-${foundSource}`
+      }, { merge: true });
+      toast({ title: "Livre importé", description: `${title} a été ajouté à la base.` });
+      setIsbn("");
     } catch (err) {
       console.error("Import ISBN Error:", err);
       toast({ variant: "destructive", title: "Erreur d'importation" });
@@ -93,7 +125,7 @@ export function IsbnImporter() {
         <Book className="h-6 w-6 text-primary" />
         <div>
           <h3 className="font-headline text-xl italic">Importer un livre par ISBN</h3>
-          <p className="text-xs italic opacity-60">Google Books, puis BnF en repli si introuvable.</p>
+          <p className="text-xs italic opacity-60">Google Books, puis Apple Books en repli.</p>
         </div>
       </div>
       <div className="flex gap-2">

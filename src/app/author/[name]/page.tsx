@@ -162,13 +162,15 @@ export default function AuthorPage() {
         }
 
         // On interroge en parallèle Google Books (univers large), la
-        // base Lectoria (masterBooks) et la BnF (Bibliothèque nationale de
-        // France) : sans ça, les livres importés via Excel/admin ou
-        // publiés chez de petites maisons françaises (BMR, Nox,
-        // Chatterley...) que Google Books référence mal n'apparaissent
-        // jamais sur la fiche de leur auteur. Le dépôt légal rend le
-        // catalogue de la BnF exhaustif pour tout livre publié en France.
-        const [googleSettled, masterSettled, bnfSettled, appleSettled] = await Promise.allSettled([
+        // Interroge en parallèle Google Books, la base Lectoria
+        // (masterBooks) et Apple Books.
+        //
+        // IMPORTANT (consigne explicite) : la BnF n'est plus jamais
+        // utilisée pour faire apparaître un livre dans la bibliographie
+        // — elle ne fournissait pas toujours de couverture, ce qui
+        // donnait une bibliographie à trous. Elle sert seulement plus
+        // bas à compléter un résumé manquant sur un livre déjà trouvé.
+        const [googleSettled, masterSettled, appleSettled] = await Promise.allSettled([
           (async () => {
             const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
             const response = await fetchWithTimeout(url, {}, 8000);
@@ -220,25 +222,6 @@ export default function AuthorPage() {
             });
           })(),
           (async () => {
-            const bnfResults = await searchBnF(authorName, "author");
-            return bnfResults.map((b: any) => ({
-              id: b.id,
-              title: b.title,
-              subtitle: "",
-              author: b.author || authorName,
-              translator: b.translator || "",
-              publisher: b.publisher,
-              cover: b.cover || undefined,
-              pages: 0,
-              description: "",
-              publicationDate: b.publicationDate,
-              genres: toArray<string>(b.genres),
-              language: b.language || "Français",
-              isbn: b.isbn || "",
-              source: "bnf",
-            }));
-          })(),
-          (async () => {
             const res = await fetchWithTimeout(`/api/itunes-search?q=${encodeURIComponent(authorName)}`, {}, 8000);
             if (!res.ok) return [];
             const data = await res.json();
@@ -260,32 +243,50 @@ export default function AuthorPage() {
           })(),
         ]);
 
-        const bnfResults = (bnfSettled.status === "fulfilled" ? bnfSettled.value : [])
-          .filter((b: any) => isAuthorMatch(b.author, authorName));
-
         const googleResults = (googleSettled.status === "fulfilled" ? googleSettled.value : [])
           .filter((g: any) => isAuthorMatch(g.author, authorName));
         const masterResults = (masterSettled.status === "fulfilled" ? masterSettled.value : [])
           .filter((m: any) => isAuthorMatch(m.author, authorName));
-        // La base Lectoria (masterBooks) est prioritaire, suivie de la BnF
-        // (plus fiable que Google Books pour les éditeurs français) :
-        // on évite les doublons en excluant de chaque source suivante
-        // tout titre déjà présent dans les sources précédentes.
-        const dedupedBnf = bnfResults.filter((b: any) =>
-          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (b.title || "").toLowerCase())
-        );
+        // La base Lectoria (masterBooks) est prioritaire ; on évite les
+        // doublons en excluant de chaque source suivante tout titre déjà
+        // présent dans les sources précédentes.
         const dedupedGoogle = googleResults.filter((g: any) =>
-          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase()) &&
-          !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (g.title || "").toLowerCase())
+          !masterResults.some((m: any) => (m.title || "").toLowerCase() === (g.title || "").toLowerCase())
         );
         const appleResults = (appleSettled.status === "fulfilled" ? appleSettled.value : [])
           .filter((a: any) => isAuthorMatch(a.author, authorName));
         const dedupedApple = appleResults.filter((a: any) =>
           !masterResults.some((m: any) => (m.title || "").toLowerCase() === (a.title || "").toLowerCase()) &&
-          !dedupedBnf.some((b: any) => (b.title || "").toLowerCase() === (a.title || "").toLowerCase()) &&
           !dedupedGoogle.some((g: any) => (g.title || "").toLowerCase() === (a.title || "").toLowerCase())
         );
-        setResults([...masterResults, ...dedupedBnf, ...dedupedGoogle, ...dedupedApple]);
+
+        let combined = [...masterResults, ...dedupedGoogle, ...dedupedApple];
+
+        // Garantie "jamais de livre sans couverture" : repli Open Library
+        // par ISBN pour tout titre encore sans image.
+        combined = combined.map((r: any) => {
+          if (r.cover) return r;
+          const isbnForCover = (r.isbn || "").toString().replace(/[-\s]/g, "");
+          if (!isbnForCover) return r;
+          return { ...r, cover: `https://covers.openlibrary.org/b/isbn/${isbnForCover}-L.jpg` };
+        });
+
+        // BnF, uniquement pour compléter un résumé manquant — jamais pour
+        // faire apparaître un titre. Limité aux premiers résultats sans
+        // résumé pour ne pas multiplier les appels réseau.
+        const missingDescription = combined.filter((r: any) => !((r.description || "").toString().trim())).slice(0, 8);
+        if (missingDescription.length > 0) {
+          await Promise.all(
+            missingDescription.map(async (r: any) => {
+              try {
+                const bnfResults = await searchBnF(r.isbn || `${r.title} ${authorName}`, r.isbn ? "isbn" : "general");
+                if (bnfResults[0]?.description) r.description = cleanDescriptionHtml(bnfResults[0].description);
+              } catch { /* résumé optionnel, non bloquant */ }
+            })
+          );
+        }
+
+        setResults(combined);
       } catch (e) {
         console.error(e);
       } finally {

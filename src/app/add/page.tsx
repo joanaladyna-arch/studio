@@ -96,15 +96,18 @@ export default function AddBookPage() {
         : searchVal;
 
     try {
-      // 1, 2 & 3. Recherche Master Database (Lectoria), Google Books et BnF
-      // (Bibliothèque nationale de France) en parallèle : ces trois
-      // sources sont indépendantes, les attendre en série n'apporte
-      // rien et double/triple la latence perçue par l'utilisatrice.
-      // La BnF référence par dépôt légal tout livre publié en France,
-      // y compris les petites maisons (BMR, Nox, Chatterley...) que
-      // Google Books manque souvent.
-      const bnfType = isIsbnQuery ? "isbn" : searchMode === "publisher" ? "publisher" : "general";
-      const [masterSettled, googleSettled, bnfSettled, appleSettled] = await Promise.allSettled([
+      // 1 & 2. Recherche Master Database (Lectoria) et Google Books en
+      // parallèle : ces deux sources sont indépendantes, les attendre en
+      // série n'apporte rien et double la latence perçue par l'utilisatrice.
+      //
+      // IMPORTANT (consigne explicite) : la BnF n'est plus jamais utilisée
+      // comme source de résultats de recherche — elle produisait des
+      // fiches sans couverture, ce qui donnait une impression d'application
+      // inachevée. Google Books et Apple Books sont désormais les deux
+      // sources principales de recherche ; la BnF sert uniquement, plus
+      // bas, à compléter un résumé manquant sur un résultat déjà trouvé
+      // par ailleurs — jamais à faire apparaître un livre par elle-même.
+      const [masterSettled, googleSettled, appleSettled] = await Promise.allSettled([
         (async () => {
           const masterRef = collection(db, "masterBooks");
           // Recherche par préfixe sur le champ pertinent selon le mode
@@ -145,26 +148,6 @@ export default function AddBookPage() {
               source: "api"
             };
           });
-        })(),
-        (async () => {
-          const bnfResults = await searchBnF(searchVal, bnfType);
-          return bnfResults.map((b: any) => ({
-            id: b.id,
-            title: b.title || "Titre inconnu",
-            subtitle: "",
-            author: b.author || "Auteur inconnu",
-            translator: b.translator || "",
-            cover: b.cover || undefined,
-            isbn: b.isbn || "",
-            isbn10: "",
-            description: cleanDescriptionHtml(b.description),
-            publisher: b.publisher || "",
-            pages: 0,
-            language: b.language || "",
-            publishedDate: b.publishedDate || "",
-            genres: toArray<string>(b.genres),
-            source: "api"
-          }));
         })(),
         (async () => {
           // Recherche par défaut, sauf en mode éditeur où l'iTunes
@@ -212,43 +195,29 @@ export default function AddBookPage() {
         // On continue même si Google Books échoue ou expire
       }
 
-      if (bnfSettled.status === "fulfilled") {
-        // Doublons exclus par ISBN, mais aussi par titre+auteur : la BnF
-        // ne renvoie pas toujours d'ISBN propre, l'ISBN seul ne suffit
-        // donc pas ici à éviter les répétitions avec Google Books.
-        const newBnfResults = bnfSettled.value.filter((b: any) =>
-          !allResults.find(m =>
-            (m.isbn13 === b.isbn || m.isbn === b.isbn) ||
-            ((m.title || "").toLowerCase() === (b.title || "").toLowerCase() && (m.author || "").toLowerCase() === (b.author || "").toLowerCase())
-          )
-        );
-        // Enrichissement des résultats BnF qui n'ont pas de couverture
-        // ou de résumé : on interroge Google Books par ISBN en parallèle
-        // et on complète uniquement les champs vides — jamais d'écrasement.
-        const enrichedBnf = await Promise.all(
-          newBnfResults.map(async (b: any) => {
-            if ((b.cover && b.description) || !b.isbn) return b;
+      // BnF : plus jamais utilisée pour ajouter des résultats à la liste,
+      // uniquement pour compléter un résumé manquant sur les résultats
+      // déjà trouvés par Google Books, Apple Books ou la base Lectoria.
+      // Ciblée sur les tout premiers résultats (les plus pertinents) pour
+      // ne pas multiplier les appels réseau sur une longue liste.
+      const missingDescription = allResults.filter((r) => !((r.description || "").toString().trim())).slice(0, 8);
+      if (missingDescription.length > 0) {
+        await Promise.all(
+          missingDescription.map(async (r) => {
             try {
-              const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${b.isbn}&maxResults=1`;
-              const gRes = await fetchWithTimeout(gUrl, {}, 5000);
-              if (!gRes.ok) return b;
-              const gData = await gRes.json();
-              const info = gData.items?.[0]?.volumeInfo;
-              if (!info) return b;
-              return {
-                ...b,
-                cover: b.cover || info.imageLinks?.thumbnail?.replace("http://", "https://") || "",
-                description: b.description || cleanDescriptionHtml(info.description) || "",
-              };
+              const bnfType2 = r.isbn ? "isbn" : "general";
+              const bnfQuery = r.isbn || `${r.title} ${r.author}`.trim();
+              const bnfResults = await searchBnF(bnfQuery, bnfType2);
+              const match = bnfResults[0];
+              if (match?.description) {
+                r.description = cleanDescriptionHtml(match.description);
+              }
             } catch {
-              return b;
+              // Résumé optionnel : on continue sans bloquer l'affichage
+              // des résultats si la BnF échoue ou expire.
             }
           })
         );
-        allResults = [...allResults, ...enrichedBnf];
-      } else {
-        console.error("BnF Error:", bnfSettled.reason);
-        // On continue même si la BnF échoue ou expire : source bonus, pas bloquante
       }
 
       if (appleSettled.status === "fulfilled") {
@@ -300,6 +269,20 @@ export default function AddBookPage() {
           // On continue même si Open Library échoue ou expire
         }
       }
+
+      // Garantie "jamais de livre sans couverture" : pour tout résultat
+      // encore sans image après Google Books / Apple Books / Open Library,
+      // tentative ultime via l'API de couvertures Open Library par ISBN
+      // (gratuite, sans clé, très large couverture éditoriale). Si l'ISBN
+      // n'a pas de couverture connue non plus, le composant BookCover gère
+      // déjà l'échec de chargement avec un repli visuel soigné plutôt
+      // qu'une image cassée.
+      allResults = allResults.map((r) => {
+        if (r.cover) return r;
+        const isbnForCover = (r.isbn13 || r.isbn || "").toString().replace(/[-\s]/g, "");
+        if (!isbnForCover) return r;
+        return { ...r, cover: `https://covers.openlibrary.org/b/isbn/${isbnForCover}-L.jpg` };
+      });
 
       setResults(sortBySaga(allResults));
 
