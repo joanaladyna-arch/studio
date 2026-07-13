@@ -8,6 +8,7 @@ import { Newspaper, Loader2, Archive, ChevronDown, ChevronUp } from "lucide-reac
 import Link from "next/link";
 import { useAdminMode } from "@/components/admin-mode";
 import { ActualitesManager } from "@/components/actualites-manager";
+import { PendingActualitesManager } from "@/components/pending-actualites-manager";
 
 // Au-delà de ce nombre de jours, une actualité quitte la liste principale
 // et ne reste consultable que dans la section "Archives" — pour que la
@@ -88,6 +89,12 @@ export default function ActualitesPage() {
         <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight italic">Actualités</h1>
         <p className="text-primary/60 italic font-medium">Les dernières nouvelles de vos auteurs, et du monde littéraire.</p>
       </header>
+
+      {adminMode && (
+        <div className="rounded-[2rem] border-2 border-rose/20 bg-rose/5 p-6">
+          <PendingActualitesManager />
+        </div>
+      )}
 
       {adminMode && (
         <div className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-6">
