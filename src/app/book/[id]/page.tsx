@@ -45,6 +45,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -1220,6 +1221,20 @@ export default function BookDetailPage() {
                    </p>
                  )}
                </div>
+
+               <label className="flex items-start gap-4 p-5 rounded-2xl bg-rose/5 border border-rose/10 cursor-pointer">
+                 <Checkbox
+                   checked={Boolean((editedData as any).isPressService)}
+                   onCheckedChange={(v) => setEditedData({ ...editedData, isPressService: Boolean(v) } as any)}
+                   className="mt-0.5 border-rose/30 data-[state=checked]:bg-rose data-[state=checked]:border-rose"
+                 />
+                 <span className="space-y-1">
+                   <span className="block font-headline italic text-lg">Service de presse</span>
+                   <span className="block text-xs text-muted-foreground leading-relaxed">
+                     Un petit triangle "SP" apparaît sur la couverture dans la bibliothèque — juste un repère visuel, ça ne change rien d'autre à la fiche.
+                   </span>
+                 </span>
+               </label>
 
                <div className="space-y-4">
                  <Label className="italic text-2xl font-headline flex items-center gap-3">

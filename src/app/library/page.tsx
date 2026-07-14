@@ -131,6 +131,7 @@ export interface UserBook {
   readStartDate?: string;
   readEndDate?: string;
   reviewDocuments?: { name: string; url: string; path: string; uploadedAt: number; type: string }[];
+  isPressService?: boolean;
 }
 
 export type Book = UserBook;
@@ -793,6 +794,7 @@ export default function LibraryPage() {
 
 export function BookCard({ book }: { book: UserBook }) {
   const rating = Number((book as any).rating) || 0;
+  const isPressService = Boolean((book as any).isPressService);
   const isAmbientDark = useAmbientDark();
   return (
     <div className="space-y-2 group cursor-pointer">
@@ -802,6 +804,24 @@ export function BookCard({ book }: { book: UserBook }) {
           alt={book.title || ""} 
           className="object-contain transition-transform duration-1000 group-hover:scale-105" 
         />
+        {isPressService && (
+          <div
+            className="absolute top-0 left-0 w-0 h-0 pointer-events-none z-10"
+            style={{
+              borderStyle: "solid",
+              borderWidth: "36px 36px 0 0",
+              borderColor: "rgba(255,255,255,0.88) transparent transparent transparent",
+            }}
+            title="Service de presse"
+          >
+            <span
+              className="absolute text-rose font-bold text-[7px] uppercase tracking-wider"
+              style={{ top: "3px", left: "-4px", transform: "rotate(-45deg)" }}
+            >
+              SP
+            </span>
+          </div>
+        )}
         <div className="absolute top-3 right-3">
           <Badge className={cn("text-[8px] font-bold uppercase", STATUSES[book.status]?.color)}>
             {STATUSES[book.status]?.label}
