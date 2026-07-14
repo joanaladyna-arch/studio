@@ -55,7 +55,9 @@ export function ThemeBackgroundDialog({ currentTheme }: { currentTheme?: string 
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 pt-2">
           {THEME_BACKGROUNDS.map((t) => {
             const isSelected = (currentTheme || "default") === t.id;
-            const isLight = !t.gradient || t.id === "creme" || t.id.endsWith("-clair");
+            // Tous les fonds proposés sont désormais des pastels clairs —
+            // le texte de l'étiquette reste toujours foncé.
+            const isLight = true;
             return (
               <button
                 key={t.id}

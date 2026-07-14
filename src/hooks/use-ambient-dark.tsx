@@ -10,8 +10,14 @@ import { doc } from "firebase/firestore";
  * directement sur le fond (pas le texte à l'intérieur des cartes
  * blanches, qui reste inchangé) doivent alors passer en clair pour
  * rester lisibles.
+ *
+ * Tous les fonds proposés sont désormais des pastels clairs (Vert
+ * d'Eau, Saumon, Jaune Clair, Rose Pâle, Parme, Blanc Cassé) — plus
+ * aucun ne nécessite de texte clair. La liste reste volontairement en
+ * place (vide pour l'instant) pour ne pas avoir à retoucher tous les
+ * titres déjà adaptés si un fond sombre était réintroduit plus tard.
  */
-const DARK_THEME_IDS = new Set(["nuit", "cuivre", "rose", "sauge"]);
+const DARK_THEME_IDS = new Set<string>([]);
 
 export function useAmbientDark(): boolean {
   const { user } = useUser();
