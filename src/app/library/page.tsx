@@ -806,18 +806,16 @@ export function BookCard({ book }: { book: UserBook }) {
         />
         {isPressService && (
           <div
-            className="absolute top-0 left-0 w-0 h-0 pointer-events-none z-10"
+            className="absolute top-0 left-2.5 z-10 pointer-events-none shadow-sm"
             style={{
-              borderStyle: "solid",
-              borderWidth: "56px 56px 0 0",
-              borderColor: "#D98BA0 transparent transparent transparent",
+              width: "26px",
+              height: "40px",
+              background: "#D98BA0",
+              clipPath: "polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)",
             }}
             title="Service de presse"
           >
-            <span
-              className="absolute text-primary font-extrabold text-[8px] uppercase tracking-wider"
-              style={{ top: "12px", left: "8px", transform: "rotate(-45deg)" }}
-            >
+            <span className="absolute inset-x-0 top-[7px] text-center text-black font-extrabold text-[8px] uppercase tracking-wide">
               SP
             </span>
           </div>
