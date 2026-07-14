@@ -809,14 +809,14 @@ export function BookCard({ book }: { book: UserBook }) {
             className="absolute top-0 left-0 w-0 h-0 pointer-events-none z-10"
             style={{
               borderStyle: "solid",
-              borderWidth: "36px 36px 0 0",
-              borderColor: "rgba(255,255,255,0.88) transparent transparent transparent",
+              borderWidth: "56px 56px 0 0",
+              borderColor: "rgba(255,255,255,0.9) transparent transparent transparent",
             }}
             title="Service de presse"
           >
             <span
-              className="absolute text-rose font-bold text-[7px] uppercase tracking-wider"
-              style={{ top: "3px", left: "-4px", transform: "rotate(-45deg)" }}
+              className="absolute text-rose font-bold text-[8px] uppercase tracking-wider"
+              style={{ top: "12px", left: "8px", transform: "rotate(-45deg)" }}
             >
               SP
             </span>
