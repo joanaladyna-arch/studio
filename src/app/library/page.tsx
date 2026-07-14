@@ -566,7 +566,7 @@ export default function LibraryPage() {
               <button
                 onClick={drawRandomNextRead}
                 className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline text-white shadow-lg transition-transform hover:scale-105"
-                style={{ background: "linear-gradient(135deg, #ff6b9d 0%, #c44dff 50%, #6b8cff 100%)" }}
+                style={{ background: "linear-gradient(135deg, #1B2430 0%, #B08457 60%, #D98BA0 100%)" }}
               >
                 <Dices className="h-4 w-4" /> Surprends-moi
               </button>

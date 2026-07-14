@@ -99,8 +99,16 @@ export default function StatsPage() {
       return { month: label, livres: count };
     });
 
+    // Compteur dédié à l'Objectif Annuel : exclut les livres marqués
+    // "Retirer des objectifs" depuis la Bibliothèque, pour rester
+    // cohérent avec le widget Objectif de lecture de l'Accueil. Le reste
+    // du bilan (readCount, genres, rythme, graphique...) continue de
+    // refléter l'historique complet de lecture, volontairement inchangé.
+    const goalEligibleReadCount = read.filter((b: any) => b.countTowardGoals !== false).length;
+
     return {
       readCount: read.length,
+      goalEligibleReadCount,
       progressCount: progress.length,
       dnfCount: dnf.length,
       totalPages,
@@ -129,7 +137,7 @@ export default function StatsPage() {
       const { jsPDF } = await import("jspdf");
       const docPdf = new jsPDF();
       const year = new Date().getFullYear();
-      const progressPct = Math.round((stats.readCount / (annualGoal || 1)) * 100);
+      const progressPct = Math.round((stats.goalEligibleReadCount / (annualGoal || 1)) * 100);
 
       docPdf.setFont("helvetica", "italic");
       docPdf.setFontSize(11);
@@ -148,7 +156,7 @@ export default function StatsPage() {
 
       const lines: [string, string][] = [
         ["Livres lus", String(stats.readCount)],
-        ["Objectif annuel", `${stats.readCount} / ${annualGoal} (${progressPct}%)`],
+        ["Objectif annuel", `${stats.goalEligibleReadCount} / ${annualGoal} (${progressPct}%)`],
         ["Rythme de lecture", `${stats.monthlyPace} livre(s)/mois`],
         ["Pages parcourues", stats.totalPages.toLocaleString("fr-FR")],
         ["Genre dominant", stats.topGenre],
@@ -237,19 +245,19 @@ export default function StatsPage() {
               <div className="space-y-6">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
-                    <p className="text-4xl font-headline italic">{stats.readCount} / {annualGoal}</p>
+                    <p className="text-4xl font-headline italic">{stats.goalEligibleReadCount} / {annualGoal}</p>
                     <p className="text-xs text-muted-foreground italic">Livres terminés en {new Date().getFullYear()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-headline text-primary italic">{Math.round((stats.readCount / annualGoal) * 100)}%</p>
+                    <p className="text-2xl font-headline text-primary italic">{Math.round((stats.goalEligibleReadCount / annualGoal) * 100)}%</p>
                     <p className="text-[10px] font-bold uppercase tracking-tighter opacity-40">Complété</p>
                   </div>
                 </div>
-                <Progress value={(stats.readCount / annualGoal) * 100} className="h-3 bg-primary/5" indicatorClassName="bg-copper" />
+                <Progress value={(stats.goalEligibleReadCount / annualGoal) * 100} className="h-3 bg-primary/5" indicatorClassName="bg-copper" />
                 <p className="text-center text-xs text-muted-foreground italic pt-4">
-                  {stats.readCount >= annualGoal 
+                  {stats.goalEligibleReadCount >= annualGoal 
                     ? "Félicitations ! Votre objectif est atteint." 
-                    : `Encore ${annualGoal - stats.readCount} pépites à découvrir pour atteindre votre but.`}
+                    : `Encore ${annualGoal - stats.goalEligibleReadCount} pépites à découvrir pour atteindre votre but.`}
                 </p>
               </div>
             </Card>
