@@ -475,62 +475,69 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      <section className="space-y-10">
-        <h2 className="text-4xl font-headline flex items-center gap-4 italic">
-          <Target className="h-8 w-8 text-primary/40" /> Mes Défis
+      <section className="space-y-6 md:space-y-10">
+        <h2 className={cn("text-2xl md:text-4xl font-headline flex items-center gap-3 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
+          <Target className="h-6 w-6 md:h-8 md:w-8 text-primary/40" /> Mes Défis
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {[
-            { label: "Annuel", icon: Trophy, value: `${stats.annualReadCount} / ${stats.goals.annual}`, progress: stats.annualProgress, color: "text-amber-500", bg: "bg-amber-50" },
-            { label: "Mensuel", icon: Target, value: `${stats.monthlyReadCount} / ${stats.goals.monthly}`, progress: stats.monthlyProgress, color: "text-blue-500", bg: "bg-blue-50" },
-            { label: "Pages", icon: FileText, value: `${stats.pagesRead.toLocaleString()}`, progress: stats.pagesProgress, color: "text-emerald-500", bg: "bg-emerald-50" },
-            { label: "Audio", icon: Headphones, value: `${stats.audioHours}h`, progress: stats.audioProgress, color: "text-purple-400", bg: "bg-purple-50" }
-          ].map((item, i) => (
-            <Card key={i} className="glass-card p-8 border-none bg-white/60 space-y-6 hover:shadow-lg transition-all duration-500">
-              <div className="flex justify-between items-center">
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 italic">{item.label}</p>
-                <item.icon className={cn("h-7 w-7", item.color)} />
+        <Card className="glass-card border-none bg-primary p-6 md:p-10 overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-1.5 h-14 bg-rose rounded-bl-md" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
+            {[
+              { label: "Annuel", icon: Trophy, value: `${stats.annualReadCount}`, total: `/ ${stats.goals.annual}`, progress: stats.annualProgress },
+              { label: "Mensuel", icon: Target, value: `${stats.monthlyReadCount}`, total: `/ ${stats.goals.monthly}`, progress: stats.monthlyProgress },
+              { label: "Pages", icon: FileText, value: `${stats.pagesRead.toLocaleString()}`, total: "", progress: stats.pagesProgress },
+              { label: "Audio", icon: Headphones, value: `${stats.audioHours}`, total: "h", progress: stats.audioProgress }
+            ].map((item, i) => (
+              <div key={i} className="space-y-3 md:space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#F5F1E8]/50 italic">{item.label}</p>
+                  <item.icon className="h-4 w-4 md:h-5 md:w-5 text-copper" />
+                </div>
+                <p className="text-2xl md:text-3xl font-headline italic text-[#F5F1E8]">
+                  {item.value}<span className="text-sm md:text-lg text-[#F5F1E8]/40 not-italic">{item.total}</span>
+                </p>
+                <div className="space-y-1.5">
+                  <div className="h-1.5 bg-[#F5F1E8]/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-copper rounded-full transition-all" style={{ width: `${Math.min(100, item.progress)}%` }} />
+                  </div>
+                  <p className="text-[9px] font-bold uppercase text-copper">{item.progress}%</p>
+                </div>
               </div>
-              <p className="text-3xl font-headline italic">{item.value}</p>
-              <div className="space-y-3">
-                <Progress value={item.progress} className={cn("h-2", item.bg)} />
-                <p className={cn("text-[10px] font-bold uppercase", item.color)}>{item.progress}% atteint</p>
-              </div>
-            </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Card>
       </section>
 
-      <section className="space-y-10">
+      <section className="space-y-6 md:space-y-10">
         <div className="flex items-center justify-between">
-          <h2 className="text-4xl font-headline italic flex items-center gap-4">
-            <Award className="h-8 w-8 text-primary/40" /> Badges & Médailles
+          <h2 className={cn("text-2xl md:text-4xl font-headline italic flex items-center gap-3 md:gap-4", isAmbientDark && "text-[#F5F1E8]")}>
+            <Award className="h-6 w-6 md:h-8 md:w-8 text-primary/40" /> Badges & Médailles
           </h2>
-          <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic text-lg">
+          <Button asChild variant="ghost" className={cn("rounded-xl font-headline italic text-sm md:text-lg", isAmbientDark ? "text-[#F5F1E8]" : "text-primary")}>
             <Link href="/profile/badges">Voir tous mes exploits <ChevronRight className="ml-2 h-5 w-5" /></Link>
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <Card className="glass-card border-none bg-white/40 p-8 space-y-6">
-            <h3 className="font-headline italic text-2xl flex items-center gap-3">
-              <Shield className="h-6 w-6 text-primary/40" /> Genres de Prédilection
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+          <Card className="glass-card border-none bg-white/40 p-6 md:p-8 space-y-5 md:space-y-6">
+            <h3 className="font-headline italic text-xl md:text-2xl flex items-center gap-3">
+              <Shield className="h-5 w-5 md:h-6 md:w-6 text-copper" /> Genres de Prédilection
             </h3>
             {toArray<string>(profile?.favoriteGenres).length > 0 && (
               <div className="flex flex-wrap gap-1.5 -mt-2">
                 {toArray<string>(profile?.favoriteGenres).map((g: string) => (
-                  <Badge key={g} variant="outline" className="rounded-full border-primary/15 text-primary/60 text-[9px] px-2.5 py-0.5 italic font-normal">
+                  <Badge key={g} variant="outline" className="rounded-full border-copper/25 text-copper text-[9px] px-2.5 py-0.5 italic font-normal bg-copper/5">
                     {g}
                   </Badge>
                 ))}
               </div>
             )}
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-2">
               {stats.unlockedGenres.length > 0 ? (
                 stats.unlockedGenres.slice(0, 6).map(([genre]) => (
-                  <div key={genre} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-primary/5">
-                    <Shield className="h-8 w-8 text-amber-500" />
-                    <span className="text-[10px] font-bold uppercase text-center truncate w-full">{genre}</span>
+                  <div key={genre} className="flex items-center gap-2 pl-2 pr-3.5 py-2 rounded-full bg-copper/8 border border-copper/15">
+                    <Shield className="h-3.5 w-3.5 text-copper shrink-0" />
+                    <span className="text-[10px] font-bold uppercase tracking-wide">{genre}</span>
                   </div>
                 ))
               ) : (
@@ -539,25 +546,25 @@ export default function ProfilePage() {
             </div>
           </Card>
 
-          <Card className="glass-card border-none bg-white/40 p-8 space-y-6">
-            <h3 className="font-headline italic text-2xl flex items-center gap-3">
-              <Medal className="h-6 w-6 text-rose" /> Tropes Favoris
+          <Card className="glass-card border-none bg-white/40 p-6 md:p-8 space-y-5 md:space-y-6">
+            <h3 className="font-headline italic text-xl md:text-2xl flex items-center gap-3">
+              <Medal className="h-5 w-5 md:h-6 md:w-6 text-rose" /> Tropes Favoris
             </h3>
             {toArray<string>(profile?.favoriteTropes).length > 0 && (
               <div className="flex flex-wrap gap-1.5 -mt-2">
                 {toArray<string>(profile?.favoriteTropes).map((t: string) => (
-                  <Badge key={t} variant="outline" className="rounded-full border-rose/25 text-rose text-[9px] px-2.5 py-0.5 italic font-normal">
+                  <Badge key={t} variant="outline" className="rounded-full border-rose/25 text-rose text-[9px] px-2.5 py-0.5 italic font-normal bg-rose/5">
                     {t}
                   </Badge>
                 ))}
               </div>
             )}
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-2">
               {stats.unlockedTropes.length > 0 ? (
                 stats.unlockedTropes.slice(0, 6).map(([trope]) => (
-                  <div key={trope} className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/60 min-w-[100px] border border-rose/10">
-                    <Medal className="h-8 w-8 text-rose" />
-                    <span className="text-[10px] font-bold uppercase text-center truncate w-full">{trope}</span>
+                  <div key={trope} className="flex items-center gap-2 pl-2 pr-3.5 py-2 rounded-full bg-rose/8 border border-rose/15">
+                    <Medal className="h-3.5 w-3.5 text-rose shrink-0" />
+                    <span className="text-[10px] font-bold uppercase tracking-wide">{trope}</span>
                   </div>
                 ))
               ) : (

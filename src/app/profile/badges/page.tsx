@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Award, Medal, BookOpen, Star, Sparkles, Diamond, Crown, Feather, Lock } from "lucide-react";
+import { Award, Medal, BookOpen, Star, Sparkles, Diamond, Crown, Shield, Lock } from "lucide-react";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { GENRES_LIST, TROPES_LIST, Book } from "@/app/library/page";
@@ -15,10 +15,10 @@ import { cn, toArray } from "@/lib/utils";
 // "Dark Romance Argent" (15+), "Dark Romance Or" (50+), "Dark Romance
 // Diamant" (100+), à la demande explicite de l'utilisatrice.
 const LEVELS = [
-  { label: "Bronze", min: 5, color: "text-amber-700", bg: "bg-amber-100" },
-  { label: "Argent", min: 15, color: "text-slate-400", bg: "bg-slate-100" },
-  { label: "Or", min: 50, color: "text-yellow-500", bg: "bg-yellow-100" },
-  { label: "Diamant", min: 100, color: "text-cyan-400", bg: "bg-cyan-100" },
+  { label: "Bronze", min: 5, color: "text-copper", bg: "bg-copper/10" },
+  { label: "Argent", min: 15, color: "text-primary/70", bg: "bg-primary/5" },
+  { label: "Or", min: 50, color: "text-rose", bg: "bg-rose/10" },
+  { label: "Diamant", min: 100, color: "text-primary", bg: "bg-primary/10" },
 ];
 
 export default function BadgesMedalsPage() {
@@ -77,7 +77,7 @@ export default function BadgesMedalsPage() {
   return (
     <div className="space-y-12 animate-paper pb-20">
       <header className="text-center space-y-4 pt-8">
-        <h1 className="text-5xl font-headline italic tracking-tight">Badges & Médailles</h1>
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline italic tracking-tight">Badges & Médailles</h1>
         <p className="text-primary/60 italic font-medium text-sm">Célébrez vos lectures terminées.</p>
       </header>
 
@@ -102,7 +102,7 @@ export default function BadgesMedalsPage() {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className={cn("p-1.5 rounded-lg", level ? level.bg : "bg-muted")}>
-                      {isUnlocked ? <Feather className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                      {isUnlocked ? <Shield className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                     </div>
                     {level && <span className={cn("text-[8px] font-bold uppercase tracking-widest", level.color)}>{level.label}</span>}
                   </div>
@@ -139,7 +139,7 @@ export default function BadgesMedalsPage() {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className={cn("p-1.5 rounded-lg", level ? level.bg : "bg-muted")}>
-                      {isUnlocked ? <Feather className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                      {isUnlocked ? <Medal className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                     </div>
                     {level && <span className={cn("text-[8px] font-bold uppercase tracking-widest", level.color)}>{level.label}</span>}
                   </div>
