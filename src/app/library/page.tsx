@@ -810,12 +810,12 @@ export function BookCard({ book }: { book: UserBook }) {
             style={{
               borderStyle: "solid",
               borderWidth: "56px 56px 0 0",
-              borderColor: "rgba(255,255,255,0.9) transparent transparent transparent",
+              borderColor: "#D98BA0 transparent transparent transparent",
             }}
             title="Service de presse"
           >
             <span
-              className="absolute text-rose font-bold text-[8px] uppercase tracking-wider"
+              className="absolute text-primary font-extrabold text-[8px] uppercase tracking-wider"
               style={{ top: "12px", left: "8px", transform: "rotate(-45deg)" }}
             >
               SP

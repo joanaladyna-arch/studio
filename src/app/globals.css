@@ -89,6 +89,12 @@
   scrollbar-width: none;
 }
 
+/* Masque le triangle natif de <summary> sur WebKit/Safari — la classe
+   Tailwind list-none ne suffit pas sur ce navigateur en particulier. */
+summary::-webkit-details-marker {
+  display: none;
+}
+
 /* Motif arabesque/floral très discret derrière les étagères de livres —
    donne du caractère sans alourdir : fond crème, trait fin cuivre à
    très faible opacité, tuile assez grande pour ne jamais distraire du

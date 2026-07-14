@@ -35,6 +35,7 @@ import {
   Target,
   FileText,
   ChevronRight,
+  ChevronDown,
   Shield,
   ShieldCheck,
   Medal,
@@ -524,13 +525,19 @@ export default function ProfilePage() {
               <Shield className="h-5 w-5 md:h-6 md:w-6 text-copper" /> Genres de Prédilection
             </h3>
             {toArray<string>(profile?.favoriteGenres).length > 0 && (
-              <div className="flex flex-wrap gap-1.5 -mt-2">
-                {toArray<string>(profile?.favoriteGenres).map((g: string) => (
-                  <Badge key={g} variant="outline" className="rounded-full border-copper/25 text-copper text-[9px] px-2.5 py-0.5 italic font-normal bg-copper/5">
-                    {g}
-                  </Badge>
-                ))}
-              </div>
+              <details className="-mt-2 group/dd">
+                <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold uppercase tracking-widest text-copper/80 bg-copper/5 rounded-full px-3 py-1.5">
+                  <span>{toArray<string>(profile?.favoriteGenres).length} genre{toArray<string>(profile?.favoriteGenres).length > 1 ? "s" : ""} sélectionné{toArray<string>(profile?.favoriteGenres).length > 1 ? "s" : ""}</span>
+                  <ChevronDown className="h-3.5 w-3.5 group-open/dd:rotate-180 transition-transform" />
+                </summary>
+                <div className="flex flex-wrap gap-1.5 pt-3">
+                  {toArray<string>(profile?.favoriteGenres).map((g: string) => (
+                    <Badge key={g} variant="outline" className="rounded-full border-copper/25 text-copper text-[9px] px-2.5 py-0.5 italic font-normal bg-copper/5">
+                      {g}
+                    </Badge>
+                  ))}
+                </div>
+              </details>
             )}
             <div className="flex flex-wrap gap-2">
               {stats.unlockedGenres.length > 0 ? (
@@ -551,13 +558,19 @@ export default function ProfilePage() {
               <Medal className="h-5 w-5 md:h-6 md:w-6 text-rose" /> Tropes Favoris
             </h3>
             {toArray<string>(profile?.favoriteTropes).length > 0 && (
-              <div className="flex flex-wrap gap-1.5 -mt-2">
-                {toArray<string>(profile?.favoriteTropes).map((t: string) => (
-                  <Badge key={t} variant="outline" className="rounded-full border-rose/25 text-rose text-[9px] px-2.5 py-0.5 italic font-normal bg-rose/5">
-                    {t}
-                  </Badge>
-                ))}
-              </div>
+              <details className="-mt-2 group/dd">
+                <summary className="flex items-center justify-between cursor-pointer list-none text-[11px] font-bold uppercase tracking-widest text-rose/90 bg-rose/5 rounded-full px-3 py-1.5">
+                  <span>{toArray<string>(profile?.favoriteTropes).length} trope{toArray<string>(profile?.favoriteTropes).length > 1 ? "s" : ""} sélectionné{toArray<string>(profile?.favoriteTropes).length > 1 ? "s" : ""}</span>
+                  <ChevronDown className="h-3.5 w-3.5 group-open/dd:rotate-180 transition-transform" />
+                </summary>
+                <div className="flex flex-wrap gap-1.5 pt-3">
+                  {toArray<string>(profile?.favoriteTropes).map((t: string) => (
+                    <Badge key={t} variant="outline" className="rounded-full border-rose/25 text-rose text-[9px] px-2.5 py-0.5 italic font-normal bg-rose/5">
+                      {t}
+                    </Badge>
+                  ))}
+                </div>
+              </details>
             )}
             <div className="flex flex-wrap gap-2">
               {stats.unlockedTropes.length > 0 ? (

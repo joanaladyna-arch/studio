@@ -19,7 +19,7 @@ import { BookCover } from "@/components/book-cover";
  */
 export function BookShelf({
   books,
-  perRow = 15,
+  perRow = 20,
 }: {
   books: any[];
   perRow?: number;

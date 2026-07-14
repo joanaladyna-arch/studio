@@ -1081,31 +1081,53 @@ export default function BookDetailPage() {
             </TabsContent>
 
             <TabsContent value="journal" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">
-               {/* Date de fin de lecture — permet le classement par mois
-                   dans la bibliothèque et le bilan annuel de lecture */}
-               {(editedData.status === "read" || editedData.status === "reread" || (editedData as any).dateRead) && (
-                 <div className="flex items-center gap-4 glass-card bg-primary/5 border-none p-5 rounded-2xl">
-                   <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
-                   <div className="flex-1 space-y-1">
-                     <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label>
-                     <input
-                       type="date"
-                       value={
-                         (() => {
-                           const raw = (editedData as any).dateRead;
-                           if (!raw) return "";
-                           const d = raw?.toDate ? raw.toDate() : new Date(raw);
-                           return d.toISOString().slice(0, 10);
-                         })()
-                       }
-                       onChange={(e) => {
-                         const val = e.target.value;
-                         setEditedData({ ...editedData, dateRead: val ? new Date(val) : null } as any);
-                       }}
-                       className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full"
-                     />
+               {/* Dates de lecture — un seul emplacement consolidé (il y en
+                   avait deux avant, un doublon source de confusion). La
+                   date de fin sert au classement par mois dans la
+                   bibliothèque et le bilan annuel.
+                   Aucune date déjà enregistrée n'est perdue : si seule
+                   l'ancienne "Date de fin de lecture" (dateRead) existait,
+                   elle continue de s'afficher ici tant que la lectrice ne
+                   modifie pas elle-même le champ — la nouvelle valeur est
+                   alors enregistrée dans readEndDate, déjà prioritaire
+                   dans le classement par mois. */}
+               {(editedData.status === "read" || editedData.status === "reread" || (editedData as any).dateRead || (editedData as any).readStartDate || (editedData as any).readEndDate) && (
+                 <div className="glass-card bg-primary/5 border-none p-5 rounded-2xl space-y-4">
+                   <div className="grid sm:grid-cols-2 gap-5">
+                     <div className="flex items-center gap-3">
+                       <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
+                       <div className="flex-1 space-y-1">
+                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de début de lecture</Label>
+                         <input
+                           type="date"
+                           value={(editedData as any).readStartDate || ""}
+                           onChange={(e) => setEditedData({ ...editedData, readStartDate: e.target.value } as any)}
+                           className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full"
+                         />
+                       </div>
+                     </div>
+                     <div className="flex items-center gap-3">
+                       <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
+                       <div className="flex-1 space-y-1">
+                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label>
+                         <input
+                           type="date"
+                           value={
+                             (editedData as any).readEndDate ||
+                             (() => {
+                               const raw = (editedData as any).dateRead;
+                               if (!raw) return "";
+                               const d = raw?.toDate ? raw.toDate() : new Date(raw);
+                               return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
+                             })()
+                           }
+                           onChange={(e) => setEditedData({ ...editedData, readEndDate: e.target.value } as any)}
+                           className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full"
+                         />
+                       </div>
+                     </div>
                    </div>
-                   <p className="text-[10px] italic opacity-40">Sert au classement par mois dans votre bibliothèque.</p>
+                   <p className="text-[10px] italic opacity-40">La date de fin sert au classement par mois dans votre bibliothèque.</p>
                  </div>
                )}
                <div className="space-y-6">
@@ -1184,27 +1206,6 @@ export default function BookDetailPage() {
                    ))}
                  </div>
                  <p className="text-[10px] text-muted-foreground italic">0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la dernière flamme pour revenir à 0.</p>
-               </div>
-
-               <div className="grid sm:grid-cols-2 gap-6">
-                 <div className="space-y-3">
-                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Début de lecture (facultatif)</Label>
-                   <Input
-                     type="date"
-                     value={(editedData as any).readStartDate || ""}
-                     onChange={(e) => setEditedData({ ...editedData, readStartDate: e.target.value } as any)}
-                     className="h-12 rounded-xl bg-white/40 border-none italic"
-                   />
-                 </div>
-                 <div className="space-y-3">
-                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Fin de lecture (facultatif)</Label>
-                   <Input
-                     type="date"
-                     value={(editedData as any).readEndDate || ""}
-                     onChange={(e) => setEditedData({ ...editedData, readEndDate: e.target.value } as any)}
-                     className="h-12 rounded-xl bg-white/40 border-none italic"
-                   />
-                 </div>
                </div>
 
                <div className="space-y-6">
