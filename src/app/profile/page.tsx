@@ -479,7 +479,7 @@ export default function ProfilePage() {
         <h2 className={cn("text-2xl md:text-4xl font-headline flex items-center gap-3 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
           <Target className="h-6 w-6 md:h-8 md:w-8 text-primary/40" /> Mes Défis
         </h2>
-        <Card className="glass-card border-none bg-primary p-6 md:p-10 overflow-hidden relative">
+        <Card className="border-none bg-primary shadow-sm rounded-[1.5rem] p-6 md:p-10 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-1.5 h-14 bg-rose rounded-bl-md" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
             {[
