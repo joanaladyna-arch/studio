@@ -479,7 +479,7 @@ export default function ProfilePage() {
         <h2 className={cn("text-2xl md:text-4xl font-headline flex items-center gap-3 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
           <Target className="h-6 w-6 md:h-8 md:w-8 text-primary/40" /> Mes Défis
         </h2>
-        <Card className="border-none bg-primary shadow-sm rounded-[1.5rem] p-6 md:p-10 overflow-hidden relative">
+        <Card className="glass-card border-none bg-white/60 p-6 md:p-10 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-1.5 h-14 bg-rose rounded-bl-md" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
             {[
@@ -490,14 +490,14 @@ export default function ProfilePage() {
             ].map((item, i) => (
               <div key={i} className="space-y-3 md:space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#F5F1E8]/50 italic">{item.label}</p>
+                  <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary/50 italic">{item.label}</p>
                   <item.icon className="h-4 w-4 md:h-5 md:w-5 text-copper" />
                 </div>
-                <p className="text-2xl md:text-3xl font-headline italic text-[#F5F1E8]">
-                  {item.value}<span className="text-sm md:text-lg text-[#F5F1E8]/40 not-italic">{item.total}</span>
+                <p className="text-2xl md:text-3xl font-headline italic text-primary">
+                  {item.value}<span className="text-sm md:text-lg text-primary/40 not-italic">{item.total}</span>
                 </p>
                 <div className="space-y-1.5">
-                  <div className="h-1.5 bg-[#F5F1E8]/10 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-primary/10 rounded-full overflow-hidden">
                     <div className="h-full bg-copper rounded-full transition-all" style={{ width: `${Math.min(100, item.progress)}%` }} />
                   </div>
                   <p className="text-[9px] font-bold uppercase text-copper">{item.progress}%</p>
