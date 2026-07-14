@@ -809,14 +809,14 @@ export function BookCard({ book }: { book: UserBook }) {
             className="absolute top-0 z-10 pointer-events-none shadow-sm"
             style={{
               left: "36px",
-              width: "26px",
-              height: "40px",
+              width: "30px",
+              height: "42px",
               background: "#D98BA0",
               clipPath: "polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%)",
             }}
             title="Service de presse"
           >
-            <span className="absolute inset-x-0 top-[7px] text-center text-black font-extrabold text-[8px] uppercase tracking-wide">
+            <span className="absolute inset-x-0 top-[8px] text-center text-black font-extrabold text-[10px] uppercase tracking-wide">
               SP
             </span>
           </div>
