@@ -39,6 +39,10 @@ import {
   Pin,
   Dices,
   Star,
+  CheckSquare,
+  Check,
+  EyeOff,
+  Eye,
   ListOrdered
 } from "lucide-react";
 import Image from "next/image";
@@ -240,6 +244,51 @@ export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortMode, setSortMode] = useState<"saga" | "author" | "manual">("saga");
   const [isReordering, setIsReordering] = useState<string | null>(null);
+
+  // Sélection multiple — pour retirer en masse des livres des objectifs
+  // (annuel/mensuel) sans toucher au reste de leur fiche. Pensé pour les
+  // lectrices qui importent tout leur historique de lecture pour avoir
+  // un visuel complet, sans vouloir que ces anciennes lectures gonflent
+  // artificiellement les objectifs de l'année en cours.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSaving, setBulkSaving] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const applyGoalExclusion = async (exclude: boolean) => {
+    if (!db || !user || selectedIds.size === 0) return;
+    setBulkSaving(true);
+    try {
+      const batch = writeBatch(db);
+      selectedIds.forEach((id) => {
+        batch.update(doc(db, "users", user.uid, "books", id), { countTowardGoals: !exclude });
+      });
+      await batch.commit();
+      toast({
+        title: exclude ? "Retiré des objectifs" : "Remis dans les objectifs",
+        description: `${selectedIds.size} livre${selectedIds.size > 1 ? "s" : ""} mis à jour.`,
+      });
+      exitSelectMode();
+    } catch (err) {
+      console.error("Bulk Goal Exclusion Error:", err);
+      toast({ variant: "destructive", title: "Erreur" });
+    } finally {
+      setBulkSaving(false);
+    }
+  };
   const [drawnBook, setDrawnBook] = useState<any | null>(null);
   const [isPinningDraw, setIsPinningDraw] = useState(false);
   const isAdmin = adminMode;
@@ -470,6 +519,16 @@ export default function LibraryPage() {
 
         <div className="flex justify-center flex-wrap gap-3">
           <button
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+            className={cn(
+              "inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
+              selectMode ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
+            )}
+          >
+            <CheckSquare className="h-4 w-4" />
+            {selectMode ? "Annuler la sélection" : "Sélectionner"}
+          </button>
+          <button
             onClick={() => setSortMode(sortMode === "author" ? "saga" : "author")}
             className={cn(
               "inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
@@ -573,7 +632,7 @@ export default function LibraryPage() {
                 readByMonth.length > 0 ? (
                   <div className="space-y-4">
                     {readByMonth.map(([key, { label, books }]) => (
-                      <MonthGroup key={key} label={label} books={books} isAdmin={isAdmin} isLoadingEditBook={isLoadingEditBook} openMasterEditor={openMasterEditor} />
+                      <MonthGroup key={key} label={label} books={books} isAdmin={isAdmin} isLoadingEditBook={isLoadingEditBook} openMasterEditor={openMasterEditor} selectMode={selectMode} selectedIds={selectedIds} toggleSelect={toggleSelect} />
                     ))}
                   </div>
                 ) : (
@@ -584,9 +643,29 @@ export default function LibraryPage() {
                 )
               ) : block.books.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
-                  {block.books.map((book) => (
+                  {block.books.map((book) => {
+                    const excluded = (book as any).countTowardGoals === false;
+                    return (
                     <div key={book.id} className="relative">
-                      {isAdmin && (
+                      {selectMode && (
+                        <div
+                          className={cn(
+                            "absolute top-2 left-2 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center shadow-md transition-colors",
+                            selectedIds.has(book.id) ? "bg-rose border-rose" : "bg-white/80 border-white"
+                          )}
+                        >
+                          {selectedIds.has(book.id) && <Check className="h-4 w-4 text-primary" />}
+                        </div>
+                      )}
+                      {excluded && !selectMode && (
+                        <div
+                          className="absolute top-2 left-2 z-10 h-7 w-7 rounded-full bg-primary/80 flex items-center justify-center shadow-md"
+                          title="Ne compte pas dans vos objectifs"
+                        >
+                          <EyeOff className="h-3.5 w-3.5 text-white" />
+                        </div>
+                      )}
+                      {isAdmin && !selectMode && (
                         <button
                           onClick={(e) => { e.preventDefault(); openMasterEditor((book as any).masterBookId); }}
                           className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
@@ -595,7 +674,7 @@ export default function LibraryPage() {
                           {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
                         </button>
                       )}
-                      {block.id === "pal" && sortMode !== "manual" && (
+                      {block.id === "pal" && sortMode !== "manual" && !selectMode && (
                         <button
                           onClick={(e) => { e.preventDefault(); togglePinNextRead(book.id, !!(book as any).isNextRead); }}
                           disabled={isPinning === book.id}
@@ -608,7 +687,7 @@ export default function LibraryPage() {
                           {isPinning === book.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pin className={cn("h-4 w-4", (book as any).isNextRead && "fill-white")} />}
                         </button>
                       )}
-                      {block.id === "pal" && sortMode === "manual" && (
+                      {block.id === "pal" && sortMode === "manual" && !selectMode && (
                         <div className="absolute top-2 right-2 z-10 flex flex-col gap-1.5">
                           <button
                             onClick={(e) => { e.preventDefault(); moveBookInPal(book.id, "up"); }}
@@ -626,11 +705,17 @@ export default function LibraryPage() {
                           </button>
                         </div>
                       )}
-                      <Link href={`/book/${book.id}`} className="group block">
-                        <BookCard book={book} />
-                      </Link>
+                      {selectMode ? (
+                        <div onClick={() => toggleSelect(book.id)} className="group block cursor-pointer">
+                          <BookCard book={book} />
+                        </div>
+                      ) : (
+                        <Link href={`/book/${book.id}`} className="group block">
+                          <BookCard book={book} />
+                        </Link>
+                      )}
                     </div>
-                  ))}
+                  );})}
                 </div>
               ) : (
                 <div className="py-16 text-center glass-card border-dashed bg-white/20 rounded-[2rem]">
@@ -659,6 +744,36 @@ export default function LibraryPage() {
             </ScrollArea>
           </DialogContent>
         </Dialog>
+      )}
+
+      {selectMode && selectedIds.size > 0 && (
+        <div
+          className="fixed left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 bg-primary text-primary-foreground rounded-2xl shadow-2xl px-4 py-3 flex-wrap justify-center"
+          style={{ bottom: "calc(88px + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <span className="text-sm font-headline italic px-2">{selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}</span>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={bulkSaving}
+            onClick={() => applyGoalExclusion(true)}
+            className="rounded-xl text-xs italic font-headline"
+          >
+            {bulkSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <EyeOff className="h-3.5 w-3.5 mr-1.5" />}
+            Retirer des objectifs
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={bulkSaving}
+            onClick={() => applyGoalExclusion(false)}
+            className="rounded-xl text-xs italic font-headline"
+          >
+            <Eye className="h-3.5 w-3.5 mr-1.5" />
+            Remettre dans les objectifs
+          </Button>
+          <button onClick={exitSelectMode} className="text-xs underline opacity-70 px-2">Annuler</button>
+        </div>
       )}
     </div>
   );
@@ -710,12 +825,15 @@ export function BookCard({ book }: { book: UserBook }) {
 // pour les mois récents (logique gérée par le composant parent), avec
 // le compteur de livres dans l'en-tête et la grille de couvertures
 // dans le corps rétractable.
-function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor }: {
+function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor, selectMode, selectedIds, toggleSelect }: {
   label: string;
   books: any[];
   isAdmin: boolean;
   isLoadingEditBook: boolean;
   openMasterEditor: (id: string) => void;
+  selectMode: boolean;
+  selectedIds: Set<string>;
+  toggleSelect: (id: string) => void;
 }) {
   const [open, setOpen] = useState(true);
   return (
@@ -729,9 +847,29 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10 pt-6 px-2">
-          {books.map((book) => (
+          {books.map((book) => {
+            const excluded = (book as any).countTowardGoals === false;
+            return (
             <div key={book.id} className="relative">
-              {isAdmin && (
+              {selectMode && (
+                <div
+                  className={cn(
+                    "absolute top-2 left-2 z-20 h-7 w-7 rounded-full border-2 flex items-center justify-center shadow-md transition-colors",
+                    selectedIds.has(book.id) ? "bg-rose border-rose" : "bg-white/80 border-white"
+                  )}
+                >
+                  {selectedIds.has(book.id) && <Check className="h-4 w-4 text-primary" />}
+                </div>
+              )}
+              {excluded && !selectMode && (
+                <div
+                  className="absolute top-2 left-2 z-10 h-7 w-7 rounded-full bg-primary/80 flex items-center justify-center shadow-md"
+                  title="Ne compte pas dans vos objectifs"
+                >
+                  <EyeOff className="h-3.5 w-3.5 text-white" />
+                </div>
+              )}
+              {isAdmin && !selectMode && (
                 <button
                   onClick={(e) => { e.preventDefault(); openMasterEditor(book.masterBookId); }}
                   className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
@@ -739,11 +877,17 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
                   {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
                 </button>
               )}
-              <Link href={`/book/${book.id}`} className="group block">
-                <BookCard book={book} />
-              </Link>
+              {selectMode ? (
+                <div onClick={() => toggleSelect(book.id)} className="group block cursor-pointer">
+                  <BookCard book={book} />
+                </div>
+              ) : (
+                <Link href={`/book/${book.id}`} className="group block">
+                  <BookCard book={book} />
+                </Link>
+              )}
             </div>
-          ))}
+          );})}
         </div>
       </CollapsibleContent>
     </Collapsible>
