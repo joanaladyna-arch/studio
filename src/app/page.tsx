@@ -175,24 +175,24 @@ export default function Home() {
               <AvatarImage src={userPhoto} className="object-cover" />
               <AvatarFallback className="bg-primary/5 text-primary text-xl md:text-3xl font-headline">PL</AvatarFallback>
             </Avatar>
-            <div className="absolute -bottom-1.5 -right-1.5 md:-bottom-2 md:-right-2 bg-primary text-white p-1.5 md:p-2.5 rounded-full border-2 border-white shadow-xl animate-pulse">
-              <Sparkles className="h-3.5 w-3.5 md:h-5 md:w-5" />
+            <div className="absolute -bottom-1.5 -right-1.5 lg:-bottom-2 lg:-right-2 bg-primary text-white p-1.5 lg:p-2.5 rounded-full border-2 border-white shadow-xl animate-pulse">
+              <Sparkles className="h-3.5 w-3.5 lg:h-5 lg:w-5" />
             </div>
           </Link>
-          <div className="space-y-1 md:space-y-2">
-            <h1 className={cn("text-2xl sm:text-3xl md:text-5xl font-headline italic tracking-tight leading-tight break-words", isAmbientDark ? "text-[#F5F1E8]" : "text-foreground")}>Bonjour, {userName}</h1>
-            <p className={cn("italic text-sm md:text-lg", isAmbientDark ? "text-[#F5F1E8]/70" : "text-muted-foreground opacity-80")}>“Chaque page tournée est un souvenir gravé.”</p>
+          <div className="space-y-1 lg:space-y-2">
+            <h1 className={cn("text-2xl sm:text-3xl lg:text-5xl font-headline italic tracking-tight leading-tight break-words", isAmbientDark ? "text-[#F5F1E8]" : "text-foreground")}>Bonjour, {userName}</h1>
+            <p className={cn("italic text-sm lg:text-lg", isAmbientDark ? "text-[#F5F1E8]/70" : "text-muted-foreground opacity-80")}>“Chaque page tournée est un souvenir gravé.”</p>
           </div>
         </div>
         
-        <div className="flex gap-2 md:gap-4 items-center">
+        <div className="flex gap-2 lg:gap-4 items-center">
           <Link
             href="/actualites"
             onClick={dismissBellHint}
-            className="relative h-11 w-11 md:h-16 md:w-16 rounded-xl md:rounded-2xl border border-primary/10 bg-white/60 hover:bg-white shadow-sm flex items-center justify-center transition-colors shrink-0"
+            className="relative h-11 w-11 lg:h-16 lg:w-16 rounded-xl lg:rounded-2xl border border-primary/10 bg-white/60 hover:bg-white shadow-sm flex items-center justify-center transition-colors shrink-0"
             title="Actualités"
           >
-            <Bell className="h-4 w-4 md:h-6 md:w-6 text-primary/70" />
+            <Bell className="h-4 w-4 lg:h-6 lg:w-6 text-primary/70" />
             {unseenActualitesCount > 0 && (
               <span className="absolute -top-1.5 -right-1.5 h-5 min-w-5 px-1 rounded-full bg-rose text-primary text-[10px] font-bold flex items-center justify-center border-2 border-white">
                 {unseenActualitesCount > 9 ? "9+" : unseenActualitesCount}
@@ -206,11 +206,11 @@ export default function Home() {
               </div>
             )}
           </Link>
-          <Button asChild variant="outline" className="rounded-xl md:rounded-2xl border-primary/10 hover:bg-white h-11 px-4 text-sm md:h-16 md:px-10 font-headline italic md:text-xl shadow-sm">
+          <Button asChild variant="outline" className="rounded-xl lg:rounded-2xl border-primary/10 hover:bg-white h-11 px-4 text-sm lg:h-16 lg:px-10 font-headline italic lg:text-xl shadow-sm">
             <Link href="/journal">Mon Journal</Link>
           </Button>
-          <Button asChild className="rounded-xl md:rounded-2xl bg-primary hover:bg-primary/90 h-11 px-4 text-sm md:h-16 md:px-12 font-headline italic md:text-xl shadow-2xl shadow-primary/20 transition-transform active:scale-95">
-            <Link href="/add"><Plus className="mr-1.5 md:mr-3 h-4 w-4 md:h-6 md:w-6" /> Ajouter</Link>
+          <Button asChild className="rounded-xl lg:rounded-2xl bg-primary hover:bg-primary/90 h-11 px-4 text-sm lg:h-16 lg:px-12 font-headline italic lg:text-xl shadow-2xl shadow-primary/20 transition-transform active:scale-95">
+            <Link href="/add"><Plus className="mr-1.5 lg:mr-3 h-4 w-4 lg:h-6 lg:w-6" /> Ajouter</Link>
           </Button>
         </div>
       </header>
@@ -362,41 +362,41 @@ export default function Home() {
           )}
         </section>
 
-        <section className="space-y-6 md:space-y-12">
-          <div className="space-y-4 md:space-y-8">
-            <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
-              <TrendingUp className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Raccourcis
+        <section className="space-y-6 lg:space-y-12">
+          <div className="space-y-4 lg:space-y-8">
+            <h2 className={cn("text-xl lg:text-4xl font-headline flex items-center gap-2 lg:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
+              <TrendingUp className="h-5 w-5 lg:h-8 lg:w-8 text-primary/40" /> Raccourcis
             </h2>
-            <div className="grid gap-3 md:gap-6">
-              <Link href="/library" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-primary" />
+            <div className="grid gap-3 lg:gap-6">
+              <Link href="/library" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <BookOpen className="h-5 w-5 lg:h-8 lg:w-8 text-primary" />
                 </div>
-                <span className="font-headline text-lg md:text-3xl italic">Bibliothèque</span>
+                <span className="font-headline text-lg lg:text-3xl italic">Bibliothèque</span>
               </Link>
-              <Link href="/profile/badges" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-copper/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Trophy className="h-5 w-5 md:h-8 md:w-8 text-copper" />
+              <Link href="/profile/badges" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-copper/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Trophy className="h-5 w-5 lg:h-8 lg:w-8 text-copper" />
                 </div>
-                <span className="font-headline text-lg md:text-3xl italic">Mes Badges</span>
+                <span className="font-headline text-lg lg:text-3xl italic">Mes Badges</span>
               </Link>
-              <Link href="/coups-de-coeur" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-rose/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-rose" />
+              <Link href="/coups-de-coeur" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-rose/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Sparkles className="h-5 w-5 lg:h-8 lg:w-8 text-rose" />
                 </div>
-                <span className="font-headline text-lg md:text-3xl italic">Coups de Cœur</span>
+                <span className="font-headline text-lg lg:text-3xl italic">Coups de Cœur</span>
               </Link>
-              <Link href="/library?filter=envie" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-secondary/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Heart className="h-5 w-5 md:h-8 md:w-8 text-primary" />
+              <Link href="/library?filter=envie" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-secondary/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Heart className="h-5 w-5 lg:h-8 lg:w-8 text-primary" />
                 </div>
-                <span className="font-headline text-lg md:text-3xl italic">Ma Wishlist</span>
+                <span className="font-headline text-lg lg:text-3xl italic">Ma Wishlist</span>
               </Link>
-              <Link href="/journal" className="flex items-center gap-4 md:gap-8 p-4 md:p-8 rounded-2xl md:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 md:p-5 rounded-xl md:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Quote className="h-5 w-5 md:h-8 md:w-8 text-primary" />
+              <Link href="/journal" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
+                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
+                  <Quote className="h-5 w-5 lg:h-8 lg:w-8 text-primary" />
                 </div>
-                <span className="font-headline text-lg md:text-3xl italic">Mes Recommandations</span>
+                <span className="font-headline text-lg lg:text-3xl italic">Mes Recommandations</span>
               </Link>
             </div>
           </div>

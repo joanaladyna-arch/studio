@@ -38,7 +38,6 @@ import {
   ChevronDown,
   ChevronUp,
   Pin,
-  Dices,
   Star,
   CheckSquare,
   Check,
@@ -565,10 +564,10 @@ export default function LibraryPage() {
               </button>
               <button
                 onClick={drawRandomNextRead}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline text-white shadow-lg transition-transform hover:scale-105"
-                style={{ background: "linear-gradient(135deg, #1B2430 0%, #B08457 60%, #D98BA0 100%)" }}
+                className="flex flex-col items-center gap-1 px-3 py-1 rounded-2xl hover:bg-white/40 transition-colors"
               >
-                <Dices className="h-4 w-4" /> Surprends-moi
+                <span className="text-3xl leading-none" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }}>🎲</span>
+                <span className="text-[11px] italic font-headline text-primary/70">Surprends-moi</span>
               </button>
             </>
           )}
