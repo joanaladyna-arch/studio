@@ -457,20 +457,20 @@ export default function LibraryPage() {
   const envieBlockBooks = useMemo(() => getBooksForStatus("envie"), [userBooks, searchQuery, sortMode]);
   const dnfBlockBooks = useMemo(() => getBooksForStatus("dnf"), [userBooks, searchQuery, sortMode]);
 
-  // Bloc "Lu" : regroupé par mois de lecture (dateRead si renseigné,
-  // sinon dateAdded en repli) pour un journal chronologique style Book
-  // Nova. Un livre retiré des objectifs (countTowardGoals === false)
-  // rejoint systématiquement "Lu également", même s'il a une date
-  // connue — c'est précisément le but de "Retirer des objectifs" :
-  // sortir ce livre du calcul ET du classement chronologique habituel.
+  // Bloc "Lu" : regroupé par mois de lecture. Priorité de date : date de
+  // fin de lecture, puis date de début, puis dateRead (champ historique),
+  // puis dateAdded en tout dernier repli. Important : dès qu'une date de
+  // début OU de fin existe, le livre reste dans le mois correspondant —
+  // même s'il a été retiré des objectifs. "Lu également" est réservé aux
+  // seuls livres sans aucune date connue, qu'ils soient exclus ou non.
   const readByMonth = useMemo(() => {
     const groups: Record<string, { label: string; books: typeof readBlockBooks }> = {};
     readBlockBooks.forEach((b) => {
-      const excluded = (b as any).countTowardGoals === false;
-      const raw = b.dateRead || b.dateAdded;
-      const date = !excluded && raw ? (raw.toDate ? raw.toDate() : new Date(raw)) : null;
-      const key = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` : "unknown";
-      const label = date ? `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}` : "Lu également";
+      const raw = (b as any).readEndDate || (b as any).readStartDate || b.dateRead || b.dateAdded;
+      const date = raw ? (raw.toDate ? raw.toDate() : new Date(raw)) : null;
+      const validDate = date && !isNaN(date.getTime()) ? date : null;
+      const key = validDate ? `${validDate.getFullYear()}-${String(validDate.getMonth() + 1).padStart(2, "0")}` : "unknown";
+      const label = validDate ? `${MONTH_NAMES[validDate.getMonth()]} ${validDate.getFullYear()}` : "Lu également";
       if (!groups[key]) groups[key] = { label, books: [] };
       groups[key].books.push(b);
     });
