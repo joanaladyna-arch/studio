@@ -38,6 +38,7 @@ import {
   ChevronUp,
   Pin,
   Dices,
+  Star,
   ListOrdered
 } from "lucide-react";
 import Image from "next/image";
@@ -664,6 +665,7 @@ export default function LibraryPage() {
 }
 
 export function BookCard({ book }: { book: UserBook }) {
+  const rating = Number((book as any).rating) || 0;
   return (
     <div className="space-y-4 group cursor-pointer">
       <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/60 group-hover:shadow-2xl transition-all duration-700 bg-secondary/5 flex items-center justify-center">
@@ -677,6 +679,22 @@ export function BookCard({ book }: { book: UserBook }) {
             {STATUSES[book.status]?.label}
           </Badge>
         </div>
+        {rating > 0 && (
+          // Pas de plaque de fond derrière les étoiles — juste une ombre
+          // portée sur chaque étoile pour rester lisible sur n'importe
+          // quelle couverture (retour direct de Joana sur le mockup).
+          <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((s) => (
+              <Star
+                key={s}
+                className={cn(
+                  "h-3 w-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]",
+                  s <= rating ? "text-copper fill-copper" : "fill-transparent text-white/75"
+                )}
+              />
+            ))}
+          </div>
+        )}
       </div>
       <div className="text-center px-2">
         <h3 className="text-sm font-headline line-clamp-1 italic">
