@@ -459,13 +459,16 @@ export default function LibraryPage() {
 
   // Bloc "Lu" : regroupé par mois de lecture (dateRead si renseigné,
   // sinon dateAdded en repli) pour un journal chronologique style Book
-  // Nova. Mois triés du plus récent au plus ancien ; les livres sans
-  // date connue tombent dans un groupe séparé affiché en toute fin.
+  // Nova. Un livre retiré des objectifs (countTowardGoals === false)
+  // rejoint systématiquement "Lu également", même s'il a une date
+  // connue — c'est précisément le but de "Retirer des objectifs" :
+  // sortir ce livre du calcul ET du classement chronologique habituel.
   const readByMonth = useMemo(() => {
     const groups: Record<string, { label: string; books: typeof readBlockBooks }> = {};
     readBlockBooks.forEach((b) => {
+      const excluded = (b as any).countTowardGoals === false;
       const raw = b.dateRead || b.dateAdded;
-      const date = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
+      const date = !excluded && raw ? (raw.toDate ? raw.toDate() : new Date(raw)) : null;
       const key = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` : "unknown";
       const label = date ? `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}` : "Lu également";
       if (!groups[key]) groups[key] = { label, books: [] };
@@ -783,6 +786,7 @@ export default function LibraryPage() {
 
 export function BookCard({ book }: { book: UserBook }) {
   const rating = Number((book as any).rating) || 0;
+  const isAmbientDark = useAmbientDark();
   return (
     <div className="space-y-2 group cursor-pointer">
       <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/60 group-hover:shadow-2xl transition-all duration-700 bg-secondary/5 flex items-center justify-center">
@@ -808,10 +812,10 @@ export function BookCard({ book }: { book: UserBook }) {
         </div>
       )}
       <div className="text-center px-2">
-        <h3 className="text-sm font-headline line-clamp-1 italic">
+        <h3 className={cn("text-sm font-headline line-clamp-1 italic", isAmbientDark && "text-[#F5F1E8]")}>
           {cleanBookTitle(book.title)}{(book as any).volume ? ` — ${(book as any).volume}` : ""}
         </h3>
-        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{cleanAuthorName(book.author)}</p>
+        <p className={cn("text-[10px] font-bold uppercase tracking-widest", isAmbientDark ? "text-[#F5F1E8]/60" : "text-muted-foreground")}>{cleanAuthorName(book.author)}</p>
       </div>
     </div>
   );

@@ -9,6 +9,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { THEME_BACKGROUNDS, ThemeBackgroundId } from "@/lib/theme-backgrounds";
 import { cn } from "@/lib/utils";
+import { useAmbientDark } from "@/hooks/use-ambient-dark";
 
 export function ThemeBackgroundDialog({ currentTheme }: { currentTheme?: string }) {
   const [open, setOpen] = useState(false);
@@ -16,6 +17,7 @@ export function ThemeBackgroundDialog({ currentTheme }: { currentTheme?: string 
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const isDark = useAmbientDark();
 
   const selectTheme = async (id: ThemeBackgroundId) => {
     if (!db || !user) return;
@@ -37,7 +39,7 @@ export function ThemeBackgroundDialog({ currentTheme }: { currentTheme?: string 
       <Button
         variant="ghost"
         onClick={() => setOpen(true)}
-        className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors"
+        className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}
       >
         <Palette className="h-5 w-5 mr-3" /> Personnaliser mon espace
       </Button>

@@ -293,16 +293,16 @@ export default function ProfilePage() {
           <div className="space-y-2 md:space-y-3 text-center md:text-left">
             <h1 className={cn("text-3xl sm:text-4xl md:text-6xl font-headline italic tracking-tight break-words", isAmbientDark && "text-[#F5F1E8]")}>{userName}</h1>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-              <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2">
+              <Badge className={cn("rounded-full border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2", isAmbientDark ? "bg-[#F5F1E8]/15 text-[#F5F1E8]" : "bg-primary/10 text-primary")}>
                 <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
               </Badge>
               {isFounder && (
-                <Badge className="rounded-full bg-copper/10 text-copper border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2">
+                <Badge className={cn("rounded-full border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2", isAmbientDark ? "bg-copper/25 text-[#F5F1E8]" : "bg-copper/10 text-copper")}>
                   <Sparkles className="h-3.5 w-3.5" /> Lectrice Fondatrice
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground italic text-sm md:text-lg leading-relaxed max-w-xl">
+            <p className={cn("italic text-sm md:text-lg leading-relaxed max-w-xl", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>
               "{profile?.profileQuote || "Chaque page tournée est un souvenir gravé."}"
             </p>
             <div className={cn("flex items-center justify-center md:justify-start gap-4 text-[10px] md:text-xs font-bold uppercase tracking-widest", isAmbientDark ? "text-[#F5F1E8]/60" : "text-muted-foreground/70")}>
@@ -324,16 +324,16 @@ export default function ProfilePage() {
             <div className="flex justify-center md:justify-start">
               <PublisherSubmissionDialog />
             </div>
-            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
             </Button>
-            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Bilan de lecture</Link>
             </Button>
-            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/share"><Share2 className="h-5 w-5 mr-3" /> Exporter vers les réseaux</Link>
             </Button>
-            <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/community"><Users className="h-5 w-5 mr-3" /> Communauté de lectrices</Link>
             </Button>
             <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
@@ -361,7 +361,7 @@ export default function ProfilePage() {
               </div>
             )}
             {user?.email && ADMIN_EMAILS.includes(user.email) && (
-              <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
+              <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                   <Link href="/admin"><ShieldCheck className="h-5 w-5 mr-3" /> Administration</Link>
               </Button>
             )}
