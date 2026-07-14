@@ -806,8 +806,9 @@ export function BookCard({ book }: { book: UserBook }) {
         />
         {isPressService && (
           <div
-            className="absolute top-0 left-2.5 z-10 pointer-events-none shadow-sm"
+            className="absolute top-0 z-10 pointer-events-none shadow-sm"
             style={{
+              left: "36px",
               width: "26px",
               height: "40px",
               background: "#D98BA0",
