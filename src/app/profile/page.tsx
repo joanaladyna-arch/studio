@@ -15,6 +15,7 @@ import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContactAdminDialog } from "@/components/contact-admin-dialog";
 import { PublisherSubmissionDialog } from "@/components/publisher-submission-dialog";
+import { ThemeBackgroundDialog } from "@/components/theme-background-dialog";
 import { sortBySaga } from "@/lib/utils";
 import { siWattpad } from "simple-icons";
 import { 
@@ -333,6 +334,7 @@ export default function ProfilePage() {
             <Button variant="ghost" asChild className="rounded-full h-11 px-5 text-sm md:h-14 md:px-8 text-primary hover:bg-primary/5 font-headline italic md:text-lg transition-colors">
                 <Link href="/community"><Users className="h-5 w-5 mr-3" /> Communauté de lectrices</Link>
             </Button>
+            <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
             {(profile?.wattpadUrl || profile?.amazonUrl) && (
               <div className="flex gap-3 justify-center md:justify-start px-2">
                 {profile?.wattpadUrl && (

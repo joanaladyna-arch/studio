@@ -10,6 +10,7 @@ import { Navigation } from "@/components/navigation";
 import { AuthGuard } from "@/components/auth-guard";
 import { AdminModeProvider } from "@/components/admin-mode";
 import { AdminModeBar } from "@/components/admin-mode-bar";
+import { ThemeBackgroundLayer } from "@/components/theme-background-layer";
 
 export default function RootLayout({
   children,
@@ -53,6 +54,7 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased bg-background text-foreground min-h-[100dvh] overflow-x-hidden relative flex flex-col">
         <FirebaseClientProvider>
+          <ThemeBackgroundLayer />
           <div className="fixed inset-0 pointer-events-none opacity-20 mix-blend-overlay z-[60] bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]" />
           
           {showSplash ? (
