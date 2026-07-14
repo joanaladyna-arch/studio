@@ -2,6 +2,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAmbientDark } from "@/hooks/use-ambient-dark";
+import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { collection, doc, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
 import { Newspaper, Loader2, Archive, ChevronDown, ChevronUp } from "lucide-react";
@@ -20,6 +22,7 @@ export default function ActualitesPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { adminMode } = useAdminMode();
+  const isAmbientDark = useAmbientDark();
   const [items, setItems] = useState<any[] | null>(null);
   const [showArchives, setShowArchives] = useState(false);
 
@@ -86,8 +89,8 @@ export default function ActualitesPage() {
     <div className="space-y-12 animate-paper pb-32 max-w-3xl mx-auto px-4">
       <header className="text-center space-y-4 pt-8">
         <Newspaper className="h-10 w-10 mx-auto text-primary/40" />
-        <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight italic">Actualités</h1>
-        <p className="text-primary/60 italic font-medium">Les dernières nouvelles de vos auteurs, et du monde littéraire.</p>
+        <h1 className={cn("text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight italic", isAmbientDark && "text-[#F5F1E8]")}>Actualités</h1>
+        <p className={cn("italic font-medium", isAmbientDark ? "text-[#F5F1E8]/70" : "text-primary/60")}>Les dernières nouvelles de vos auteurs, et du monde littéraire.</p>
       </header>
 
       {adminMode && <PendingActualitesManager />}

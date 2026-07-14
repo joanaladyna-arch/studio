@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ export default function JournalPage() {
   const db = useFirestore();
   const { adminMode } = useAdminMode();
   const { toast } = useToast();
+  const isAmbientDark = useAmbientDark();
   const [readingNotes, setReadingNotes] = useState("");
   const [listeningNotes, setListeningNotes] = useState("");
   const [title, setTitle] = useState("");
@@ -142,8 +144,8 @@ export default function JournalPage() {
   return (
     <div className="space-y-12 animate-in fade-in duration-700 pb-20">
       <header className="pt-8">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-headline italic tracking-tight">Journal de bord</h1>
-        <p className="text-primary/60 italic font-medium">Capturez l'essence de vos voyages littéraires.</p>
+        <h1 className={cn("text-3xl sm:text-4xl md:text-5xl font-headline italic tracking-tight", isAmbientDark && "text-[#F5F1E8]")}>Journal de bord</h1>
+        <p className={cn("italic font-medium", isAmbientDark ? "text-[#F5F1E8]/70" : "text-primary/60")}>Capturez l'essence de vos voyages littéraires.</p>
       </header>
 
       <section className="space-y-6">

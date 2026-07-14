@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useAmbientDark } from '@/hooks/use-ambient-dark';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +84,7 @@ export default function ProfilePage() {
   const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
+  const isAmbientDark = useAmbientDark();
   
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -289,7 +291,7 @@ export default function ProfilePage() {
             )}
           </div>
           <div className="space-y-2 md:space-y-3 text-center md:text-left">
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline italic tracking-tight break-words">{userName}</h1>
+            <h1 className={cn("text-3xl sm:text-4xl md:text-6xl font-headline italic tracking-tight break-words", isAmbientDark && "text-[#F5F1E8]")}>{userName}</h1>
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
               <Badge className="rounded-full bg-primary/10 text-primary border-none px-4 py-1.5 italic font-headline text-xs md:text-sm gap-2">
                 <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
@@ -303,7 +305,7 @@ export default function ProfilePage() {
             <p className="text-muted-foreground italic text-sm md:text-lg leading-relaxed max-w-xl">
               "{profile?.profileQuote || "Chaque page tournée est un souvenir gravé."}"
             </p>
-            <div className="flex items-center justify-center md:justify-start gap-4 text-[10px] md:text-xs font-bold uppercase tracking-widest text-muted-foreground/70">
+            <div className={cn("flex items-center justify-center md:justify-start gap-4 text-[10px] md:text-xs font-bold uppercase tracking-widest", isAmbientDark ? "text-[#F5F1E8]/60" : "text-muted-foreground/70")}>
               {user?.metadata?.creationTime && (
                 <span>Membre depuis {new Date(user.metadata.creationTime).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
               )}
@@ -311,7 +313,7 @@ export default function ProfilePage() {
                 <Link href="/community" className="hover:text-rose transition-colors">{followerCount} abonnée{followerCount > 1 ? "s" : ""}</Link>
               )}
             </div>
-            {profile?.bio && <p className="text-muted-foreground italic text-sm md:text-xl max-w-xl leading-relaxed">{profile.bio}</p>}
+            {profile?.bio && <p className={cn("italic text-sm md:text-xl max-w-xl leading-relaxed", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>{profile.bio}</p>}
           </div>
         </div>
         <div className="flex flex-col gap-4 w-full md:w-auto">
@@ -425,7 +427,7 @@ export default function ProfilePage() {
 
       {(stats.unlockedGenres.length + stats.unlockedTropes.length) > 0 && (
         <div className="space-y-4">
-          <h3 className="font-headline italic text-lg px-2">Genres & tropes favoris</h3>
+          <h3 className={cn("font-headline italic text-lg px-2", isAmbientDark && "text-[#F5F1E8]")}>Genres & tropes favoris</h3>
           <Card className="glass-card border-none bg-white/40 p-6">
             <div className="flex flex-wrap gap-2 items-center justify-center">
               {[...stats.unlockedGenres, ...stats.unlockedTropes]
@@ -450,7 +452,7 @@ export default function ProfilePage() {
       {followedAuthorsInfo.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
-            <h3 className="font-headline italic text-lg">Auteurs suivis ({followedAuthorsInfo.length})</h3>
+            <h3 className={cn("font-headline italic text-lg", isAmbientDark && "text-[#F5F1E8]")}>Auteurs suivis ({followedAuthorsInfo.length})</h3>
           </div>
           <div className="flex gap-4 overflow-x-auto no-scrollbar px-2 pb-1">
             {followedAuthorsInfo.map((a) => (

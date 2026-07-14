@@ -29,6 +29,7 @@ import { BookCover } from '@/components/book-cover';
 import { BookShelf } from '@/components/book-shelf';
 import { cleanBookTitle, cleanAuthorName, cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
+import { useAmbientDark } from '@/hooks/use-ambient-dark';
 import { collection, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -42,6 +43,7 @@ export default function Home() {
   }, [db, user]);
 
   const { data: profile } = useDoc(profileRef);
+  const isAmbientDark = useAmbientDark();
 
   // Indice affiché une seule fois pour signaler ce à quoi sert la cloche
   // — la moitié des testeuses bêta ne l'avait pas remarquée. Se ferme
@@ -178,8 +180,8 @@ export default function Home() {
             </div>
           </Link>
           <div className="space-y-1 md:space-y-2">
-            <h1 className="text-2xl sm:text-3xl md:text-5xl font-headline italic text-foreground tracking-tight leading-tight break-words">Bonjour, {userName}</h1>
-            <p className="text-muted-foreground italic text-sm md:text-lg opacity-80">“Chaque page tournée est un souvenir gravé.”</p>
+            <h1 className={cn("text-2xl sm:text-3xl md:text-5xl font-headline italic tracking-tight leading-tight break-words", isAmbientDark ? "text-[#F5F1E8]" : "text-foreground")}>Bonjour, {userName}</h1>
+            <p className={cn("italic text-sm md:text-lg", isAmbientDark ? "text-[#F5F1E8]/70" : "text-muted-foreground opacity-80")}>“Chaque page tournée est un souvenir gravé.”</p>
           </div>
         </div>
         
@@ -215,7 +217,7 @@ export default function Home() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between px-2">
-          <h2 className="text-lg md:text-2xl font-headline flex items-center gap-2 md:gap-3 italic">
+          <h2 className={cn("text-lg md:text-2xl font-headline flex items-center gap-2 md:gap-3 italic", isAmbientDark && "text-[#F5F1E8]")}>
             <Target className="h-4 w-4 md:h-6 md:w-6 text-primary/40" /> Objectif de lecture
           </h2>
           <Link href="/stats" className="text-[10px] font-bold uppercase tracking-widest text-primary/50 hover:text-primary transition-colors">
@@ -244,7 +246,7 @@ export default function Home() {
 
       <section className="space-y-6 md:space-y-8">
         <div className="flex justify-between items-center px-2">
-          <h2 className="text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic">
+          <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
             <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Votre pile de lectures
           </h2>
           {readBooks.length > 0 && (
@@ -302,7 +304,7 @@ export default function Home() {
       <div className="grid lg:grid-cols-[1.8fr_1fr] gap-8 lg:gap-12">
         <section className="space-y-4 md:space-y-8">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic">
+            <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
               <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Lecture Actuelle
             </h2>
             {currentRead && (
@@ -362,7 +364,7 @@ export default function Home() {
 
         <section className="space-y-6 md:space-y-12">
           <div className="space-y-4 md:space-y-8">
-            <h2 className="text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic">
+            <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
               <TrendingUp className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Raccourcis
             </h2>
             <div className="grid gap-3 md:gap-6">
@@ -403,7 +405,7 @@ export default function Home() {
 
       {lastReviewedBook && (
         <section className="space-y-4 md:space-y-6 pt-4 border-t border-primary/5">
-          <h2 className="text-lg md:text-3xl font-headline flex items-center gap-2 md:gap-4 italic px-2">
+          <h2 className={cn("text-lg md:text-3xl font-headline flex items-center gap-2 md:gap-4 italic px-2", isAmbientDark && "text-[#F5F1E8]")}>
             <Quote className="h-4 w-4 md:h-7 md:w-7 text-primary/40" /> Mon dernier avis
           </h2>
           <Link href={`/book/${lastReviewedBook.id}`}>

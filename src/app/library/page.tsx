@@ -3,6 +3,7 @@
 
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState, useMemo, useEffect } from "react";
+import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -239,6 +240,7 @@ export default function LibraryPage() {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
+  const isAmbientDark = useAmbientDark();
   const { adminMode } = useAdminMode();
   const searchParams = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
@@ -465,7 +467,7 @@ export default function LibraryPage() {
       const raw = b.dateRead || b.dateAdded;
       const date = raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
       const key = date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}` : "unknown";
-      const label = date ? `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}` : "Date inconnue";
+      const label = date ? `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}` : "Lu également";
       if (!groups[key]) groups[key] = { label, books: [] };
       groups[key].books.push(b);
     });
@@ -497,8 +499,8 @@ export default function LibraryPage() {
     <div className="space-y-10 animate-paper pb-32">
       <header className="space-y-8 pt-4">
         <div className="text-center space-y-4">
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight italic">Ma Bibliothèque</h1>
-          <p className="text-primary/60 italic font-medium">Votre univers littéraire centralisé.</p>
+          <h1 className={cn("text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight italic", isAmbientDark && "text-[#F5F1E8]")}>Ma Bibliothèque</h1>
+          <p className={cn("italic font-medium", isAmbientDark ? "text-[#F5F1E8]/70" : "text-primary/60")}>Votre univers littéraire centralisé.</p>
         </div>
         
         <div className="flex flex-col md:flex-row gap-4 max-w-4xl mx-auto items-center">
@@ -624,7 +626,7 @@ export default function LibraryPage() {
           {BLOCKS.map((block) => (
             <section key={block.id} id={`block-${block.id}`} className="space-y-6 scroll-mt-24">
               <div className="flex items-center gap-4 px-2">
-                <h2 className="font-headline italic text-2xl md:text-3xl">{block.label}</h2>
+                <h2 className={cn("font-headline italic text-2xl md:text-3xl", isAmbientDark && "text-[#F5F1E8]")}>{block.label}</h2>
                 <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">{block.books.length}</span>
               </div>
 
@@ -782,7 +784,7 @@ export default function LibraryPage() {
 export function BookCard({ book }: { book: UserBook }) {
   const rating = Number((book as any).rating) || 0;
   return (
-    <div className="space-y-4 group cursor-pointer">
+    <div className="space-y-2 group cursor-pointer">
       <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/60 group-hover:shadow-2xl transition-all duration-700 bg-secondary/5 flex items-center justify-center">
         <BookCover
           src={book.cover}
@@ -794,23 +796,17 @@ export function BookCard({ book }: { book: UserBook }) {
             {STATUSES[book.status]?.label}
           </Badge>
         </div>
-        {rating > 0 && (
-          // Pas de plaque de fond derrière les étoiles — juste une ombre
-          // portée sur chaque étoile pour rester lisible sur n'importe
-          // quelle couverture (retour direct de Joana sur le mockup).
-          <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-0.5">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star
-                key={s}
-                className={cn(
-                  "h-3 w-3 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]",
-                  s <= rating ? "text-copper fill-copper" : "fill-transparent text-white/75"
-                )}
-              />
-            ))}
-          </div>
-        )}
       </div>
+      {rating > 0 && (
+        <div className="flex justify-center gap-0.5">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Star
+              key={s}
+              className={cn("h-3 w-3", s <= rating ? "text-copper fill-copper" : "fill-transparent text-muted-foreground/25")}
+            />
+          ))}
+        </div>
+      )}
       <div className="text-center px-2">
         <h3 className="text-sm font-headline line-clamp-1 italic">
           {cleanBookTitle(book.title)}{(book as any).volume ? ` — ${(book as any).volume}` : ""}

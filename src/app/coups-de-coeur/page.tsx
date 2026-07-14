@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { RANKS, RankType } from "@/app/library/page";
 import { Diamond, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart, Gift, Sun, X } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
@@ -22,6 +23,7 @@ export default function CoupsDeCoeurPage() {
   const { toast } = useToast();
   const { adminMode } = useAdminMode();
   const isAdmin = adminMode;
+  const isAmbientDark = useAmbientDark();
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
   const [activeView, setActiveView] = useState<"lectures" | "auteurs">("lectures");
@@ -187,8 +189,8 @@ export default function CoupsDeCoeurPage() {
         <div className="flex justify-center gap-3 mb-2">
           <Heart className="h-6 w-6 md:h-8 md:w-8 text-primary/40 animate-pulse" />
         </div>
-        <h1 className="text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight">Coups de Cœur</h1>
-        <p className="text-primary/60 max-w-md mx-auto italic text-sm md:text-lg font-medium">
+        <h1 className={cn("text-3xl sm:text-4xl md:text-6xl font-headline tracking-tight", isAmbientDark && "text-[#F5F1E8]")}>Coups de Cœur</h1>
+        <p className={cn("max-w-md mx-auto italic text-sm md:text-lg font-medium", isAmbientDark ? "text-[#F5F1E8]/70" : "text-primary/60")}>
           L'écrin de vos lectures, classées selon la Palme que vous leur avez attribuée.
         </p>
       </header>
