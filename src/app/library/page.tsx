@@ -458,15 +458,22 @@ export default function LibraryPage() {
   const dnfBlockBooks = useMemo(() => getBooksForStatus("dnf"), [userBooks, searchQuery, sortMode]);
 
   // Bloc "Lu" : regroupé par mois de lecture. Priorité de date : date de
-  // fin de lecture, puis date de début, puis dateRead (champ historique),
-  // puis dateAdded en tout dernier repli. Important : dès qu'une date de
-  // début OU de fin existe, le livre reste dans le mois correspondant —
-  // même s'il a été retiré des objectifs. "Lu également" est réservé aux
-  // seuls livres sans aucune date connue, qu'ils soient exclus ou non.
+  // fin de lecture, puis date de début, puis dateRead (champ historique).
+  // dateAdded (date d'AJOUT à la bibliothèque, pas de lecture) sert
+  // encore de dernier repli pour les livres normaux — c'est ainsi que
+  // la plupart des livres déjà organisés par mois le sont. Mais pour un
+  // livre RETIRÉ DES OBJECTIFS (typiquement un import d'historique sans
+  // date précise), dateAdded n'est plus utilisée : elle ne représente
+  // que le jour où le livre a été ajouté à Lectoria, pas lu, et
+  // grouperait à tort tout un lot d'anciens livres importés le même
+  // jour dans le mois en cours. Ces livres tombent alors dans
+  // "Lu également" s'ils n'ont pas de vraie date de lecture.
   const readByMonth = useMemo(() => {
     const groups: Record<string, { label: string; books: typeof readBlockBooks }> = {};
     readBlockBooks.forEach((b) => {
-      const raw = (b as any).readEndDate || (b as any).readStartDate || b.dateRead || b.dateAdded;
+      const excluded = (b as any).countTowardGoals === false;
+      const genuineDate = (b as any).readEndDate || (b as any).readStartDate || b.dateRead;
+      const raw = genuineDate || (excluded ? null : b.dateAdded);
       const date = raw ? (raw.toDate ? raw.toDate() : new Date(raw)) : null;
       const validDate = date && !isNaN(date.getTime()) ? date : null;
       const key = validDate ? `${validDate.getFullYear()}-${String(validDate.getMonth() + 1).padStart(2, "0")}` : "unknown";
