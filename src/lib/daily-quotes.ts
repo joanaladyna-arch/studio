@@ -32,3 +32,28 @@ export const PUBLIC_DOMAIN_QUOTES: { text: string; author: string }[] = [
   { text: "Le temps que tu perds pour ta rose est ce qui fait ta rose si importante.", author: "Antoine de Saint-Exupéry" },
   { text: "Il faut cultiver notre jardin.", author: "Voltaire" },
 ];
+
+export type DailyQuote = { text: string; author: string; isOwn: boolean };
+
+/**
+ * Citation du jour, partagée entre la fenêtre d'ouverture (Accueil) et
+ * tout autre usage futur. Alterne entre les citations déjà enregistrées
+ * par la lectrice sur ses livres (champ favoriteQuote, même source que
+ * Journal > Carnet de Citations) et la petite sélection ci-dessus.
+ * Index calculé à partir du jour de l'année : stable toute la journée,
+ * change automatiquement à minuit, sans tâche planifiée nécessaire.
+ */
+export function getDailyQuote(booksRaw: any[]): DailyQuote | null {
+  const citationPool: DailyQuote[] = (booksRaw || [])
+    .filter((b: any) => (b?.favoriteQuote || "").toString().trim())
+    .map((b: any) => ({
+      text: b.favoriteQuote,
+      author: `${b.title || ""}${b.author ? " — " + b.author : ""}`,
+      isOwn: true,
+    }));
+  const pool: DailyQuote[] = [...citationPool, ...PUBLIC_DOMAIN_QUOTES.map((q) => ({ ...q, isOwn: false }))];
+  if (pool.length === 0) return null;
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((Date.now() - start.getTime()) / 86400000);
+  return pool[dayOfYear % pool.length];
+}

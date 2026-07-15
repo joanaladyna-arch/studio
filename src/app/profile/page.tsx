@@ -17,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ContactAdminDialog } from "@/components/contact-admin-dialog";
 import { PublisherSubmissionDialog } from "@/components/publisher-submission-dialog";
 import { ThemeBackgroundDialog } from "@/components/theme-background-dialog";
-import { PUBLIC_DOMAIN_QUOTES } from "@/lib/daily-quotes";
 import { sortBySaga } from "@/lib/utils";
 import { siWattpad } from "simple-icons";
 import { 
@@ -37,7 +36,6 @@ import {
   FileText,
   ChevronRight,
   ChevronDown,
-  Quote,
   Shield,
   ShieldCheck,
   Medal,
@@ -201,23 +199,6 @@ export default function ProfilePage() {
 
   const isFounder = Boolean(user?.email && FOUNDER_EMAILS.includes(user.email));
 
-  // "Un jour, une citation" — alterne entre les citations que la
-  // lectrice a déjà enregistrées sur ses livres (Carnet, même source
-  // que Journal > Carnet de Citations) et une petite sélection
-  // d'auteurs du domaine public. Index calculé à partir du jour de
-  // l'année : stable toute la journée, change automatiquement à
-  // minuit, sans tâche planifiée nécessaire.
-  const dailyQuote = useMemo(() => {
-    const citationPool = toArray<any>(booksRaw)
-      .filter((b: any) => (b.favoriteQuote || "").toString().trim())
-      .map((b: any) => ({ text: b.favoriteQuote, author: `${b.title || ""}${b.author ? " — " + b.author : ""}`, isOwn: true }));
-    const pool = [...citationPool, ...PUBLIC_DOMAIN_QUOTES.map((q) => ({ ...q, isOwn: false }))];
-    if (pool.length === 0) return null;
-    const start = new Date(new Date().getFullYear(), 0, 0);
-    const dayOfYear = Math.floor((Date.now() - start.getTime()) / 86400000);
-    return pool[dayOfYear % pool.length];
-  }, [booksRaw]);
-
   const handleLogout = async () => {
     if (!auth) return;
     try {
@@ -334,21 +315,10 @@ export default function ProfilePage() {
           </div>
           {profile?.bio && <p className={cn("italic text-sm max-w-xl leading-relaxed", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>{profile.bio}</p>}
 
-          {/* Citations, tout en bas de la colonne comme demandé */}
+          {/* Citation simple, comme à l'origine */}
           <p className={cn("italic text-sm md:text-base leading-relaxed max-w-xl", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>
             "{profile?.profileQuote || "Chaque page tournée est un souvenir gravé."}"
           </p>
-          {dailyQuote && (
-            <Card className="glass-card border-none bg-white/50 p-5 max-w-md w-full">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-copper flex items-center justify-center gap-2 mb-2">
-                <Quote className="h-3.5 w-3.5" /> Un jour, une citation
-              </p>
-              <p className="font-headline italic text-base leading-relaxed">"{dailyQuote.text}"</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mt-2">
-                {dailyQuote.isOwn ? `📖 Depuis ton Carnet — ${dailyQuote.author}` : `✦ ${dailyQuote.author} — Petite sélection Lectoria`}
-              </p>
-            </Card>
-          )}
         </div>
 
         <div className="flex flex-col gap-4 w-full items-center md:items-start">
