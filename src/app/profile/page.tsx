@@ -256,7 +256,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-16 animate-paper pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-center md:items-start pt-4 md:pt-8 gap-6 md:gap-10">
+      <header className="flex flex-col lg:flex-row justify-between items-center lg:items-start pt-4 lg:pt-8 gap-6 lg:gap-10">
         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8">
           <div className="relative group">
             <Avatar className="h-28 w-28 md:h-44 md:w-44 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
