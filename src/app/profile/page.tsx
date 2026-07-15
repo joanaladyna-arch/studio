@@ -328,26 +328,26 @@ export default function ProfilePage() {
           {/* Ajout pur : petit aperçu lecture actuelle / prochaine lecture,
               ne remplace ni ne déplace rien d'existant sur cette page. */}
           {(currentRead || nextRead) && (
-            <div className="flex gap-3 w-full max-w-md">
+            <div className="flex flex-col gap-3 w-full max-w-md">
               {currentRead && (
-                <Link href={`/book/${currentRead.id}`} className="flex-1 flex items-center gap-2 p-2 rounded-xl bg-white/40 hover:bg-white/70 transition-colors min-w-0">
-                  <div className="relative h-12 w-8 rounded-md overflow-hidden shrink-0 bg-secondary/10">
+                <Link href={`/book/${currentRead.id}`} className="flex items-center gap-3 p-3 rounded-xl bg-white/40 hover:bg-white/70 transition-colors min-w-0">
+                  <div className="relative h-16 w-11 rounded-md overflow-hidden shrink-0 bg-secondary/10">
                     <BookCover src={currentRead.cover} alt={currentRead.title || ""} className="object-cover" />
                   </div>
                   <div className="min-w-0 text-left">
-                    <p className="text-[8px] font-bold uppercase tracking-widest text-primary/40">En cours</p>
-                    <p className="text-[11px] font-headline italic leading-tight truncate">{cleanBookTitle(currentRead.title)}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-primary/40">En cours</p>
+                    <p className="text-sm font-headline italic leading-tight truncate">{cleanBookTitle(currentRead.title)}</p>
                   </div>
                 </Link>
               )}
               {nextRead && (
-                <Link href={`/book/${nextRead.id}`} className="flex-1 flex items-center gap-2 p-2 rounded-xl bg-white/40 hover:bg-white/70 transition-colors min-w-0">
-                  <div className="relative h-12 w-8 rounded-md overflow-hidden shrink-0 bg-secondary/10">
+                <Link href={`/book/${nextRead.id}`} className="flex items-center gap-3 p-3 rounded-xl bg-white/40 hover:bg-white/70 transition-colors min-w-0">
+                  <div className="relative h-16 w-11 rounded-md overflow-hidden shrink-0 bg-secondary/10">
                     <BookCover src={nextRead.cover} alt={nextRead.title || ""} className="object-cover" />
                   </div>
                   <div className="min-w-0 text-left">
-                    <p className="text-[8px] font-bold uppercase tracking-widest text-primary/40">Ensuite</p>
-                    <p className="text-[11px] font-headline italic leading-tight truncate">{cleanBookTitle(nextRead.title)}</p>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-primary/40">Ensuite</p>
+                    <p className="text-sm font-headline italic leading-tight truncate">{cleanBookTitle(nextRead.title)}</p>
                   </div>
                 </Link>
               )}
