@@ -115,11 +115,20 @@ export default function StatsPage() {
     });
 
     // Compteur dédié à l'Objectif Annuel : exclut les livres marqués
-    // "Retirer des objectifs" depuis la Bibliothèque, pour rester
-    // cohérent avec le widget Objectif de lecture de l'Accueil. Le reste
-    // du bilan (readCount, genres, rythme, graphique...) continue de
-    // refléter l'historique complet de lecture, volontairement inchangé.
-    const goalEligibleReadCount = read.filter((b: any) => b.countTowardGoals !== false).length;
+    // "Retirer des objectifs" depuis la Bibliothèque, ET ne compte que
+    // les livres lus PENDANT L'ANNÉE EN COURS (pas tout l'historique) —
+    // c'était le bug précis remonté : le compteur incluait à tort des
+    // livres lus les années précédentes. Priorité de date identique au
+    // reste de l'app : fin > début > dateRead > dateAdded (ce dernier
+    // uniquement pour les livres non exclus).
+    const currentYear = new Date().getFullYear();
+    const goalEligibleReadCount = read.filter((b: any) => {
+      if (b.countTowardGoals === false) return false;
+      const raw = b.readEndDate || b.readStartDate || b.dateRead || b.dateAdded;
+      if (!raw) return false;
+      const d = raw?.toDate ? raw.toDate() : new Date(raw);
+      return !isNaN(d.getTime()) && d.getFullYear() === currentYear;
+    }).length;
 
     return {
       readCount: read.length,

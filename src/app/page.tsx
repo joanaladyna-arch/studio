@@ -128,13 +128,28 @@ export default function Home() {
     // Seuls les livres pour lesquels l'utilisatrice a confirmé qu'ils
     // comptent (case cochée à l'ajout) alimentent les objectifs — un
     // livre déjà lu par le passé, ajouté seulement pour archive, ne doit
-    // jamais gonfler artificiellement les objectifs en cours.
-    const goalEligibleBooks = readBooks.filter(b => (b as any).countTowardGoals !== false);
+    // jamais gonfler artificiellement les objectifs en cours. Et ne
+    // comptent que ceux réellement lus PENDANT L'ANNÉE/LE MOIS en cours
+    // (pas tout l'historique) — c'était le bug précis remonté : le
+    // compteur annuel incluait à tort des livres lus les années
+    // précédentes. Priorité de date : fin > début > dateRead > dateAdded
+    // (ce dernier uniquement pour les livres non exclus).
+    const getGenuineDate = (b: any): Date | null => {
+      if (b.countTowardGoals === false) return null;
+      const raw = b.readEndDate || b.readStartDate || b.dateRead || b.dateAdded;
+      if (!raw) return null;
+      const d = raw?.toDate ? raw.toDate() : new Date(raw);
+      return isNaN(d.getTime()) ? null : d;
+    };
 
-    const monthlyRead = goalEligibleBooks.filter(b => {
-      if (!b.dateAdded) return false;
-      const d = b.dateAdded.toDate ? b.dateAdded.toDate() : new Date(b.dateAdded);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    const goalEligibleBooks = readBooks.filter((b: any) => {
+      const d = getGenuineDate(b);
+      return d !== null && d.getFullYear() === currentYear;
+    });
+
+    const monthlyRead = readBooks.filter((b: any) => {
+      const d = getGenuineDate(b);
+      return d !== null && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
     const pagesRead = goalEligibleBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
