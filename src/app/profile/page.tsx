@@ -275,12 +275,12 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-16 animate-paper pb-20">
-      <header className="flex flex-col lg:flex-row justify-between items-center lg:items-start pt-4 lg:pt-8 gap-6 lg:gap-10">
-        <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8">
+      <header className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-8 lg:gap-14 pt-4 lg:pt-8">
+        <div className="flex flex-col items-center text-center gap-4">
           <div className="relative group">
-            <Avatar className="h-28 w-28 lg:h-44 lg:w-44 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
+            <Avatar className="h-28 w-28 lg:h-36 lg:w-36 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
               <AvatarImage src={userPhoto} className="object-cover" />
-              <AvatarFallback className="font-headline italic text-xl lg:text-3xl">PL</AvatarFallback>
+              <AvatarFallback className="font-headline italic text-xl lg:text-2xl">PL</AvatarFallback>
             </Avatar>
             {/* Overlay desktop (hover) */}
             <button
@@ -301,53 +301,57 @@ export default function ProfilePage() {
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-            <div className="absolute -bottom-1.5 -right-1.5 lg:-bottom-2 lg:-right-2 bg-amber-500 text-white rounded-full p-2 lg:p-3 border-4 border-white shadow-xl z-20">
-              <Crown className="h-5 w-5 lg:h-7 lg:w-7" />
+            <div className="absolute -bottom-1.5 -right-1.5 lg:-bottom-1 lg:-right-1 bg-amber-500 text-white rounded-full p-2 border-4 border-white shadow-xl z-20">
+              <Crown className="h-5 w-5" />
             </div>
             {isFounder && (
-              <div className="absolute -top-1 -left-1 lg:-top-2 lg:-left-2 bg-copper text-primary-foreground rounded-full p-1.5 lg:p-2 border-2 lg:border-4 border-white shadow-xl z-20" title="Lectrice Fondatrice — bêta de la première heure">
-                <Sparkles className="h-3.5 w-3.5 lg:h-5 lg:w-5" />
+              <div className="absolute -top-1 -left-1 bg-copper text-primary-foreground rounded-full p-1.5 border-2 border-white shadow-xl z-20" title="Lectrice Fondatrice — bêta de la première heure">
+                <Sparkles className="h-3.5 w-3.5" />
               </div>
             )}
           </div>
-          <div className="space-y-2 lg:space-y-3 text-center lg:text-left">
-            <h1 className={cn("text-3xl sm:text-4xl lg:text-6xl font-headline italic tracking-tight break-words", isAmbientDark && "text-[#F5F1E8]")}>{userName}</h1>
-            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2">
-              <Badge className={cn("rounded-full border-none px-4 py-1.5 italic font-headline text-xs lg:text-sm gap-2", isAmbientDark ? "bg-[#F5F1E8]/15 text-[#F5F1E8]" : "bg-primary/10 text-primary")}>
-                <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
-              </Badge>
-              {isFounder && (
-                <Badge className={cn("rounded-full border-none px-4 py-1.5 italic font-headline text-xs lg:text-sm gap-2", isAmbientDark ? "bg-copper/25 text-[#F5F1E8]" : "bg-copper/10 text-copper")}>
-                  <Sparkles className="h-3.5 w-3.5" /> Lectrice Fondatrice
-                </Badge>
-              )}
-            </div>
-            <p className={cn("italic text-sm lg:text-lg leading-relaxed max-w-xl", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>
-              "{profile?.profileQuote || "Chaque page tournée est un souvenir gravé."}"
-            </p>
-            <div className={cn("flex items-center justify-center lg:justify-start gap-4 text-[10px] lg:text-xs font-bold uppercase tracking-widest", isAmbientDark ? "text-[#F5F1E8]/60" : "text-muted-foreground/70")}>
-              {user?.metadata?.creationTime && (
-                <span>Membre depuis {new Date(user.metadata.creationTime).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
-              )}
-              {followerCount !== null && followerCount > 0 && (
-                <Link href="/community" className="hover:text-rose transition-colors">{followerCount} abonnée{followerCount > 1 ? "s" : ""}</Link>
-              )}
-            </div>
-            {profile?.bio && <p className={cn("italic text-sm lg:text-xl max-w-xl leading-relaxed", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>{profile.bio}</p>}
-            {dailyQuote && (
-              <Card className="glass-card border-none bg-white/50 p-5 max-w-md mt-2">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-copper flex items-center gap-2 mb-2">
-                  <Quote className="h-3.5 w-3.5" /> Un jour, une citation
-                </p>
-                <p className="font-headline italic text-base lg:text-lg leading-relaxed">"{dailyQuote.text}"</p>
-                <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mt-2">
-                  {dailyQuote.isOwn ? `📖 Depuis ton Carnet — ${dailyQuote.author}` : `✦ ${dailyQuote.author} — Petite sélection Lectoria`}
-                </p>
-              </Card>
+
+          {/* Nom + statut de lectrice côte à côte, comme demandé */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <h1 className={cn("text-3xl lg:text-4xl font-headline italic tracking-tight break-words", isAmbientDark && "text-[#F5F1E8]")}>{userName}</h1>
+            <Badge className={cn("rounded-full border-none px-4 py-1.5 italic font-headline text-xs gap-2", isAmbientDark ? "bg-[#F5F1E8]/15 text-[#F5F1E8]" : "bg-primary/10 text-primary")}>
+              <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
+            </Badge>
+          </div>
+          {isFounder && (
+            <Badge className={cn("rounded-full border-none px-4 py-1.5 italic font-headline text-xs gap-2 -mt-2", isAmbientDark ? "bg-copper/25 text-[#F5F1E8]" : "bg-copper/10 text-copper")}>
+              <Sparkles className="h-3.5 w-3.5" /> Lectrice Fondatrice
+            </Badge>
+          )}
+
+          <div className={cn("flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-widest", isAmbientDark ? "text-[#F5F1E8]/60" : "text-muted-foreground/70")}>
+            {user?.metadata?.creationTime && (
+              <span>Membre depuis {new Date(user.metadata.creationTime).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</span>
+            )}
+            {followerCount !== null && followerCount > 0 && (
+              <Link href="/community" className="hover:text-rose transition-colors">{followerCount} abonnée{followerCount > 1 ? "s" : ""}</Link>
             )}
           </div>
+          {profile?.bio && <p className={cn("italic text-sm max-w-xl leading-relaxed", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>{profile.bio}</p>}
+
+          {/* Citations, tout en bas de la colonne comme demandé */}
+          <p className={cn("italic text-sm lg:text-base leading-relaxed max-w-xl", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>
+            "{profile?.profileQuote || "Chaque page tournée est un souvenir gravé."}"
+          </p>
+          {dailyQuote && (
+            <Card className="glass-card border-none bg-white/50 p-5 max-w-md w-full">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-copper flex items-center justify-center gap-2 mb-2">
+                <Quote className="h-3.5 w-3.5" /> Un jour, une citation
+              </p>
+              <p className="font-headline italic text-base leading-relaxed">"{dailyQuote.text}"</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mt-2">
+                {dailyQuote.isOwn ? `📖 Depuis ton Carnet — ${dailyQuote.author}` : `✦ ${dailyQuote.author} — Petite sélection Lectoria`}
+              </p>
+            </Card>
+          )}
         </div>
-        <div className="flex flex-col gap-4 w-full lg:w-auto">
+
+        <div className="flex flex-col gap-4 w-full items-center lg:items-start">
             <div className="flex gap-3 items-center justify-center lg:justify-start flex-wrap">
               <EditProfileDialog profile={profile} />
               <ContactAdminDialog />
