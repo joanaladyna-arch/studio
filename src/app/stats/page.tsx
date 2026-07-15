@@ -9,7 +9,7 @@ import { BookOpen, Headphones, FileText, Target, BarChart3, Clock, Star, Landmar
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import { BarChart, Bar, XAxis, ResponsiveContainer, Tooltip } from "recharts";
-import { FORMATS } from "@/app/library/page";
+import { FORMATS, RANKS } from "@/app/library/page";
 
 export default function StatsPage() {
   const { user } = useUser();
@@ -34,7 +34,10 @@ export default function StatsPage() {
     const progress = books.filter(b => b.status === 'progress');
     const dnf = books.filter(b => b.status === 'dnf');
     const totalPages = books.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
-    const favorites = books.filter(b => b.favorite || b.dePlume).length;
+    // Coups de cœur : même champ que la page Coups de Cœur (plumeRank),
+    // pas "favorite"/"dePlume" qui n'existent nulle part dans l'app —
+    // c'était la cause du 0 permanent malgré des livres réellement notés.
+    const favorites = books.filter((b: any) => b.plumeRank && Object.keys(RANKS).includes(b.plumeRank)).length;
     const audioHours = Math.round(
       books.reduce((acc, b: any) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.pagesRead) || 0) / 50 : 0), 0)
     );
@@ -75,10 +78,22 @@ export default function StatsPage() {
     // Rythme de lecture — moyenne mensuelle depuis le premier livre marqué
     // lu, pour donner un rythme réaliste plutôt qu'une simple division par
     // 12 qui pénaliserait une lectrice arrivée en cours d'année.
+    //
+    // Priorité de date : date de fin de lecture, puis date de début,
+    // puis dateRead (champ historique). dateAdded (date d'AJOUT à la
+    // bibliothèque, pas de lecture) ne sert de dernier repli que pour
+    // les livres non exclus des objectifs — sinon un import groupé
+    // (ex. tout un historique ajouté le même mois) gonflerait à tort
+    // ce mois-là dans le graphique de régularité, alors qu'aucun de ces
+    // livres n'a forcément été lu à ce moment précis.
     const readDates = read
       .map((b: any) => {
-        const raw = b.dateRead || b.dateAdded;
-        return raw?.toDate ? raw.toDate() : (raw ? new Date(raw) : null);
+        const excluded = b.countTowardGoals === false;
+        const genuineDate = b.readEndDate || b.readStartDate || b.dateRead;
+        const raw = genuineDate || (excluded ? null : b.dateAdded);
+        if (!raw) return null;
+        const d = raw?.toDate ? raw.toDate() : new Date(raw);
+        return isNaN(d.getTime()) ? null : d;
       })
       .filter(Boolean) as Date[];
     let monthlyPace = 0;
