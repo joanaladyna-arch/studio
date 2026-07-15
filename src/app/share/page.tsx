@@ -290,13 +290,26 @@ export default function SharePage() {
                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 via-secondary/15 to-primary/5">
                           <Loader2 className="h-6 w-6 animate-spin opacity-40" />
                         </div>
-                      ) : coverError ? (
+                      ) : (
+                        // Regroupe volontairement les deux cas (erreur de
+                        // récupération ET absence totale d'URL de
+                        // couverture connue) sous le même repli visible —
+                        // avant ce correctif, une couverture manquante
+                        // dès le départ (jamais tentée) retombait
+                        // silencieusement sur un rectangle blanc vide à
+                        // l'export, sans aucune indication du problème.
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-primary/10 via-secondary/15 to-primary/5 p-3 text-center">
                           <BookOpen className="h-8 w-8 opacity-30" />
-                          <p className="text-[9px] italic opacity-50 leading-tight">Couverture indisponible</p>
+                          <p className="text-[9px] italic opacity-50 leading-tight">{coverError || "Couverture introuvable"}</p>
+                          {finalCoverUrl && (
+                            <button
+                              onClick={() => setCoverRetryCount((c) => c + 1)}
+                              className="text-[9px] font-bold uppercase tracking-wider text-primary underline underline-offset-2"
+                            >
+                              Réessayer
+                            </button>
+                          )}
                         </div>
-                      ) : (
-                        <BookCover src={finalCoverUrl} alt={selectedBook.title} className="object-cover" />
                       )}
                     </div>
 
@@ -381,7 +394,7 @@ export default function SharePage() {
                   <button
                     key={p.name}
                     onClick={() => handleShareToSocial(p.name)}
-                    disabled={isExporting || !selectedBook || coverLoading}
+                    disabled={isExporting || !selectedBook || coverLoading || !coverDataUri}
                     title={`Partager sur ${p.name}`}
                     className="h-10 w-10 rounded-full shadow-md flex items-center justify-center shrink-0 transition-transform hover:scale-110 disabled:opacity-40 disabled:hover:scale-100"
                     style={{ background: p.bg }}
@@ -397,7 +410,7 @@ export default function SharePage() {
               <Button
                 variant="outline"
                 onClick={handleExport}
-                disabled={isExporting || !selectedBook || coverLoading}
+                disabled={isExporting || !selectedBook || coverLoading || !coverDataUri}
                 className="w-full rounded-2xl border-primary/20 text-primary h-12"
               >
                 {isExporting ? (
