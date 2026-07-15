@@ -275,17 +275,17 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-16 animate-paper pb-20">
-      <header className="grid grid-cols-1 lg:grid-cols-[1fr_1.3fr] gap-8 lg:gap-14 pt-4 lg:pt-8">
+      <header className="grid grid-cols-1 md:grid-cols-[1fr_1.3fr] gap-8 md:gap-14 pt-4 md:pt-8">
         <div className="flex flex-col items-center text-center gap-4">
           <div className="relative group">
-            <Avatar className="h-28 w-28 lg:h-36 lg:w-36 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
+            <Avatar className="h-28 w-28 md:h-36 md:w-36 border-4 border-white shadow-2xl overflow-hidden transition-transform duration-500 group-hover:scale-105">
               <AvatarImage src={userPhoto} className="object-cover" />
-              <AvatarFallback className="font-headline italic text-xl lg:text-2xl">PL</AvatarFallback>
+              <AvatarFallback className="font-headline italic text-xl md:text-2xl">PL</AvatarFallback>
             </Avatar>
             {/* Overlay desktop (hover) */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="absolute inset-0 bg-black/40 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-10 hidden lg:flex"
+              className="absolute inset-0 bg-black/40 items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full z-10 hidden md:flex"
               disabled={uploading}
             >
               {uploading ? <Loader2 className="h-8 w-8 text-white animate-spin" /> : <Camera className="h-8 w-8 text-white" />}
@@ -295,13 +295,13 @@ export default function ProfilePage() {
                 invisible à jamais pour les lectrices sur iPhone/Android. */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="lg:hidden absolute -bottom-1.5 -left-1.5 bg-primary text-white rounded-full p-2 border-4 border-white shadow-xl z-20 flex items-center justify-center"
+              className="md:hidden absolute -bottom-1.5 -left-1.5 bg-primary text-white rounded-full p-2 border-4 border-white shadow-xl z-20 flex items-center justify-center"
               disabled={uploading}
             >
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
             </button>
             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-            <div className="absolute -bottom-1.5 -right-1.5 lg:-bottom-1 lg:-right-1 bg-amber-500 text-white rounded-full p-2 border-4 border-white shadow-xl z-20">
+            <div className="absolute -bottom-1.5 -right-1.5 md:-bottom-1 md:-right-1 bg-amber-500 text-white rounded-full p-2 border-4 border-white shadow-xl z-20">
               <Crown className="h-5 w-5" />
             </div>
             {isFounder && (
@@ -313,7 +313,7 @@ export default function ProfilePage() {
 
           {/* Nom + statut de lectrice côte à côte, comme demandé */}
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <h1 className={cn("text-3xl lg:text-4xl font-headline italic tracking-tight break-words", isAmbientDark && "text-[#F5F1E8]")}>{userName}</h1>
+            <h1 className={cn("text-3xl md:text-4xl font-headline italic tracking-tight break-words", isAmbientDark && "text-[#F5F1E8]")}>{userName}</h1>
             <Badge className={cn("rounded-full border-none px-4 py-1.5 italic font-headline text-xs gap-2", isAmbientDark ? "bg-[#F5F1E8]/15 text-[#F5F1E8]" : "bg-primary/10 text-primary")}>
               <Feather className="h-3.5 w-3.5" /> {getReaderTitle(stats.readCount)}
             </Badge>
@@ -335,7 +335,7 @@ export default function ProfilePage() {
           {profile?.bio && <p className={cn("italic text-sm max-w-xl leading-relaxed", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>{profile.bio}</p>}
 
           {/* Citations, tout en bas de la colonne comme demandé */}
-          <p className={cn("italic text-sm lg:text-base leading-relaxed max-w-xl", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>
+          <p className={cn("italic text-sm md:text-base leading-relaxed max-w-xl", isAmbientDark ? "text-[#F5F1E8]/80" : "text-muted-foreground")}>
             "{profile?.profileQuote || "Chaque page tournée est un souvenir gravé."}"
           </p>
           {dailyQuote && (
@@ -351,29 +351,29 @@ export default function ProfilePage() {
           )}
         </div>
 
-        <div className="flex flex-col gap-4 w-full items-center lg:items-start">
-            <div className="flex gap-3 items-center justify-center lg:justify-start flex-wrap">
+        <div className="flex flex-col gap-4 w-full items-center md:items-start">
+            <div className="flex gap-3 items-center justify-center md:justify-start flex-wrap">
               <EditProfileDialog profile={profile} />
               <ContactAdminDialog />
             </div>
-            <div className="flex justify-center lg:justify-start">
+            <div className="flex justify-center md:justify-start">
               <PublisherSubmissionDialog />
             </div>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm lg:h-14 lg:px-8 font-headline italic lg:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
             </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm lg:h-14 lg:px-8 font-headline italic lg:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Bilan de lecture</Link>
             </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm lg:h-14 lg:px-8 font-headline italic lg:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/share"><Share2 className="h-5 w-5 mr-3" /> Exporter vers les réseaux</Link>
             </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm lg:h-14 lg:px-8 font-headline italic lg:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                 <Link href="/community"><Users className="h-5 w-5 mr-3" /> Communauté de lectrices</Link>
             </Button>
             <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
             {(profile?.wattpadUrl || profile?.amazonUrl) && (
-              <div className="flex gap-3 justify-center lg:justify-start px-2">
+              <div className="flex gap-3 justify-center md:justify-start px-2">
                 {profile?.wattpadUrl && (
                   <a
                     href={profile.wattpadUrl} target="_blank" rel="noopener noreferrer"
@@ -396,7 +396,7 @@ export default function ProfilePage() {
               </div>
             )}
             {user?.email && ADMIN_EMAILS.includes(user.email) && (
-              <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm lg:h-14 lg:px-8 font-headline italic lg:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+              <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                   <Link href="/admin"><ShieldCheck className="h-5 w-5 mr-3" /> Administration</Link>
               </Button>
             )}
