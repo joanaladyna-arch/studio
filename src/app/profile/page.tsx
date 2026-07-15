@@ -353,6 +353,43 @@ export default function ProfilePage() {
               )}
             </div>
           )}
+
+          {/* Ajout pur : 7 pastilles L M M J V S D — la lettre passe en
+              cuivre si l'app a été ouverte ce jour-là (semaine en cours,
+              lundi à dimanche), reste éteinte sinon. Ne remplace ni ne
+              déplace rien d'existant. */}
+          <div className="flex justify-center gap-2">
+            {(() => {
+              const openDays = new Set(toArray<string>(profile?.appOpenDays));
+              const today = new Date();
+              const todayStr = today.toISOString().slice(0, 10);
+              // Lundi = premier jour de la semaine
+              const mondayOffset = (today.getDay() + 6) % 7;
+              const monday = new Date(today);
+              monday.setDate(today.getDate() - mondayOffset);
+              const dayLetters = ["L", "M", "M", "J", "V", "S", "D"];
+              return dayLetters.map((letter, i) => {
+                const d = new Date(monday);
+                d.setDate(monday.getDate() + i);
+                const dStr = d.toISOString().slice(0, 10);
+                const isOpened = openDays.has(dStr);
+                const isToday = dStr === todayStr;
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "h-9 w-9 rounded-full flex items-center justify-center text-xs font-headline italic border-2 transition-colors",
+                      isOpened ? "bg-copper/20 border-copper text-copper font-bold" : "bg-primary/5 border-transparent text-muted-foreground/40",
+                      isToday && !isOpened && "border-primary/30"
+                    )}
+                    title={dStr}
+                  >
+                    {letter}
+                  </div>
+                );
+              });
+            })()}
+          </div>
         </div>
 
         <div className="flex flex-col gap-4 w-full items-center md:items-start">

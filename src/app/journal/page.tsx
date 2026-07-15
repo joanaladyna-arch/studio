@@ -7,6 +7,7 @@ import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { BookOpen, Headset, Save, History, Plus, Star, Sparkles, MessageCircle, Quote, PlusCircle, Share2, Heart } from "lucide-react";
@@ -80,6 +81,16 @@ export default function JournalPage() {
   }, [db, user]);
 
   const { data: books = [] } = useCollection(booksQuery);
+
+  // Liste déroulante des notes : uniquement les livres En cours et PAL —
+  // dès qu'un livre passe au statut "Lu", il disparaît automatiquement
+  // de cette liste (le filtre se recalcule à chaque chargement des
+  // livres, aucune action manuelle nécessaire).
+  const notableBooks = useMemo(() => {
+    return (books as any[])
+      .filter((b) => b.status === "progress" || b.status === "pal")
+      .sort((a, b) => (a.status === "progress" ? -1 : 1) - (b.status === "progress" ? -1 : 1));
+  }, [books]);
 
   // "Mes recommandations" : les livres auxquels une Palme a été
   // attribuée (le même classement que l'onglet Coups de Cœur) sont, par
@@ -319,12 +330,22 @@ export default function JournalPage() {
             <div className="space-y-8">
                 <Card className="glass-card shadow-lg border-none bg-white/60">
                     <CardHeader>
-                        <Input 
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Titre de l'œuvre..."
-                            className="text-2xl font-headline italic border-none bg-transparent h-auto px-0 focus-visible:ring-0 placeholder:opacity-30"
-                        />
+                        <Select value={title} onValueChange={setTitle}>
+                          <SelectTrigger className="text-2xl font-headline italic border-none bg-transparent h-auto px-0 focus:ring-0 [&>span]:truncate">
+                            <SelectValue placeholder="Choisir un livre..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {notableBooks.length > 0 ? (
+                              notableBooks.map((b: any) => (
+                                <SelectItem key={b.id} value={`${cleanBookTitle(b.title)}${b.author ? " — " + cleanAuthorName(b.author) : ""}`}>
+                                  <span className="italic">{b.status === "progress" ? "📖 " : "📚 "}{cleanBookTitle(b.title)}</span>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="px-2 py-3 text-sm italic opacity-50 text-center">Aucun livre en cours ou en PAL pour le moment.</div>
+                            )}
+                          </SelectContent>
+                        </Select>
                         <CardDescription className="italic">Partagez votre réflexion du moment.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">

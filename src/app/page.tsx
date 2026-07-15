@@ -33,6 +33,7 @@ import { useAmbientDark } from '@/hooks/use-ambient-dark';
 import { collection, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DailyQuoteModal } from '@/components/daily-quote-modal';
+import { TrackAppOpen } from '@/components/track-app-open';
 
 export default function Home() {
   const { user, loading: authLoading } = useUser();
@@ -185,6 +186,7 @@ export default function Home() {
   return (
     <div className="space-y-8 md:space-y-16 animate-paper">
       <DailyQuoteModal />
+      <TrackAppOpen />
       <header className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 pt-4 md:pt-10">
         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
           <Link href="/profile" className="relative group">
