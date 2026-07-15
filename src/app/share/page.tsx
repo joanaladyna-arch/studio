@@ -14,7 +14,7 @@ import { BookCover } from "@/components/book-cover";
 import Link from "next/link";
 import { RANKS, EMOTIONS, Book, BookCard } from "@/app/library/page";
 import { cn, toArray } from "@/lib/utils";
-import { useUser, useFirestore, useCollection } from "@/firebase";
+import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, query, where, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,6 +57,62 @@ export default function SharePage() {
   }, [db, user]);
 
   const { data: books = [], loading } = useCollection(booksQuery);
+
+  // Mode "Récap de l'année" : nécessite TOUS les livres (PAL, DNF,
+  // wishlist compris), pas seulement lus/en cours comme pour la carte
+  // livre par livre — d'où une requête séparée, sans filtre de statut.
+  const [mode, setMode] = useState<"book" | "recap">("book");
+  const allBooksQuery = useMemo(() => {
+    if (!db || !user) return null;
+    return collection(db, "users", user.uid, "books");
+  }, [db, user]);
+  const { data: allBooks = [] } = useCollection(allBooksQuery);
+
+  const profileRef = useMemo(() => {
+    if (!db || !user) return null;
+    return doc(db, "users", user.uid);
+  }, [db, user]);
+  const { data: profile } = useDoc(profileRef);
+
+  const recapStats = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const getGenuineDate = (b: any): Date | null => {
+      if (b.countTowardGoals === false) return null;
+      const raw = b.readEndDate || b.readStartDate || b.dateRead || b.dateAdded;
+      if (!raw) return null;
+      const d = raw?.toDate ? raw.toDate() : new Date(raw);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const readThisYear = allBooks.filter((b: any) => {
+      if (b.status !== "read" && b.status !== "reread") return false;
+      const d = getGenuineDate(b);
+      return d !== null && d.getFullYear() === currentYear;
+    });
+    const avisPostes = allBooks.filter((b: any) => (b.review || "").toString().trim()).length;
+    const coupsDeCoeur = allBooks.filter((b: any) => b.plumeRank && Object.keys(RANKS).includes(b.plumeRank)).length;
+    const livresPAL = allBooks.filter((b: any) => b.status === "pal").length;
+    const servicesPresse = allBooks.filter((b: any) => b.isPressService).length;
+    const auteursSuivis = toArray<string>(profile?.followedAuthors).length;
+
+    const genreCounts: Record<string, number> = {};
+    readThisYear.forEach((b: any) => {
+      (Array.isArray(b.genres) ? b.genres : []).forEach((g: string) => {
+        genreCounts[g] = (genreCounts[g] || 0) + 1;
+      });
+    });
+    const genreDominant = Object.entries(genreCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
+
+    return {
+      livresLus: readThisYear.length,
+      avisPostes,
+      coupsDeCoeur,
+      livresPAL,
+      servicesPresse,
+      auteursSuivis,
+      genreDominant,
+      year: currentYear,
+    };
+  }, [allBooks, profile]);
 
   const selectedBook = useMemo(() => {
     if (selectedBookId) return books.find(b => b.id === selectedBookId) || books[0];
@@ -184,7 +240,9 @@ export default function SharePage() {
     return toPng(cardRef.current, { pixelRatio: 3, cacheBust: true });
   };
 
-  const fileName = () => `lectoria-${(selectedBook?.title || "partage").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
+  const fileName = () => mode === "recap"
+    ? `lectoria-mon-annee-${recapStats.year}.png`
+    : `lectoria-${(selectedBook?.title || "partage").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
 
   const handleExport = async () => {
     if (isExporting) return;
@@ -223,8 +281,8 @@ export default function SharePage() {
       if (typeof navigator !== "undefined" && (navigator as any).canShare?.({ files: [file] })) {
         await (navigator as any).share({
           files: [file],
-          title: selectedBook?.title || "Lectoria",
-          text: selectedBook ? `${selectedBook.title} — sur Lectoria` : "Lectoria",
+          title: mode === "recap" ? `Mon année de lecture ${recapStats.year}` : (selectedBook?.title || "Lectoria"),
+          text: mode === "recap" ? `Mon année de lecture ${recapStats.year} — sur Lectoria` : (selectedBook ? `${selectedBook.title} — sur Lectoria` : "Lectoria"),
         });
       } else {
         const link = document.createElement("a");
@@ -247,7 +305,116 @@ export default function SharePage() {
         <p className="text-muted-foreground italic">Générez une fiche élégante pour vos réseaux sociaux.</p>
       </header>
 
-      {loading ? (
+      <div className="flex justify-center gap-3">
+        <button
+          onClick={() => setMode("book")}
+          className={cn(
+            "px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
+            mode === "book" ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
+          )}
+        >
+          Un livre
+        </button>
+        <button
+          onClick={() => setMode("recap")}
+          className={cn(
+            "px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
+            mode === "recap" ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
+          )}
+        >
+          Récap de l'année
+        </button>
+      </div>
+
+      {mode === "recap" ? (
+        <div className="grid md:grid-cols-[1fr_350px] gap-8 justify-items-center">
+          <div className="md:col-start-2 space-y-6 w-full max-w-[350px]">
+            <div
+              ref={cardRef}
+              className="relative w-full aspect-[9/16] rounded-[3rem] overflow-hidden shadow-2xl border border-white/40 flex flex-col p-8 animate-paper"
+              style={{ background: theme.gradient, color: theme.text }}
+            >
+              <div className="absolute top-0 left-0 w-full h-1/3 bg-gradient-to-b from-white/10 to-transparent" />
+              <div className="absolute top-0 right-12 w-1.5 h-11 rounded-b-sm" style={{ background: theme.accent }} />
+
+              <div className="relative z-10 flex flex-col h-full">
+                <div className="text-center space-y-1">
+                  <div className="text-[9px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>✦ Lectoria</div>
+                  <h2 className="text-3xl font-headline italic font-bold">Mon année de lecture</h2>
+                  <p className="text-[11px] font-bold tracking-widest" style={{ color: theme.copper }}>{recapStats.year}</p>
+                </div>
+
+                <div className="text-center my-6">
+                  <p className="text-6xl font-headline italic font-bold leading-none">{recapStats.livresLus}</p>
+                  <p className="text-[10px] uppercase tracking-widest opacity-60 mt-1">Livres lus cette année</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5 mt-auto">
+                  {[
+                    { icon: "💬", n: recapStats.avisPostes, l: "Avis postés" },
+                    { icon: "💎", n: recapStats.coupsDeCoeur, l: "Coups de cœur" },
+                    { icon: "📚", n: recapStats.livresPAL, l: "Livres en PAL" },
+                    { icon: "🎗️", n: recapStats.servicesPresse, l: "Services de presse" },
+                    { icon: "✍️", n: recapStats.auteursSuivis, l: "Auteurs suivis" },
+                    { icon: "🌙", n: recapStats.genreDominant, l: "Genre dominant" },
+                  ].map((s, i) => (
+                    <div key={i} className="rounded-2xl p-3 text-center" style={{ background: theme.badge }}>
+                      <div className="text-lg mb-0.5">{s.icon}</div>
+                      <div className="text-xl font-headline italic font-bold truncate">{s.n}</div>
+                      <div className="text-[7px] uppercase tracking-widest opacity-60 mt-0.5 leading-tight">{s.l}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-center pt-4">
+                  <p className="text-[11px] font-headline italic" style={{ color: theme.accent }}>Lectoria</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-center gap-3">
+                {[
+                  { name: "Instagram", icon: siInstagram, bg: "linear-gradient(45deg, #FEDA75, #FA7E1E, #D62976, #962FBF, #4F5BD5)" },
+                  { name: "TikTok", icon: siTiktok, bg: `#${siTiktok.hex}` },
+                  { name: "Twitch", icon: siTwitch, bg: `#${siTwitch.hex}` },
+                  { name: "Snapchat", icon: siSnapchat, bg: `#${siSnapchat.hex}` },
+                  { name: "Facebook", icon: siFacebook, bg: `#${siFacebook.hex}` },
+                ].map((p) => (
+                  <button
+                    key={p.name}
+                    onClick={() => handleShareToSocial(p.name)}
+                    disabled={isExporting}
+                    title={`Partager sur ${p.name}`}
+                    className="h-10 w-10 rounded-full shadow-md flex items-center justify-center shrink-0 transition-transform hover:scale-110 disabled:opacity-40 disabled:hover:scale-100"
+                    style={{ background: p.bg }}
+                  >
+                    {isExporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-white" />
+                    ) : (
+                      <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white"><path d={p.icon.path} /></svg>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                onClick={handleExport}
+                disabled={isExporting}
+                className="w-full rounded-2xl border-primary/20 text-primary h-12"
+              >
+                {isExporting ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Génération...</>
+                ) : exportDone ? (
+                  <><Check className="mr-2 h-4 w-4" /> Image enregistrée !</>
+                ) : (
+                  <><Download className="mr-2 h-4 w-4" /> Enregistrer</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : loading ? (
         <div className="py-20 text-center italic text-muted-foreground">Préparation de vos lectures...</div>
       ) : books.length > 0 ? (
         <div className="grid md:grid-cols-[1fr_350px] gap-8">
