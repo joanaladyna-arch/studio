@@ -36,6 +36,8 @@ import {
   FileText,
   ChevronRight,
   ChevronDown,
+  Landmark,
+  X,
   Shield,
   ShieldCheck,
   Medal,
@@ -49,7 +51,7 @@ import { cn, toArray, ADMIN_EMAILS, FOUNDER_EMAILS, cleanBookTitle } from '@/lib
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
 import { BookCover } from '@/components/book-cover';
 import { BookShelf } from '@/components/book-shelf';
-import { doc, collection, setDoc, serverTimestamp, updateDoc, deleteDoc, getDoc, getCountFromServer } from 'firebase/firestore';
+import { doc, collection, setDoc, serverTimestamp, updateDoc, deleteDoc, getDoc, getCountFromServer, arrayRemove } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Book, GENRES_LIST, TROPES_LIST, FORMATS, BookFormat } from '@/app/library/page';
 import { signOut, updateProfile } from 'firebase/auth';
@@ -541,6 +543,38 @@ export default function ProfilePage() {
                 </Avatar>
                 <p className="text-[9px] mt-1.5 truncate leading-tight">{a.name}</p>
               </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {toArray<string>(profile?.followedPublishers).length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-2">
+            <h3 className={cn("font-headline italic text-lg", isAmbientDark && "text-[#F5F1E8]")}>
+              Éditeurs Préférés ({toArray<string>(profile?.followedPublishers).length})
+            </h3>
+          </div>
+          <div className="flex flex-wrap gap-2 px-2">
+            {toArray<string>(profile?.followedPublishers).map((pub) => (
+              <Badge
+                key={pub}
+                variant="outline"
+                className="rounded-full border-copper/25 text-copper bg-copper/5 px-3 py-1.5 italic font-normal gap-2 group"
+              >
+                <Landmark className="h-3 w-3" />
+                {pub}
+                <button
+                  onClick={async () => {
+                    if (!db || !user) return;
+                    await setDoc(doc(db, "users", user.uid), { followedPublishers: arrayRemove(pub) }, { merge: true });
+                  }}
+                  className="opacity-40 hover:opacity-100 transition-opacity"
+                  aria-label={`Ne plus suivre ${pub}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
             ))}
           </div>
         </div>

@@ -6,7 +6,7 @@ import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useDoc } from "@/firebase";
 import { collection, doc, getDocs, setDoc, serverTimestamp } from "firebase/firestore";
-import { Newspaper, Loader2, Archive, ChevronDown, ChevronUp } from "lucide-react";
+import { Newspaper, Loader2, Archive, ChevronDown, ChevronUp, Landmark } from "lucide-react";
 import Link from "next/link";
 import { useAdminMode } from "@/components/admin-mode";
 import { ActualitesManager } from "@/components/actualites-manager";
@@ -191,6 +191,10 @@ function ActualiteCard({ item }: { item: any }) {
           <Link href={`/author/${encodeURIComponent(item.authorName)}`} className="text-[10px] font-bold uppercase tracking-widest text-primary/60 hover:text-primary transition-colors">
             {item.authorName}
           </Link>
+        ) : item.publisherName ? (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-copper/70 flex items-center gap-1.5">
+            <Landmark className="h-3 w-3" /> {item.publisherName}
+          </span>
         ) : (
           <span className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Actualité littéraire</span>
         )}

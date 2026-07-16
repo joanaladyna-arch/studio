@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
-import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where, onSnapshot, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -14,6 +14,7 @@ import {
   Globe,
   Headphones,
   Landmark,
+  Heart,
   Hash,
   Loader2,
   Camera,
@@ -1216,6 +1217,40 @@ export default function BookDetailPage() {
                      className="h-10 border-none bg-transparent px-0 italic focus-visible:ring-0"
                    />
                  </div>
+                 {(() => {
+                   const publisherName = ((editedData as any).publisher || masterBook?.publisher || "").trim();
+                   if (!publisherName) return null;
+                   const isFollowingPublisher = toArray<string>(profile?.followedPublishers).some(
+                     (p) => p.toLowerCase() === publisherName.toLowerCase()
+                   );
+                   const togglePublisherFollow = async () => {
+                     if (!db || !user) return;
+                     try {
+                       await setDoc(
+                         doc(db, "users", user.uid),
+                         { followedPublishers: isFollowingPublisher ? arrayRemove(publisherName) : arrayUnion(publisherName) },
+                         { merge: true }
+                       );
+                       toast({
+                         title: isFollowingPublisher ? "Éditeur retiré du suivi" : "Éditeur suivi",
+                         description: isFollowingPublisher ? undefined : "Ses nouveautés pourront apparaître dans tes Actualités.",
+                       });
+                     } catch (err) {
+                       console.error("Toggle Publisher Follow Error:", err);
+                     }
+                   };
+                   return (
+                     <Button
+                       type="button"
+                       variant="ghost"
+                       onClick={togglePublisherFollow}
+                       className={cn("rounded-xl h-9 px-3 shrink-0 gap-1.5", isFollowingPublisher ? "text-copper" : "text-muted-foreground/50")}
+                     >
+                       <Heart className={cn("h-4 w-4", isFollowingPublisher && "fill-copper")} />
+                       <span className="text-[10px] font-bold uppercase hidden sm:inline">{isFollowingPublisher ? "Suivi" : "Suivre"}</span>
+                     </Button>
+                   );
+                 })()}
                </div>
 
                <div className="space-y-6">
