@@ -38,6 +38,7 @@ import {
   ChevronDown,
   Landmark,
   X,
+  HelpCircle,
   Shield,
   ShieldCheck,
   Medal,
@@ -417,6 +418,9 @@ export default function ProfilePage() {
                 <Link href="/community"><Users className="h-5 w-5 mr-3" /> Communauté de lectrices</Link>
             </Button>
             <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                <Link href="/guide"><HelpCircle className="h-5 w-5 mr-3" /> Comment utiliser Lectoria</Link>
+            </Button>
             {(profile?.wattpadUrl || profile?.amazonUrl) && (
               <div className="flex gap-3 justify-center md:justify-start px-2">
                 {profile?.wattpadUrl && (
