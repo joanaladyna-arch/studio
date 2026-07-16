@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
+import { StarRating } from "@/components/star-rating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor } from "@/lib/utils";
@@ -825,15 +826,21 @@ export function BookCard({ book }: { book: UserBook }) {
             {STATUSES[book.status]?.label}
           </Badge>
         </div>
+        {book.format && FORMATS[book.format] && (() => {
+          const FormatIcon = FORMATS[book.format].icon;
+          return (
+            <div
+              className="absolute bottom-2 left-2 h-7 w-7 rounded-full bg-white/85 shadow-sm flex items-center justify-center z-10"
+              title={FORMATS[book.format].label}
+            >
+              <FormatIcon className={cn("h-3.5 w-3.5", FORMATS[book.format].color)} />
+            </div>
+          );
+        })()}
       </div>
       {rating > 0 && (
-        <div className="flex justify-center gap-0.5">
-          {[1, 2, 3, 4, 5].map((s) => (
-            <Star
-              key={s}
-              className={cn("h-3 w-3", s <= rating ? "text-copper fill-copper" : "fill-transparent text-muted-foreground/25")}
-            />
-          ))}
+        <div className="flex justify-center">
+          <StarRating rating={rating} size={12} gap="gap-0.5" colorClass="text-copper fill-copper" emptyClass="fill-transparent text-muted-foreground/25" />
         </div>
       )}
       <div className="text-center px-2">

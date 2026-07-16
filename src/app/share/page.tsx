@@ -89,7 +89,7 @@ export default function SharePage() {
       return d !== null && d.getFullYear() === currentYear;
     });
     const avisPostes = allBooks.filter((b: any) => (b.review || "").toString().trim()).length;
-    const coupsDeCoeur = allBooks.filter((b: any) => b.plumeRank && Object.keys(RANKS).includes(b.plumeRank)).length;
+    const coupsDeCoeur = allBooks.filter((b: any) => b.plumeRank && b.plumeRank !== "dnf").length;
     const livresPAL = allBooks.filter((b: any) => b.status === "pal").length;
     const servicesPresse = allBooks.filter((b: any) => b.isPressService).length;
     const auteursSuivis = toArray<string>(profile?.followedAuthors).length;

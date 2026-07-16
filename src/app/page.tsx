@@ -26,6 +26,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import { BookCover } from '@/components/book-cover';
+import { StarRating } from '@/components/star-rating';
 import { BookShelf } from '@/components/book-shelf';
 import { cleanBookTitle, cleanAuthorName, cn } from '@/lib/utils';
 import { useUser, useFirestore, useCollection, useDoc } from '@/firebase';
@@ -153,8 +154,20 @@ export default function Home() {
       return d !== null && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
     });
 
-    const pagesRead = goalEligibleBooks.reduce((acc, b) => acc + (Number(b.pagesRead) || 0), 0);
-    const audioHours = goalEligibleBooks.reduce((acc, b) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.pagesRead) || 0) / 50 : 0), 0);
+    // Pages : uniquement les formats papier/ebook/liseuse (le champ
+    // pagesRead n'a de sens que pour ceux-ci). Heures d'écoute : champ
+    // dédié audioHoursListened, saisi directement en heures — avant ce
+    // correctif, le calcul divisait à tort pagesRead par 50 pour les
+    // livres audio, un champ qui n'était jamais rempli pour eux (d'où
+    // les 0h systématiques remontés en retour bêta).
+    const pagesRead = goalEligibleBooks.reduce((acc, b) => {
+      const isAudio = ['audio', 'audible', 'audiolib'].includes(b.format || '');
+      return acc + (isAudio ? 0 : (Number((b as any).pagesRead) || 0));
+    }, 0);
+    const audioHours = goalEligibleBooks.reduce((acc, b) => {
+      const isAudio = ['audio', 'audible', 'audiolib'].includes(b.format || '');
+      return acc + (isAudio ? (Number((b as any).audioHoursListened) || 0) : 0);
+    }, 0);
 
     const goals = {
       annual: profile?.annualGoal || 24,
@@ -438,14 +451,7 @@ export default function Home() {
                     {cleanBookTitle(lastReviewedBook.title)}{lastReviewedBook.volume ? ` — ${lastReviewedBook.volume}` : ""}
                   </h3>
                   <p className="text-[10px] font-bold uppercase tracking-widest opacity-60">{cleanAuthorName(lastReviewedBook.author)}</p>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Star
-                        key={s}
-                        className={cn("h-3 w-3", s <= (lastReviewedBook.rating || 0) ? "text-copper fill-copper" : "text-muted-foreground/20")}
-                      />
-                    ))}
-                  </div>
+                  <StarRating rating={lastReviewedBook.rating || 0} size={12} gap="gap-1" colorClass="text-copper fill-copper" emptyClass="text-muted-foreground/20" />
                   <p className="text-xs md:text-sm italic text-muted-foreground leading-relaxed line-clamp-3">"{lastReviewedBook.review}"</p>
                 </div>
               </CardContent>

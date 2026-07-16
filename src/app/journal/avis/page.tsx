@@ -8,6 +8,7 @@ import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { BookCover } from "@/components/book-cover";
+import { StarRating } from "@/components/star-rating";
 
 export default function AllReviewsPage() {
   const { user } = useUser();
@@ -54,10 +55,8 @@ export default function AllReviewsPage() {
                         {cleanBookTitle(book.title)}{book.volume ? ` — ${book.volume}` : ""}
                       </h4>
                       <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 line-clamp-1">{cleanAuthorName(book.author)}</p>
-                      <div className="flex gap-1 pt-1">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star key={s} className={cn("h-3 w-3", s <= (book.rating || 0) ? "text-copper fill-copper" : "text-muted-foreground/20")} />
-                        ))}
+                      <div className="pt-1">
+                        <StarRating rating={book.rating || 0} size={12} gap="gap-1" colorClass="text-copper fill-copper" emptyClass="text-muted-foreground/20" />
                       </div>
                     </div>
                   </div>

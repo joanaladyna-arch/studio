@@ -149,7 +149,7 @@ export default function CoupsDeCoeurPage() {
   }, [db, user]);
   const { data: allUserBooks = [], loading } = useCollection(allBooksQuery);
 
-  const rankedBooks = useMemo(() => allUserBooks.filter((b: any) => b.plumeRank && Object.keys(RANKS).includes(b.plumeRank)), [allUserBooks]);
+  const rankedBooks = useMemo(() => allUserBooks.filter((b: any) => b.plumeRank && b.plumeRank !== "dnf"), [allUserBooks]);
 
   const giftBooks = useMemo(() => sortBySaga(allUserBooks.filter((b: any) => b.toGift) as any[]), [allUserBooks]);
 

@@ -12,6 +12,8 @@ import {
   Save, 
   Star, 
   Globe,
+  Headphones,
+  Landmark,
   Hash,
   Loader2,
   Camera,
@@ -40,6 +42,7 @@ import { Slider } from "@/components/ui/slider";
 import Image from "next/image";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
+import { StarRating } from "@/components/star-rating";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -877,7 +880,7 @@ export default function BookDetailPage() {
                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] font-bold uppercase tracking-[0.2em] opacity-60">
                  <div className="space-y-1"><div className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> Pages</div><span className="text-foreground">{masterBook?.pageCount || masterBook?.pages || "N/A"}</span></div>
                  <div className="space-y-1"><div className="flex items-center gap-2"><Hash className="h-4 w-4" /> ISBN</div><span className="text-foreground">{masterBook?.isbn13 || masterBook?.isbn || "N/A"}</span></div>
-                 <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{masterBook?.publisher || "N/A"}</span></div>
+                 <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{(userBook as any)?.publisher || masterBook?.publisher || "N/A"}</span></div>
                  <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Langue</div><span className="text-foreground">{masterBook?.language || "N/A"}</span></div>
                </div>
                <div className="flex flex-wrap gap-6">
@@ -1149,6 +1152,68 @@ export default function BookDetailPage() {
                    <p className="text-[10px] italic opacity-40">La date de fin sert au classement par mois dans votre bibliothèque.</p>
                  </div>
                )}
+
+               {/* Pages ou durée d'écoute selon le format — alimente les
+                   statistiques du Bilan et de l'Accueil (pages parcourues,
+                   heures d'écoute), qui affichaient toujours 0 faute d'un
+                   endroit pour saisir cette information. */}
+               <div className="glass-card bg-primary/5 border-none p-5 rounded-2xl">
+                 <div className="flex items-center gap-3">
+                   {["audio", "audible", "audiolib"].includes((editedData as any).format) ? (
+                     <>
+                       <Headphones className="h-5 w-5 text-primary/40 shrink-0" />
+                       <div className="flex-1 space-y-1">
+                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Durée d'écoute (en heures)</Label>
+                         <Input
+                           type="number"
+                           min="0"
+                           step="0.5"
+                           inputMode="decimal"
+                           value={(editedData as any).audioHoursListened ?? ""}
+                           onChange={(e) => setEditedData({ ...editedData, audioHoursListened: e.target.value === "" ? null : Number(e.target.value) } as any)}
+                           placeholder="Ex : 8.5"
+                           className="h-10 border-none bg-transparent px-0 italic focus-visible:ring-0"
+                         />
+                       </div>
+                     </>
+                   ) : (
+                     <>
+                       <BookOpen className="h-5 w-5 text-primary/40 shrink-0" />
+                       <div className="flex-1 space-y-1">
+                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Nombre de pages</Label>
+                         <Input
+                           type="number"
+                           min="0"
+                           inputMode="numeric"
+                           value={(editedData as any).pagesRead ?? ""}
+                           onChange={(e) => setEditedData({ ...editedData, pagesRead: e.target.value === "" ? null : Number(e.target.value) } as any)}
+                           placeholder={masterBook?.pageCount || masterBook?.pages ? `Ex : ${masterBook.pageCount || masterBook.pages}` : "Ex : 320"}
+                           className="h-10 border-none bg-transparent px-0 italic focus-visible:ring-0"
+                         />
+                       </div>
+                     </>
+                   )}
+                 </div>
+                 <p className="text-[10px] italic opacity-40 mt-2">Alimente les pages parcourues et le rythme de lecture dans ton Bilan.</p>
+               </div>
+
+               {/* Éditeur — modifiable ici, prioritaire sur la fiche
+                   partagée (souvent vide selon la source d'import). Avant
+                   ce champ, rien ne permettait de corriger un éditeur
+                   manquant : "N/A" s'affichait alors quoi qu'on fasse. */}
+               <div className="flex items-center gap-3 glass-card bg-primary/5 border-none p-5 rounded-2xl">
+                 <Landmark className="h-5 w-5 text-primary/40 shrink-0" />
+                 <div className="flex-1 space-y-1">
+                   <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Maison d'édition</Label>
+                   <Input
+                     value={(editedData as any).publisher ?? ""}
+                     onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value } as any)}
+                     placeholder={masterBook?.publisher || "Ex : Hugo Poche"}
+                     className="h-10 border-none bg-transparent px-0 italic focus-visible:ring-0"
+                   />
+                 </div>
+               </div>
+
                <div className="space-y-6">
                  <div className="flex items-center justify-between flex-wrap gap-4">
                    <Label className="italic text-3xl font-headline">Ma Note</Label>
@@ -1196,18 +1261,15 @@ export default function BookDetailPage() {
                      </DialogContent>
                    </Dialog>
                  </div>
-                 <div className="flex gap-4">
-                   {[1,2,3,4,5].map(s => (
-                    <Star 
-                      key={s} 
-                      onClick={() => setEditedData({ ...editedData, rating: s })} 
-                      className={cn(
-                        "h-12 w-12 cursor-pointer transition-all hover:scale-110", 
-                        s <= (editedData.rating || 0) ? "text-amber-400 fill-amber-400 drop-shadow-md" : "text-muted-foreground/10"
-                      )} 
-                    />
-                   ))}
-                 </div>
+                 <StarRating
+                   rating={editedData.rating || 0}
+                   size={48}
+                   interactive
+                   onChange={(v) => setEditedData({ ...editedData, rating: v })}
+                   gap="gap-4"
+                   colorClass="text-amber-400 fill-amber-400 drop-shadow-md"
+                   emptyClass="text-muted-foreground/10"
+                 />
                </div>
 
                <div className="space-y-6">

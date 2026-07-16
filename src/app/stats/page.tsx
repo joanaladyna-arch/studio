@@ -33,13 +33,20 @@ export default function StatsPage() {
     const read = books.filter(b => b.status === 'read' || b.status === 'reread');
     const progress = books.filter(b => b.status === 'progress');
     const dnf = books.filter(b => b.status === 'dnf');
-    const totalPages = books.reduce((acc, b) => acc + (b.pagesRead || 0), 0);
+    const totalPages = books.reduce((acc, b: any) => {
+      const isAudio = ['audio', 'audible', 'audiolib'].includes(b.format || '');
+      return acc + (isAudio ? 0 : (Number(b.pagesRead) || 0));
+    }, 0);
     // Coups de cœur : même champ que la page Coups de Cœur (plumeRank),
     // pas "favorite"/"dePlume" qui n'existent nulle part dans l'app —
     // c'était la cause du 0 permanent malgré des livres réellement notés.
-    const favorites = books.filter((b: any) => b.plumeRank && Object.keys(RANKS).includes(b.plumeRank)).length;
+    const favorites = books.filter((b: any) => b.plumeRank && b.plumeRank !== "dnf").length;
+    // Heures d'écoute : champ dédié audioHoursListened, saisi
+    // directement en heures — avant ce correctif, division par 50 d'un
+    // champ (pagesRead) jamais rempli pour les livres audio, d'où les
+    // 0h systématiques remontés en retour bêta.
     const audioHours = Math.round(
-      books.reduce((acc, b: any) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.pagesRead) || 0) / 50 : 0), 0)
+      books.reduce((acc, b: any) => acc + (['audio', 'audible', 'audiolib'].includes(b.format || '') ? (Number(b.audioHoursListened) || 0) : 0), 0)
     );
 
     // Most read publisher
