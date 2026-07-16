@@ -43,6 +43,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
 import { StarRating } from "@/components/star-rating";
+import { InfoBadge } from "@/components/info-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -757,7 +758,10 @@ export default function BookDetailPage() {
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label>
+             <div className="flex items-center gap-2">
+               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label>
+               <InfoBadge text="Ton système de «coup de cœur» à part, pour distinguer tes toutes meilleures lectures — bien plus rare qu'une simple bonne note. C'est différent de «Ma Note» plus haut : les étoiles disent combien tu as aimé sur le moment, la Palme dit si ce livre mérite une place à part dans ta bibliothèque." />
+             </div>
              <div className="flex flex-wrap gap-2">
                {SELECTABLE_RANKS.map((k) => {
                  const v = RANKS[k];
@@ -1216,7 +1220,10 @@ export default function BookDetailPage() {
 
                <div className="space-y-6">
                  <div className="flex items-center justify-between flex-wrap gap-4">
-                   <Label className="italic text-3xl font-headline">Ma Note</Label>
+                   <div className="flex items-center gap-2">
+                     <Label className="italic text-3xl font-headline">Ma Note</Label>
+                     <InfoBadge text="Ta note personnelle sur ce livre, de 1 à 5 étoiles (les demi-étoiles comme 3,5 ou 4,5 sont possibles). C'est différent de «Mon Rang» plus bas : la note dit combien tu as aimé, la Palme dit si ce livre fait partie de tes tout meilleurs souvenirs de lecture." />
+                   </div>
                    <Dialog open={ratingGridOpen} onOpenChange={setRatingGridOpen}>
                      <DialogTrigger asChild>
                        <Button variant="outline" className="rounded-2xl h-11 px-6 italic font-headline border-primary/20">
