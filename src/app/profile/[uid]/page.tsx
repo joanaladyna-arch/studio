@@ -147,17 +147,28 @@ export default function PublicProfilePage() {
       )}
 
       {toArray<any>(p.recommendedBooks).length > 0 && (
-        <div className="space-y-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-copper/70 flex items-center justify-center gap-2">
-            <Sparkles className="h-3.5 w-3.5" /> Pépites Incontournables de {p.name || "cette lectrice"}
+        <div
+          className="rounded-[2rem] p-6 relative overflow-hidden"
+          style={{ background: "linear-gradient(155deg, #F5EDE1 0%, #B08457 120%)" }}
+        >
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 flex items-center justify-center gap-2 mb-5">
+            💎 Pépites Incontournables de {p.name || "cette lectrice"}
           </p>
-          <div className="flex gap-3 overflow-x-auto pb-2 px-1 no-scrollbar">
+          <div className="flex gap-4 overflow-x-auto pb-2 px-1 no-scrollbar">
             {toArray<any>(p.recommendedBooks).map((b) => (
-              <div key={b.id} className="w-20 shrink-0 space-y-1.5 text-center">
-                <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-sm bg-secondary/10">
-                  <BookCover src={b.cover} alt={b.title || ""} className="object-cover" />
+              <div key={b.id} className="w-20 shrink-0 text-center">
+                <div
+                  className="relative aspect-[2/3] rounded-xl p-[3px] shadow-md"
+                  style={{ background: "linear-gradient(155deg, #B08457, #D98BA0, #B08457)" }}
+                >
+                  <div className="relative w-full h-full rounded-lg overflow-hidden bg-secondary/10">
+                    <BookCover src={b.cover} alt={b.title || ""} className="object-cover" />
+                  </div>
+                  <div className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-copper border-2 border-white shadow-sm flex items-center justify-center text-[9px]">
+                    💎
+                  </div>
                 </div>
-                <p className="text-[9px] italic leading-tight truncate">{cleanBookTitle(b.title)}</p>
+                <p className="text-[9px] italic leading-tight truncate mt-1.5 text-primary">{cleanBookTitle(b.title)}</p>
               </div>
             ))}
           </div>

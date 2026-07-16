@@ -702,16 +702,40 @@ export default function ProfilePage() {
       </section>
 
       {stats.recommendedBooks.length > 0 && (
-        <section className="space-y-10 pt-10">
-          <div className="flex items-center justify-between">
-            <h2 className="text-4xl font-headline italic flex items-center gap-4">
-              <Sparkles className="h-8 w-8 text-copper/60" /> Pépites Incontournables
-            </h2>
+        <section className="space-y-6 pt-10">
+          <div
+            className="rounded-[2rem] p-6 md:p-8 relative overflow-hidden"
+            style={{ background: "linear-gradient(155deg, #F5EDE1 0%, #B08457 120%)" }}
+          >
+            <div className="relative z-10 space-y-1 mb-6">
+              <h2 className="text-3xl md:text-4xl font-headline italic flex items-center gap-3 text-primary">
+                💎 Pépites Incontournables
+              </h2>
+              <p className="text-sm italic text-primary/60">
+                Les livres que tu as aimés et que tu recommandes à d'autres lectrices.
+              </p>
+            </div>
+            <div className="relative z-10 flex gap-4 overflow-x-auto no-scrollbar pb-2 px-1">
+              {stats.recommendedBooks.map((book: any) => (
+                <Link key={book.id} href={`/book/${book.id}`} className="shrink-0 w-24 text-center group">
+                  <div
+                    className="relative aspect-[2/3] rounded-2xl p-[3px] shadow-lg group-hover:-translate-y-1.5 transition-transform duration-300"
+                    style={{ background: "linear-gradient(155deg, #B08457, #D98BA0, #B08457)" }}
+                  >
+                    <div className="relative w-full h-full rounded-xl overflow-hidden bg-secondary/10">
+                      <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+                    </div>
+                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-copper border-2 border-white shadow-md flex items-center justify-center text-[11px]">
+                      💎
+                    </div>
+                  </div>
+                  <p className="text-[10px] italic font-headline mt-2 leading-tight truncate text-primary">
+                    {cleanBookTitle(book.title)}
+                  </p>
+                </Link>
+              ))}
+            </div>
           </div>
-          <p className="text-sm italic text-muted-foreground -mt-6">
-            Les livres que tu as aimés et que tu recommandes à d'autres lectrices.
-          </p>
-          <BookShelf books={stats.recommendedBooks} />
         </section>
       )}
     </div>
