@@ -9,7 +9,7 @@ import { FieldValue } from "firebase-admin/firestore";
  * validation par l'administratrice — jamais publiées directement (voir
  * PendingActualitesManager côté app).
  *
- * Protégée par un secret partagé (CRON_SECRET) pour qu'elle ne puisse
+ * Protégée par un secret partagé (CRONSECRET) pour qu'elle ne puisse
  * être déclenchée que par Vercel Cron, jamais par une requête publique.
  *
  * Fenêtre de détection volontairement resserrée à 45 jours après la
@@ -24,7 +24,7 @@ function normalize(s: string) {
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
-  const expected = process.env.CRON_SECRET ? `Bearer ${process.env.CRON_SECRET}` : null;
+  const expected = process.env.CRONSECRET ? `Bearer ${process.env.CRONSECRET}` : null;
   if (!expected || authHeader !== expected) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
