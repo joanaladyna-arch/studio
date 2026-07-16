@@ -19,7 +19,8 @@ import {
   Eye,
   FileJson,
   Save,
-  Sparkles
+  Sparkles,
+  Hash
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
@@ -37,7 +38,6 @@ export default function AdminPage() {
   const db = useFirestore();
   const { toast } = useToast();
   
-  // Excel states
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [excelData, setExcelData] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -51,7 +51,11 @@ export default function AdminPage() {
   const [isCleaningGenres, setIsCleaningGenres] = useState(false);
   const [cleanResults, setCleanResults] = useState<{ cleaned: number } | null>(null);
 
-  // --- Gestion de la navigation ---
+  // ── Compléter ISBN + Éditeur via BnF ──────────────────────────────────
+  const [isFillingIsbn, setIsFillingIsbn] = useState(false);
+  const [isbnProgress, setIsbnProgress] = useState(0);
+  const [isbnResults, setIsbnResults] = useState<{ filled: number; notFound: number; skipped: number } | null>(null);
+
   const [navOverrides, setNavOverrides] = useState<Record<string, { label?: string; visible?: boolean }>>({});
   const [isLoadingNav, setIsLoadingNav] = useState(false);
   const [isSavingNav, setIsSavingNav] = useState(false);
@@ -85,9 +89,8 @@ export default function AdminPage() {
     setIsSavingNav(true);
     try {
       await setDoc(doc(db, "config", "navigation"), { items: navOverrides, updatedAt: serverTimestamp() }, { merge: true });
-      toast({ title: "Navigation mise à jour", description: "Les changements sont visibles immédiatement (après rechargement de la page)." });
+      toast({ title: "Navigation mise à jour" });
     } catch (err) {
-      console.error("Save Nav Config Error:", err);
       toast({ variant: "destructive", title: "Erreur d'enregistrement" });
     } finally {
       setIsSavingNav(false);
@@ -128,15 +131,95 @@ export default function AdminPage() {
       setCleanResults({ cleaned });
       toast({ title: "Nettoyage terminé", description: `${cleaned} fiche(s) nettoyée(s).` });
     } catch (err) {
-      console.error("Clean Genres Error:", err);
       toast({ variant: "destructive", title: "Erreur de nettoyage" });
     } finally {
       setIsCleaningGenres(false);
     }
   };
 
-  const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
+  // ── Compléter ISBN + Éditeur manquants via BnF UNIQUEMENT ─────────────
+  const fillMissingIsbnPublisher = async () => {
+    if (!db) return;
+    setIsFillingIsbn(true);
+    setIsbnProgress(0);
+    setIsbnResults(null);
+    let filled = 0; let notFound = 0; let skipped = 0;
+    try {
+      const snap = await getDocs(collection(db, "masterBooks"));
+      // On ne traite que les fiches où ISBN ou éditeur est manquant
+      const candidates = snap.docs.filter(d => {
+        const data = d.data();
+        return !data.isbn13?.toString().trim() || !data.publisher?.toString().trim();
+      });
+      skipped = snap.docs.length - candidates.length;
 
+      for (let i = 0; i < candidates.length; i++) {
+        const bookDoc = candidates[i];
+        const data = bookDoc.data();
+        const title  = (data.title  || "").toString().trim();
+        const author = (data.author || "").toString().trim();
+        if (!title) { notFound++; setIsbnProgress(Math.round(((i+1)/candidates.length)*100)); continue; }
+
+        let foundIsbn      = "";
+        let foundPublisher = "";
+        let foundDescription = "";
+
+        try {
+          // Recherche BnF par titre + auteur
+          const q = author ? `${title} ${author}` : title;
+          const results = await searchBnF(q, "general");
+
+          // On cherche d'abord une correspondance exacte de titre
+          const match = results.find(r =>
+            r.title?.toLowerCase().trim() === title.toLowerCase().trim()
+          ) || results[0]; // sinon premier résultat
+
+          if (match) {
+            if (!data.isbn13?.toString().trim() && match.isbn?.trim())
+              foundIsbn = match.isbn.trim();
+            if (!data.publisher?.toString().trim() && match.publisher?.trim())
+              foundPublisher = match.publisher.trim();
+            // Bonus : résumé si manquant
+            if (!data.description?.toString().trim() && match.description?.trim())
+              foundDescription = cleanDescriptionHtml(match.description);
+          }
+        } catch (err) {
+          console.error("BnF search error:", title, err);
+        }
+
+        if (foundIsbn || foundPublisher || foundDescription) {
+          const updates: any = { updatedAt: serverTimestamp() };
+          if (foundIsbn)        updates.isbn13      = foundIsbn;
+          if (foundPublisher)   updates.publisher   = foundPublisher;
+          if (foundDescription) updates.description = foundDescription;
+          try {
+            await setDoc(doc(db, "masterBooks", bookDoc.id), updates, { merge: true });
+            filled++;
+          } catch (err) {
+            console.error("Write error:", title, err);
+            notFound++;
+          }
+        } else {
+          notFound++;
+        }
+
+        setIsbnProgress(Math.round(((i + 1) / candidates.length) * 100));
+      }
+
+      setIsbnResults({ filled, notFound, skipped });
+      toast({
+        title: "Terminé",
+        description: `${filled} fiche(s) complétée(s), ${notFound} introuvables dans la BnF, ${skipped} déjà complètes.`,
+      });
+    } catch (err) {
+      console.error("FillMissingIsbn Error:", err);
+      toast({ variant: "destructive", title: "Erreur", description: (err as any)?.message });
+    } finally {
+      setIsFillingIsbn(false);
+    }
+  };
+
+  const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
   if (!user || !isAdmin) {
     return <div className="p-20 text-center italic">Accès réservé aux gardiens de Lectoria.</div>;
   }
@@ -196,9 +279,7 @@ export default function AdminPage() {
     setIsProcessing(true);
     setProgress(0);
     setImportResults(null);
-    let success = 0;
-    let errors = 0;
-
+    let success = 0; let errors = 0;
     for (let i = 0; i < excelData.length; i++) {
       const row = excelData[i];
       try {
@@ -249,10 +330,7 @@ export default function AdminPage() {
           await setDoc(doc(db, "authors", authId), { name: authName, slug: authId, works: arrayUnion(bookData.title), bookIds: arrayUnion(bookId), updatedAt: serverTimestamp() }, { merge: true });
         }
         success++;
-      } catch (err) {
-        console.error("Row import error:", err);
-        errors++;
-      }
+      } catch (err) { console.error("Row import error:", err); errors++; }
       if ((i + 1) % 10 === 0 || i === excelData.length - 1) {
         setProgress(Math.round(((i + 1) / excelData.length) * 100));
       }
@@ -266,8 +344,7 @@ export default function AdminPage() {
   const syncAuthors = async () => {
     if (!db) return;
     setIsSyncingAuthors(true);
-    let booksProcessed = 0;
-    let authorsTouched = 0;
+    let booksProcessed = 0; let authorsTouched = 0;
     try {
       const snap = await getDocs(collection(db, "masterBooks"));
       for (const bookDoc of snap.docs) {
@@ -287,7 +364,6 @@ export default function AdminPage() {
       }
       toast({ title: "Synchronisation terminée", description: `${booksProcessed} livres parcourus, ${authorsTouched} fiches auteur mises à jour.` });
     } catch (err) {
-      console.error("Sync Authors Error:", err);
       toast({ variant: "destructive", title: "Échec de la synchronisation" });
     } finally {
       setIsSyncingAuthors(false);
@@ -350,7 +426,6 @@ export default function AdminPage() {
       setFillResults({ filled, notFound, skipped });
       toast({ title: "Recherche terminée", description: `${filled} résumés complétés, ${notFound} introuvables, ${skipped} en avaient déjà un.` });
     } catch (err) {
-      console.error("Fill Descriptions Error:", err);
       toast({ variant: "destructive", title: "Échec" });
     } finally {
       setIsFillingDescriptions(false);
@@ -377,7 +452,6 @@ export default function AdminPage() {
       await Promise.all(writes);
       toast({ title: "Nettoyage terminé", description: `${cleaned} résumé(s) nettoyé(s) sur ${checked} vérifié(s).` });
     } catch (err) {
-      console.error("Clean Descriptions Error:", err);
       toast({ variant: "destructive", title: "Échec" });
     } finally {
       setIsCleaningDescriptions(false);
@@ -522,12 +596,7 @@ export default function AdminPage() {
                   return (
                     <div key={item.id} className={cn("flex items-center gap-4 p-4 rounded-2xl bg-white/40 transition-opacity", !isVisible && "opacity-40")}>
                       <Icon className="h-5 w-5 text-primary/60 flex-shrink-0" />
-                      <Input
-                        value={override?.label ?? item.label}
-                        onChange={(e) => updateNavLabel(item.id, e.target.value)}
-                        placeholder={item.label}
-                        className="h-11 italic bg-white/60 rounded-xl border-none shadow-inner flex-1"
-                      />
+                      <Input value={override?.label ?? item.label} onChange={(e) => updateNavLabel(item.id, e.target.value)} placeholder={item.label} className="h-11 italic bg-white/60 rounded-xl border-none shadow-inner flex-1" />
                       <span className="text-[10px] opacity-40 italic hidden sm:inline">{item.href}</span>
                       <Switch checked={isVisible} onCheckedChange={() => toggleNavVisible(item.id)} />
                     </div>
@@ -549,6 +618,24 @@ export default function AdminPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-10 flex flex-col gap-4">
+
+            {/* ── NOUVEAU : Compléter ISBN + Éditeur via BnF ── */}
+            <Button variant="outline" onClick={fillMissingIsbnPublisher} disabled={isFillingIsbn} className="h-14 rounded-2xl italic font-headline text-lg border-amber-200 text-amber-700 hover:bg-amber-50">
+              {isFillingIsbn ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Hash className="mr-3 h-5 w-5" />}
+              Compléter ISBN + Éditeur manquants (BnF)
+            </Button>
+            {isFillingIsbn && (
+              <div className="space-y-1">
+                <Progress value={isbnProgress} className="h-2 bg-amber-100" />
+                <p className="text-[10px] text-center opacity-40 italic">{isbnProgress}% — interrogation de la BnF…</p>
+              </div>
+            )}
+            {isbnResults && (
+              <p className="text-[10px] text-center opacity-60 italic">
+                {isbnResults.filled} fiche(s) complétée(s), {isbnResults.notFound} introuvables dans la BnF, {isbnResults.skipped} déjà complètes.
+              </p>
+            )}
+
             <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
               {isSyncingAuthors ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Synchroniser les Auteurs
             </Button>
