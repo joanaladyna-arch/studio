@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
@@ -14,20 +13,6 @@ import { Loader2, Search, Pencil, X, Save, Upload, User as UserIcon, GitMerge, S
 import Image from "next/image";
 import { cn, slugify, authorKey } from "@/lib/utils";
 
-/**
- * Éditeur de fiche auteur, utilisable depuis la Bibliothèque en mode
- * admin. Permet de :
- *  - compléter à la main bio / photo / nom affiché d'un auteur (ces
- *    valeurs priment ensuite sur celles récupérées d'Open Library) ;
- *  - fusionner deux fiches en doublon (ex. "Kent Rina" et "Rina Kent") :
- *    on réécrit l'auteur des livres concernés vers le nom retenu, sans
- *    rien perdre.
- *
- * Les fiches sont stockées dans la collection `authors`, identifiées par
- * un slug insensible à l'ordre du nom (authorKey), pour que les variantes
- * d'ordre pointent vers la même fiche.
- */
-
 export function AuthorEditor({
   onClose,
   onSaved,
@@ -35,11 +20,7 @@ export function AuthorEditor({
   initialAuthorName,
 }: {
   onClose: () => void;
-  /** Appelé après un enregistrement réussi, avec la fiche à jour. */
   onSaved?: (author: any) => void;
-  /** Si fourni, l'éditeur saute directement en mode édition pour cet
-   * auteur (slug `authors/{id}`) au lieu d'afficher d'abord la recherche
-   * — utile quand on sait déjà de qui il s'agit (ex. depuis sa fiche). */
   initialAuthorId?: string;
   initialAuthorName?: string;
 }) {
@@ -67,7 +48,6 @@ export function AuthorEditor({
       .then((snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setAuthorsCache(list);
-        // Saut direct en édition si on connaît déjà l'auteur concerné.
         if (initialAuthorId) {
           const found = list.find((a: any) => a.id === initialAuthorId);
           const author = found || { id: initialAuthorId, name: initialAuthorName || initialAuthorId };
@@ -85,10 +65,6 @@ export function AuthorEditor({
     const matched = (authorsCache || []).filter((a) =>
       (a.name || "").toLowerCase().includes(q)
     );
-    // Groupement par nom normalisé : si plusieurs docs ont exactement
-    // le même nom (cas le plus fréquent des doublons), on n'affiche
-    // qu'une entrée et on indique combien de doublons existent pour
-    // que l'admin sache lesquels fusionner.
     const groups: Record<string, any[]> = {};
     for (const a of matched) {
       const key = (a.name || "").toLowerCase().trim();
@@ -97,9 +73,6 @@ export function AuthorEditor({
     }
     return Object.values(groups)
       .map((group) => {
-        // On choisit comme entrée principale celle qui a la photo ET
-        // le plus d'œuvres — c'est elle qu'on propose d'éditer en
-        // priorité, les autres seront proposées à la fusion.
         const best = group.sort((a, b) => {
           const aScore = (a.photo ? 100 : 0) + (Array.isArray(a.works) ? a.works.length : 0);
           const bScore = (b.photo ? 100 : 0) + (Array.isArray(b.works) ? b.works.length : 0);
@@ -143,14 +116,11 @@ export function AuthorEditor({
     }
     setIsSaving(true);
     try {
-      // On conserve l'id existant de la fiche pour ne pas créer de doublon.
       const ref = doc(db, "authors", editing.id);
       const dataToSave = {
         name: form.name.trim(),
         bio: form.bio?.trim() || "",
         photo: form.photo?.trim() || "",
-        // marqueurs : ces valeurs ont été saisies à la main et priment sur
-        // celles récupérées automatiquement (Open Library).
         manualBio: !!form.bio?.trim(),
         manualPhoto: !!form.photo?.trim(),
         updatedAt: serverTimestamp(),
@@ -167,22 +137,12 @@ export function AuthorEditor({
       }
     } catch (err) {
       console.error("Save Author Error:", err);
-      toast({ variant: "destructive", title: "Erreur d'enregistrement" });
+      toast({ variant: "destructive", title: "Erreur d'enregistrement", description: (err as any)?.message });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Fusionne la fiche en cours d'édition DANS la fiche cible : tous les
-  // livres de l'auteur courant voient leur champ `author` réécrit vers le
-  // nom de la cible. Aucun livre n'est supprimé.
-  // Fusionne automatiquement tous les doublons de la collection authors :
-  // - groupe les docs par nom normalisé (même casse)
-  // - pour chaque groupe de doublons, choisit le "meilleur" (photo + plus
-  //   d'œuvres) comme cible
-  // - combine les works/bookIds de tous les autres dans la cible
-  // - supprime les docs redondants
-  // On utilise des batches pour limiter les écritures individuelles.
   const autoMergeDuplicates = useCallback(async () => {
     if (!db || !authorsCache) return;
     if (!confirm("Fusionner automatiquement tous les doublons de la base auteur ? L'opération est irréversible.")) return;
@@ -199,7 +159,6 @@ export function AuthorEditor({
       }
       for (const group of Object.values(groups)) {
         if (group.length < 2) continue;
-        // Tri : photo + plus d'œuvres en tête
         group.sort((a, b) => {
           const aS = (a.photo ? 100 : 0) + (Array.isArray(a.works) ? a.works.length : 0);
           const bS = (b.photo ? 100 : 0) + (Array.isArray(b.works) ? b.works.length : 0);
@@ -207,7 +166,6 @@ export function AuthorEditor({
         });
         const target = group[0];
         const rest = group.slice(1);
-        // Accumule tous les works/bookIds des doublons dans la cible
         const allWorks = Array.from(new Set(group.flatMap((a) => Array.isArray(a.works) ? a.works : [])));
         const allBookIds = Array.from(new Set(group.flatMap((a) => Array.isArray(a.bookIds) ? a.bookIds : [])));
         const batch = writeBatch(db);
@@ -224,43 +182,102 @@ export function AuthorEditor({
         await batch.commit();
         merged++;
       }
-      // Recharge la liste après nettoyage
       const snap = await getDocs(collection(db, "authors"));
       setAuthorsCache(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
       toast({ title: "Doublons fusionnés", description: `${merged} groupe(s) traité(s), ${deleted} fiche(s) supprimée(s).` });
     } catch (err) {
       console.error("AutoMerge Error:", err);
-      toast({ variant: "destructive", title: "Erreur lors de la fusion" });
+      toast({ variant: "destructive", title: "Erreur lors de la fusion", description: (err as any)?.message });
     } finally {
       setIsAutoMerging(false);
     }
   }, [db, authorsCache, toast]);
 
-  // Fusionne la fiche en cours d'édition DANS la fiche cible : tous les
-  // livres de l'auteur courant voient leur champ `author` réécrit vers le
-  // nom de la cible. Aucun livre n'est supprimé.
+  // ─── FUSION MANUELLE — VERSION CORRIGÉE ───────────────────────────────────
+  // Corrections apportées :
+  //   1. Utilise un writeBatch pour des opérations atomiques
+  //   2. Met à jour la fiche CIBLE avec les works/bookIds combinés
+  //   3. SUPPRIME la fiche SOURCE après fusion (c'était l'oubli principal)
+  //   4. Met à jour le cache local correctement
+  //   5. Affiche le message d'erreur réel en cas d'échec
   const handleMerge = async () => {
     if (!db || !editing || !mergeTarget.trim()) return;
     const target = (authorsCache || []).find((a) => a.id === mergeTarget);
     if (!target) return;
-    if (!confirm(`Fusionner "${editing.name}" dans "${target.name}" ? Les livres de "${editing.name}" seront réattribués à "${target.name}".`)) return;
+    if (!confirm(
+      `Fusionner "${editing.name}" dans "${target.name}" ?\n` +
+      `• Les livres de "${editing.name}" seront réattribués à "${target.name}"\n` +
+      `• La fiche "${editing.name}" sera supprimée\n` +
+      `Cette action est irréversible.`
+    )) return;
+
     setIsMerging(true);
     try {
-      const booksSnap = await getDocs(query(collection(db, "masterBooks"), where("author", "==", editing.name)));
+      // 1. Récupérer tous les masterBooks dont l'auteur est la fiche source
+      const booksSnap = await getDocs(
+        query(collection(db, "masterBooks"), where("author", "==", editing.name))
+      );
+
+      const batch = writeBatch(db);
+
+      // 2. Réécrire l'auteur dans chaque masterBook vers le nom cible
       for (const b of booksSnap.docs) {
-        await setDoc(doc(db, "masterBooks", b.id), { author: target.name, updatedAt: serverTimestamp() }, { merge: true });
+        batch.set(
+          doc(db, "masterBooks", b.id),
+          { author: target.name, updatedAt: serverTimestamp() },
+          { merge: true }
+        );
       }
-      toast({ title: "Fusion effectuée", description: `${booksSnap.size} livre(s) réattribué(s) à "${target.name}".` });
+
+      // 3. Combiner works et bookIds dans la fiche CIBLE
+      const allWorks = Array.from(new Set([
+        ...(Array.isArray(target.works)  ? target.works  : []),
+        ...(Array.isArray(editing.works) ? editing.works : []),
+      ]));
+      const allBookIds = Array.from(new Set([
+        ...(Array.isArray(target.bookIds)  ? target.bookIds  : []),
+        ...(Array.isArray(editing.bookIds) ? editing.bookIds : []),
+      ]));
+
+      batch.set(
+        doc(db, "authors", target.id),
+        { works: allWorks, bookIds: allBookIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+
+      // 4. SUPPRIMER la fiche source (c'était l'oubli)
+      batch.delete(doc(db, "authors", editing.id));
+
+      await batch.commit();
+
+      // 5. Mettre à jour le cache local
+      setAuthorsCache(prev =>
+        (prev || [])
+          .filter(a => a.id !== editing.id)
+          .map(a => a.id === target.id
+            ? { ...a, works: allWorks, bookIds: allBookIds }
+            : a
+          )
+      );
+
+      toast({
+        title: "Fusion effectuée",
+        description: `${booksSnap.size} livre(s) réattribué(s) à "${target.name}". Fiche "${editing.name}" supprimée.`,
+      });
       setEditing(null);
     } catch (err) {
       console.error("Merge Authors Error:", err);
-      toast({ variant: "destructive", title: "Erreur de fusion" });
+      toast({
+        variant: "destructive",
+        title: "Erreur de fusion",
+        description: (err as any)?.message || "Erreur inconnue",
+      });
     } finally {
       setIsMerging(false);
     }
   };
 
-    // --- Liste / recherche ---
+  // --- Liste / recherche ---
   if (!editing) {
     return (
       <div className="space-y-6">
@@ -363,7 +380,7 @@ export function AuthorEditor({
 
       <div className="pt-6 border-t border-primary/10 space-y-3">
         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60 flex items-center gap-2"><GitMerge className="h-3.5 w-3.5" /> Fusionner ce doublon dans une autre fiche</Label>
-        <p className="text-xs italic opacity-50">Les livres de "{editing.name}" seront réattribués à l'auteur choisi. Rien n'est supprimé.</p>
+        <p className="text-xs italic opacity-50">Les livres de "{editing.name}" seront réattribués à l'auteur choisi. La fiche "{editing.name}" sera supprimée.</p>
         <div className="flex gap-2">
           <select
             value={mergeTarget}
