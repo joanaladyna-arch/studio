@@ -109,6 +109,7 @@ export default function ProfilePage() {
     const readBooks = allBooks.filter(b => b.status === 'read' || b.status === 'reread');
     const palBooks = sortBySaga(allBooks.filter(b => b.status === 'pal'));
     const wishlistBooks = sortBySaga(allBooks.filter(b => b.status === 'envie'));
+    const recommendedBooks = sortBySaga(allBooks.filter((b: any) => b.isRecommended));
     
     // Seuls les livres pour lesquels l'utilisatrice a confirmé qu'ils
     // comptent (case cochée à l'ajout) alimentent les objectifs — readCount
@@ -157,6 +158,7 @@ export default function ProfilePage() {
       monthlyReadCount: monthlyRead.length,
       palBooks,
       wishlistBooks,
+      recommendedBooks,
       pagesRead,
       audioHours: Math.round(audioHours),
       goals,
@@ -698,6 +700,20 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
+
+      {stats.recommendedBooks.length > 0 && (
+        <section className="space-y-10 pt-10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-4xl font-headline italic flex items-center gap-4">
+              <Sparkles className="h-8 w-8 text-copper/60" /> Mes Recommandations
+            </h2>
+          </div>
+          <p className="text-sm italic text-muted-foreground -mt-6">
+            Les livres que tu recommandes à la communauté des lectrices.
+          </p>
+          <BookShelf books={stats.recommendedBooks} />
+        </section>
+      )}
     </div>
   );
 }

@@ -6,7 +6,9 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, UserPlus, UserCheck, Users } from "lucide-react";
+import { Loader2, ArrowLeft, UserPlus, UserCheck, Users, Sparkles } from "lucide-react";
+import { BookCover } from "@/components/book-cover";
+import { cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { useFirestore, useDoc, useUser } from "@/firebase";
 import { doc, setDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { toArray } from "@/lib/utils";
@@ -139,6 +141,24 @@ export default function PublicProfilePage() {
           <div className="flex flex-wrap justify-center gap-2">
             {toArray<string>(p.favoriteGenres).map((g) => (
               <Badge key={g} variant="secondary" className="bg-muted italic">{g}</Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {toArray<any>(p.recommendedBooks).length > 0 && (
+        <div className="space-y-4">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-copper/70 flex items-center justify-center gap-2">
+            <Sparkles className="h-3.5 w-3.5" /> Recommandations de {p.name || "cette lectrice"}
+          </p>
+          <div className="flex gap-3 overflow-x-auto pb-2 px-1 no-scrollbar">
+            {toArray<any>(p.recommendedBooks).map((b) => (
+              <div key={b.id} className="w-20 shrink-0 space-y-1.5 text-center">
+                <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-sm bg-secondary/10">
+                  <BookCover src={b.cover} alt={b.title || ""} className="object-cover" />
+                </div>
+                <p className="text-[9px] italic leading-tight truncate">{cleanBookTitle(b.title)}</p>
+              </div>
             ))}
           </div>
         </div>

@@ -539,6 +539,25 @@ export default function BookDetailPage() {
           // la sauvegarde pour ça.
           console.error("Book Review Mirror Error:", mirrorErr);
         }
+
+        // Miroir des recommandations vers publicProfiles — toujours
+        // recalculé en entier (jamais un simple arrayUnion/arrayRemove
+        // d'objets, fragile si le titre change entre-temps) à partir de
+        // TOUS les livres actuellement recommandés, pour rester exact.
+        // Là aussi, uniquement si "Visible dans la communauté" est
+        // activé — sinon rien n'est écrit publiquement.
+        try {
+          if (profile?.communityVisible) {
+            const allBooksSnap = await getDocs(collection(db, "users", user.uid, "books"));
+            const recommendedBooks = allBooksSnap.docs
+              .map((d) => ({ id: d.id, ...d.data() } as any))
+              .filter((b) => b.isRecommended)
+              .map((b) => ({ id: b.id, title: b.title || "", author: b.author || "", cover: b.cover || "" }));
+            await setDoc(doc(db, "publicProfiles", user.uid), { recommendedBooks }, { merge: true });
+          }
+        } catch (recMirrorErr) {
+          console.error("Recommended Books Mirror Error:", recMirrorErr);
+        }
       }
 
       toast({ title: "Journal gravé", description: "Vos réflexions ont été enregistrées." });
@@ -1234,6 +1253,25 @@ export default function BookDetailPage() {
                    <span className="block text-xs text-muted-foreground leading-relaxed">
                      Un petit triangle "SP" apparaît sur la couverture dans la bibliothèque — juste un repère visuel, ça ne change rien d'autre à la fiche.
                    </span>
+                 </span>
+               </label>
+
+               <label className="flex items-start gap-4 p-5 rounded-2xl bg-copper/5 border border-copper/10 cursor-pointer">
+                 <Checkbox
+                   checked={Boolean((editedData as any).isRecommended)}
+                   onCheckedChange={(v) => setEditedData({ ...editedData, isRecommended: Boolean(v) } as any)}
+                   className="mt-0.5 border-copper/30 data-[state=checked]:bg-copper data-[state=checked]:border-copper"
+                 />
+                 <span className="space-y-1">
+                   <span className="block font-headline italic text-lg">Recommander à la communauté des lectrices</span>
+                   <span className="block text-xs text-muted-foreground leading-relaxed">
+                     Ce livre apparaît alors dans "Mes Recommandations" sur ton profil, et sur ton profil visible par les autres lectrices si "Visible dans la communauté" est activé.
+                   </span>
+                   {profile && !profile.communityVisible && (
+                     <span className="block text-[10px] text-muted-foreground italic">
+                       Active "Visible dans la communauté" dans ton profil pour que tes recommandations soient vues par les autres lectrices.
+                     </span>
+                   )}
                  </span>
                </label>
 
