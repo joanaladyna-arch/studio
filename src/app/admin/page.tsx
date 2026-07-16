@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -19,7 +18,8 @@ import {
   CheckCircle2, 
   Eye,
   FileJson,
-  Save
+  Save,
+  Sparkles
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
@@ -29,6 +29,7 @@ import { MasterBookManager } from "@/components/master-book-manager";
 import { AdminMessagerie } from "@/components/admin-messagerie";
 import { PublisherReviewQueue } from "@/components/publisher-review-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
+import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
 import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF } from "@/lib/utils";
 
 export default function AdminPage() {
@@ -50,7 +51,7 @@ export default function AdminPage() {
   const [isCleaningGenres, setIsCleaningGenres] = useState(false);
   const [cleanResults, setCleanResults] = useState<{ cleaned: number } | null>(null);
 
-  // --- Gestion de la navigation (renommer / masquer une rubrique) ---
+  // --- Gestion de la navigation ---
   const [navOverrides, setNavOverrides] = useState<Record<string, { label?: string; visible?: boolean }>>({});
   const [isLoadingNav, setIsLoadingNav] = useState(false);
   const [isSavingNav, setIsSavingNav] = useState(false);
@@ -64,9 +65,7 @@ export default function AdminPage() {
         if (snap.exists()) setNavOverrides(snap.data()?.items || {});
         setNavLoaded(true);
       })
-      .catch((err) => {
-        console.error("Load Nav Config Error:", err);
-      })
+      .catch((err) => { console.error("Load Nav Config Error:", err); })
       .finally(() => setIsLoadingNav(false));
   }, [db, navLoaded]);
 
@@ -76,7 +75,7 @@ export default function AdminPage() {
 
   const toggleNavVisible = (id: string) => {
     setNavOverrides((prev) => {
-      const current = prev[id]?.visible !== false; // true par défaut
+      const current = prev[id]?.visible !== false;
       return { ...prev, [id]: { ...prev[id], visible: !current } };
     });
   };
@@ -95,11 +94,6 @@ export default function AdminPage() {
     }
   };
 
-  // --- Éditeur complet de fiches MasterBook : la recherche/sélection
-  // reste ici (spécifique à l'admin), le formulaire lui-même vit dans le
-  // composant partagé <MasterBookEditor>, réutilisé aussi depuis
-  // Bibliothèque/Coups de Cœur/Ajouter via un bouton "éditer" contextuel.
-
   const cleanGenres = async () => {
     if (!db) return;
     setIsCleaningGenres(true);
@@ -113,10 +107,7 @@ export default function AdminPage() {
         const out: string[] = [];
         list.forEach((v: any) => {
           const t = v?.toString().trim();
-          if (t && !seen.has(t.toLowerCase())) {
-            seen.add(t.toLowerCase());
-            out.push(t);
-          }
+          if (t && !seen.has(t.toLowerCase())) { seen.add(t.toLowerCase()); out.push(t); }
         });
         return out;
       };
@@ -135,7 +126,7 @@ export default function AdminPage() {
         }
       }
       setCleanResults({ cleaned });
-      toast({ title: "Nettoyage terminé", description: `${cleaned} fiche(s) nettoyée(s) (doublons et espaces retirés).` });
+      toast({ title: "Nettoyage terminé", description: `${cleaned} fiche(s) nettoyée(s).` });
     } catch (err) {
       console.error("Clean Genres Error:", err);
       toast({ variant: "destructive", title: "Erreur de nettoyage" });
@@ -144,16 +135,12 @@ export default function AdminPage() {
     }
   };
 
-  // Simple Admin check
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
 
   if (!user || !isAdmin) {
     return <div className="p-20 text-center italic">Accès réservé aux gardiens de Lectoria.</div>;
   }
 
-  // Nettoie un contributeur au format catalographique "Nom, Prénom. Rôle"
-  // ou "Nom, Prénom - Rôle" (ex: "Bagot, Marie. Traducteur") en un nom
-  // propre "Prénom Nom" — même logique que pour les notices BnF.
   const normalizeContributor = (raw: string): string => {
     const namePart = raw.split(/\s-\s|\./)[0].trim();
     const parts = namePart.split(",");
@@ -163,16 +150,9 @@ export default function AdminPage() {
     return namePart;
   };
 
-  // Lit un champ par son nom quelle que soit sa casse dans le fichier
-  // source (TITRE, Titre, titre...) et accepte plusieurs noms candidats
-  // (français/anglais) — les fichiers Excel/CSV qu'on importe ne suivent
-  // jamais exactement la même convention de casse ou de langue d'une fois
-  // à l'autre (export BnF, export perso, copier-coller...).
   const getField = (row: any, ...names: string[]): string => {
     const lowerMap: Record<string, any> = {};
-    Object.keys(row).forEach((k) => {
-      lowerMap[k.toLowerCase().trim()] = row[k];
-    });
+    Object.keys(row).forEach((k) => { lowerMap[k.toLowerCase().trim()] = row[k]; });
     for (const name of names) {
       const v = lowerMap[name.toLowerCase()];
       if (v !== undefined && v !== null && v.toString().trim() !== "") return v.toString().trim();
@@ -180,16 +160,10 @@ export default function AdminPage() {
     return "";
   };
 
-  // Génère un fichier .xlsx vierge avec les bons en-têtes + une ligne
-  // d'exemple, pour que les imports suivants soient toujours acceptés
-  // sans avoir à deviner le bon format de colonnes.
   const downloadTemplate = () => {
     const headers = ["Titre", "Auteur", "Traducteur", "Editeur", "Annee", "ISBN", "Langue", "Pages", "Description", "Genres", "Tropes", "Themes", "Tome"];
-    const example = [
-      "Deviant King", "Rina Kent", "Marie Bagot", "BMR", "2024", "9782017286271", "FR", "460",
-      "Le premier tome de la saga Royal Elite.", "Dark romance, New adult", "Enemies to lovers, Forbidden love", "Pouvoir, Vengeance", "1"
-    ];
-    const note = ["Astuce : Genres / Tropes / Themes acceptent plusieurs valeurs séparées par une virgule. L'ordre et la casse des colonnes n'ont pas d'importance — seul l'intitulé compte."];
+    const example = ["Deviant King", "Rina Kent", "Marie Bagot", "BMR", "2024", "9782017286271", "FR", "460", "Le premier tome de la saga Royal Elite.", "Dark romance, New adult", "Enemies to lovers, Forbidden love", "Pouvoir, Vengeance", "1"];
+    const note = ["Astuce : Genres / Tropes / Themes acceptent plusieurs valeurs séparées par une virgule."];
     const ws = XLSX.utils.aoa_to_sheet([headers, example, [], note]);
     ws["!cols"] = headers.map(() => ({ wch: 22 }));
     const wb = XLSX.utils.book_new();
@@ -200,7 +174,6 @@ export default function AdminPage() {
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -223,49 +196,26 @@ export default function AdminPage() {
     setIsProcessing(true);
     setProgress(0);
     setImportResults(null);
-
     let success = 0;
     let errors = 0;
-    const batchSize = 100;
 
     for (let i = 0; i < excelData.length; i++) {
       const row = excelData[i];
       try {
-        // Validation minimale
         const title = getField(row, "title", "titre");
         const authorStr = getField(row, "authors", "auteurs", "auteur") || "Inconnu";
-
-        if (!title) {
-          errors++;
-          continue;
-        }
-
+        if (!title) { errors++; continue; }
         const isbn13 = cleanIsbnValue(getField(row, "isbn13", "isbn"));
         const bookId = isbn13 || stableBookKey(title.toString(), authorStr.toString());
-
-        // 1. Création/Mise à jour MasterBook. On lit d'abord la fiche
-        // existante : une réimport Excel ne doit JAMAIS écraser par du
-        // vide un champ que tu as enrichi à la main (résumé, couverture,
-        // tropes, thèmes...) — le fichier Excel ne contient pas ces
-        // colonnes, donc sans cette précaution `merge:true` remplacerait
-        // ton travail par des chaînes vides. On ne réécrit donc un champ
-        // que si l'Excel apporte réellement une valeur, sinon on garde
-        // l'existant.
         const masterBookRef = doc(db, "masterBooks", bookId);
         const existingSnap = await getDoc(masterBookRef);
         const existing: any = existingSnap.exists() ? existingSnap.data() : {};
-
-        const keepText = (incoming: string, current: any) =>
-          (incoming && incoming.trim()) ? incoming : (current ?? "");
-        const keepArray = (incoming: string[], current: any) =>
-          (incoming && incoming.length) ? incoming : (Array.isArray(current) ? current : []);
-        const keepNumber = (incoming: number, current: any) =>
-          incoming > 0 ? incoming : (current ?? 0);
-
+        const keepText = (incoming: string, current: any) => (incoming && incoming.trim()) ? incoming : (current ?? "");
+        const keepArray = (incoming: string[], current: any) => (incoming && incoming.length) ? incoming : (Array.isArray(current) ? current : []);
+        const keepNumber = (incoming: number, current: any) => incoming > 0 ? incoming : (current ?? 0);
         const excelGenres = getField(row, "genres").split(",").map((s: string) => s.trim()).filter(Boolean);
         const excelTropes = getField(row, "tropes").split(",").map((s: string) => s.trim()).filter(Boolean);
         const excelThemes = getField(row, "themes").split(",").map((s: string) => s.trim()).filter(Boolean);
-
         const bookData = {
           title: keepText(title.toString(), existing.title),
           subtitle: keepText(getField(row, "subtitle", "soustitre", "sous-titre"), existing.subtitle),
@@ -288,60 +238,31 @@ export default function AdminPage() {
           updatedAt: serverTimestamp(),
           source: existing.source || "excel-import"
         };
-
         await setDoc(masterBookRef, bookData, { merge: true });
-
-        // 2. Création/Mise à jour Publisher si présent
         if (bookData.publisher) {
           const pubId = slugify(bookData.publisher);
-          await setDoc(doc(db, "publishers", pubId), {
-            name: bookData.publisher,
-            slug: pubId,
-            updatedAt: serverTimestamp()
-          }, { merge: true });
+          await setDoc(doc(db, "publishers", pubId), { name: bookData.publisher, slug: pubId, updatedAt: serverTimestamp() }, { merge: true });
         }
-
-        // 3. Création/Mise à jour Authors si présent — on référence aussi
-        // l'œuvre elle-même (titre + ID de la fiche maître) sur la fiche
-        // auteur, pour que sa bibliographie se complète au fil des imports
-        // au lieu de ne stocker que son nom.
         const actualAuthors = bookData.author.split(",").map((s: string) => s.trim()).filter(Boolean);
         for (const authName of actualAuthors) {
           const authId = authorKey(authName);
-          await setDoc(doc(db, "authors", authId), {
-            name: authName,
-            slug: authId,
-            works: arrayUnion(bookData.title),
-            bookIds: arrayUnion(bookId),
-            updatedAt: serverTimestamp()
-          }, { merge: true });
+          await setDoc(doc(db, "authors", authId), { name: authName, slug: authId, works: arrayUnion(bookData.title), bookIds: arrayUnion(bookId), updatedAt: serverTimestamp() }, { merge: true });
         }
-
         success++;
       } catch (err) {
         console.error("Row import error:", err);
         errors++;
       }
-
-      // Update progress
       if ((i + 1) % 10 === 0 || i === excelData.length - 1) {
         setProgress(Math.round(((i + 1) / excelData.length) * 100));
       }
     }
-
     setImportResults({ success, errors });
     setIsProcessing(false);
-    toast({ 
-      title: "Importation terminée", 
-      description: `${success} pépites ajoutées, ${errors} échecs.` 
-    });
-    setExcelData([]); // Clear data after import
+    toast({ title: "Importation terminée", description: `${success} pépites ajoutées, ${errors} échecs.` });
+    setExcelData([]);
   };
 
-  // Reconstruit les fiches auteur (nom, œuvres, IDs des livres) à partir
-  // de TOUS les livres déjà présents dans masterBooks — pas seulement ceux
-  // importés par Excel, mais aussi ceux ajoutés via la recherche/l'API.
-  // Permet de compléter les fiches auteur après coup, sans réimporter.
   const syncAuthors = async () => {
     if (!db) return;
     setIsSyncingAuthors(true);
@@ -358,51 +279,31 @@ export default function AdminPage() {
           const authId = authorKey(authName);
           if (!authId) continue;
           try {
-            await setDoc(doc(db, "authors", authId), {
-              name: authName,
-              slug: authId,
-              works: arrayUnion(data.title || "Titre inconnu"),
-              bookIds: arrayUnion(bookDoc.id),
-              updatedAt: serverTimestamp()
-            }, { merge: true });
+            await setDoc(doc(db, "authors", authId), { name: authName, slug: authId, works: arrayUnion(data.title || "Titre inconnu"), bookIds: arrayUnion(bookDoc.id), updatedAt: serverTimestamp() }, { merge: true });
             authorsTouched++;
-          } catch (err) {
-            console.error("Sync Author Error:", authName, err);
-          }
+          } catch (err) { console.error("Sync Author Error:", authName, err); }
         }
         booksProcessed++;
       }
-      toast({
-        title: "Synchronisation terminée",
-        description: `${booksProcessed} livres parcourus, ${authorsTouched} fiches auteur mises à jour.`
-      });
+      toast({ title: "Synchronisation terminée", description: `${booksProcessed} livres parcourus, ${authorsTouched} fiches auteur mises à jour.` });
     } catch (err) {
       console.error("Sync Authors Error:", err);
-      toast({ variant: "destructive", title: "Échec de la synchronisation", description: "Vérifie les règles Firestore (lecture sur masterBooks, écriture sur authors)." });
+      toast({ variant: "destructive", title: "Échec de la synchronisation" });
     } finally {
       setIsSyncingAuthors(false);
     }
   };
 
-  // Recherche un résumé pour toutes les fiches maître qui n'en ont pas
-  // encore — utile pour les livres ajoutés avant l'enrichissement
-  // systématique des résumés, ou dont la source d'origine n'en fournissait
-  // pas. Ordre de priorité : BnF (souvent en français), puis Google
-  // Books restreint au français, puis Google Books sans restriction en
-  // dernier recours. Ne touche jamais aux livres qui ont déjà un résumé.
   const fillMissingDescriptions = async () => {
     if (!db) return;
     setIsFillingDescriptions(true);
     setFillProgress(0);
     setFillResults(null);
-    let filled = 0;
-    let notFound = 0;
-    let skipped = 0;
+    let filled = 0; let notFound = 0; let skipped = 0;
     try {
       const snap = await getDocs(collection(db, "masterBooks"));
       const candidates = snap.docs.filter((d) => !((d.data().description || "").toString().trim()));
       skipped = snap.docs.length - candidates.length;
-
       for (let i = 0; i < candidates.length; i++) {
         const bookDoc = candidates[i];
         const data = bookDoc.data();
@@ -410,17 +311,11 @@ export default function AdminPage() {
         const title = (data.title || "").toString().trim();
         const author = (data.author || "").toString().trim();
         let description = "";
-
         try {
-          // 1. La BnF d'abord : quand elle a un résumé catalogué, il est
-          // presque toujours en français, ce que ne garantit jamais un
-          // résultat Google Books pris au hasard sur un ISBN donné.
           if (title) {
             const bnfResults = isbn ? await searchBnF(isbn, "isbn") : await searchBnF(author ? `${title} ${author}` : title, "general");
             description = cleanDescriptionHtml(bnfResults[0]?.description);
           }
-          // 2. Google Books restreint au français, pour favoriser une
-          // édition FR si une existe et que la BnF ne l'a pas fournie.
           if (!description && isbn) {
             const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&langRestrict=fr`, {}, 8000);
             const json = await res.json();
@@ -432,9 +327,6 @@ export default function AdminPage() {
             const json = await res.json();
             description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }
-          // 3. Sans restriction de langue en dernier recours, pour ne
-          // jamais laisser un résumé manquant si une version existe dans
-          // une autre langue (mieux qu'aucun résumé du tout).
           if (!description && isbn) {
             const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`, {}, 8000);
             const json = await res.json();
@@ -446,51 +338,29 @@ export default function AdminPage() {
             const json = await res.json();
             description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }
-        } catch (err) {
-          console.error("Recherche résumé échouée:", title, err);
-        }
-
+        } catch (err) { console.error("Recherche résumé échouée:", title, err); }
         if (description) {
           try {
             await setDoc(doc(db, "masterBooks", bookDoc.id), { description, updatedAt: serverTimestamp() }, { merge: true });
             filled++;
-          } catch (err) {
-            console.error("Écriture résumé échouée:", title, err);
-            notFound++;
-          }
-        } else {
-          notFound++;
-        }
-
+          } catch (err) { notFound++; }
+        } else { notFound++; }
         setFillProgress(Math.round(((i + 1) / candidates.length) * 100));
       }
-
       setFillResults({ filled, notFound, skipped });
-      toast({
-        title: "Recherche terminée",
-        description: `${filled} résumés complétés, ${notFound} introuvables, ${skipped} en avaient déjà un.`
-      });
+      toast({ title: "Recherche terminée", description: `${filled} résumés complétés, ${notFound} introuvables, ${skipped} en avaient déjà un.` });
     } catch (err) {
       console.error("Fill Descriptions Error:", err);
-      toast({ variant: "destructive", title: "Échec", description: "Vérifie les règles Firestore (lecture/écriture sur masterBooks)." });
+      toast({ variant: "destructive", title: "Échec" });
     } finally {
       setIsFillingDescriptions(false);
     }
   };
 
-  // Relit tous les résumés déjà enregistrés et repasse chacun par le
-  // même nettoyeur HTML utilisé partout ailleurs (cleanDescriptionHtml)
-  // — utile pour rattraper les résumés enregistrés AVANT le correctif
-  // sur la récupération via lien de référence, qui gardaient parfois
-  // des balises <br> brutes. Aucune source externe interrogée, donc
-  // aucun risque de limite de temps serveur : tout reste en mémoire
-  // côté navigateur. N'écrit que les fiches réellement modifiées par
-  // le nettoyage — jamais de réécriture inutile sur un résumé déjà propre.
   const cleanRawHtmlDescriptions = async () => {
     if (!db) return;
     setIsCleaningDescriptions(true);
-    let cleaned = 0;
-    let checked = 0;
+    let cleaned = 0; let checked = 0;
     try {
       const snap = await getDocs(collection(db, "masterBooks"));
       const writes: Promise<any>[] = [];
@@ -505,18 +375,14 @@ export default function AdminPage() {
         }
       });
       await Promise.all(writes);
-      toast({
-        title: "Nettoyage terminé",
-        description: `${cleaned} résumé(s) nettoyé(s) sur ${checked} vérifié(s).`
-      });
+      toast({ title: "Nettoyage terminé", description: `${cleaned} résumé(s) nettoyé(s) sur ${checked} vérifié(s).` });
     } catch (err) {
       console.error("Clean Descriptions Error:", err);
-      toast({ variant: "destructive", title: "Échec", description: "Vérifie les règles Firestore (lecture/écriture sur masterBooks)." });
+      toast({ variant: "destructive", title: "Échec" });
     } finally {
       setIsCleaningDescriptions(false);
     }
   };
-
 
   return (
     <div className="space-y-12 animate-paper pb-24 max-w-7xl mx-auto px-4">
@@ -531,8 +397,25 @@ export default function AdminPage() {
       </header>
 
       <div className="grid gap-10">
-        <MasterBookManager />
 
+        {/* ── ACTUALITÉS EN ATTENTE ── */}
+        <Card className="glass-card border-none bg-white/60 shadow-xl">
+          <CardHeader className="p-10 border-b border-primary/5">
+            <div className="space-y-2">
+              <CardTitle className="font-headline text-3xl italic flex items-center gap-3">
+                <Sparkles className="h-8 w-8 text-rose" /> Actualités en attente
+              </CardTitle>
+              <CardDescription className="italic">
+                Détectées automatiquement — lisez, cochez et validez avant publication sur /actualites.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="p-10">
+            <AdminActualitesQueue />
+          </CardContent>
+        </Card>
+
+        <MasterBookManager />
         <AdminMessagerie />
         <PublisherReviewQueue />
         <AdminAnalytics />
@@ -545,28 +428,14 @@ export default function AdminPage() {
                 <CardTitle className="font-headline text-3xl italic flex items-center gap-3">
                   <FileSpreadsheet className="h-8 w-8 text-emerald-500" /> Importer ma base de données
                 </CardTitle>
-                <CardDescription className="italic">Fichier .xlsx, .xls ou .csv — n'importe quelle casse ou langue de colonnes (Titre/TITRE/title...) est acceptée.</CardDescription>
+                <CardDescription className="italic">Fichier .xlsx, .xls ou .csv — n'importe quelle casse ou langue de colonnes acceptée.</CardDescription>
               </div>
               <div className="flex gap-3">
-                <input 
-                  type="file" 
-                  ref={fileInputRef} 
-                  onChange={handleFileUpload} 
-                  className="hidden" 
-                  accept=".xlsx,.xls,.csv"
-                />
-                <Button 
-                  onClick={downloadTemplate} 
-                  variant="outline"
-                  className="rounded-2xl h-14 px-6 border-primary/20 bg-white/40 text-primary/70 hover:bg-white/60 italic font-headline text-lg"
-                >
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".xlsx,.xls,.csv" />
+                <Button onClick={downloadTemplate} variant="outline" className="rounded-2xl h-14 px-6 border-primary/20 bg-white/40 text-primary/70 hover:bg-white/60 italic font-headline text-lg">
                   <FileJson className="mr-3 h-5 w-5" /> Modèle vierge
                 </Button>
-                <Button 
-                  onClick={() => fileInputRef.current?.click()} 
-                  variant="outline"
-                  className="rounded-2xl h-14 px-8 border-emerald-200 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-50 italic font-headline text-xl"
-                >
+                <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="rounded-2xl h-14 px-8 border-emerald-200 bg-emerald-50/30 text-emerald-600 hover:bg-emerald-50 italic font-headline text-xl">
                   <Upload className="mr-3" /> Choisir un fichier
                 </Button>
               </div>
@@ -607,15 +476,11 @@ export default function AdminPage() {
                     </Table>
                   </ScrollArea>
                 </div>
-                <Button 
-                  onClick={importToFirestore} 
-                  className="w-full h-16 rounded-[2rem] bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 font-headline italic text-2xl transition-transform active:scale-95"
-                >
+                <Button onClick={importToFirestore} className="w-full h-16 rounded-[2rem] bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 font-headline italic text-2xl transition-transform active:scale-95">
                   <CheckCircle2 className="mr-4 h-8 w-8" /> Lancer l'importation dans LECTORIA
                 </Button>
               </div>
             )}
-
             {isProcessing && (
               <div className="space-y-6 text-center py-10">
                 <div className="flex items-center justify-center gap-4">
@@ -623,18 +488,14 @@ export default function AdminPage() {
                   <p className="font-headline italic text-3xl">Gravure en cours... {progress}%</p>
                 </div>
                 <Progress value={progress} className="h-4 bg-primary/10" />
-                <p className="text-primary/40 italic">La base Lectoria s’enrichit de nouvelles pépites.</p>
               </div>
             )}
-
             {importResults && (
               <div className="p-10 rounded-[3rem] bg-emerald-50 border border-emerald-100 flex flex-col items-center gap-6 animate-in zoom-in duration-500">
                 <CheckCircle2 className="h-16 w-16 text-emerald-500" />
                 <div className="text-center space-y-2">
                   <h3 className="text-3xl font-headline italic text-emerald-700">Importation terminée !</h3>
-                  <p className="text-emerald-600/60 font-medium">
-                    {importResults.success} pépites ajoutées avec succès, {importResults.errors} erreurs.
-                  </p>
+                  <p className="text-emerald-600/60 font-medium">{importResults.success} pépites ajoutées, {importResults.errors} erreurs.</p>
                 </div>
                 <Button onClick={() => setImportResults(null)} variant="ghost" className="text-emerald-700 font-headline italic text-xl">Fermer</Button>
               </div>
@@ -648,12 +509,10 @@ export default function AdminPage() {
             <CardTitle className="font-headline text-3xl italic flex items-center gap-3">
               <Shield className="h-8 w-8 text-primary" /> Gérer la navigation
             </CardTitle>
-            <CardDescription className="italic">Renomme une rubrique ou masque-la, comme ça a été fait pour Abonnement — sans avoir besoin de coder. L'icône, elle, reste liée à la page réelle.</CardDescription>
+            <CardDescription className="italic">Renomme une rubrique ou masque-la sans avoir à coder.</CardDescription>
           </CardHeader>
           <CardContent className="p-10 space-y-6">
-            {isLoadingNav && (
-              <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin opacity-40" /></div>
-            )}
+            {isLoadingNav && <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin opacity-40" /></div>}
             {!isLoadingNav && (
               <div className="space-y-4">
                 {navItems.map((item) => {
@@ -683,44 +542,43 @@ export default function AdminPage() {
         </Card>
 
         {/* MAINTENANCE SECTION */}
-        <div className="grid gap-10">
-          <Card className="glass-card border-none bg-white/60 shadow-lg">
-            <CardHeader className="p-10 border-b border-primary/5">
-              <CardTitle className="font-headline text-2xl italic flex items-center gap-3">
-                <Landmark className="h-6 w-6 text-amber-500" /> Maintenance Système
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-10 flex flex-col gap-4">
-               <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
-                 {isSyncingAuthors ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Synchroniser les Auteurs
-               </Button>
-               <Button variant="outline" onClick={fillMissingDescriptions} disabled={isFillingDescriptions} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
-                 {isFillingDescriptions ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Compléter les résumés manquants
-               </Button>
-               {isFillingDescriptions && (
-                 <div className="space-y-1">
-                   <Progress value={fillProgress} className="h-2 bg-primary/10" />
-                   <p className="text-[10px] text-center opacity-40 italic">{fillProgress}%</p>
-                 </div>
-               )}
-               {fillResults && (
-                 <p className="text-[10px] text-center opacity-60 italic">
-                   {fillResults.filled} résumés complétés, {fillResults.notFound} introuvables, {fillResults.skipped} en avaient déjà un.
-                 </p>
-               )}
-               <Button variant="outline" onClick={cleanRawHtmlDescriptions} disabled={isCleaningDescriptions} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
-                 {isCleaningDescriptions ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Nettoyer les résumés (HTML brut)
-               </Button>
-               <Button variant="outline" onClick={cleanGenres} disabled={isCleaningGenres} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
-                 {isCleaningGenres ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Nettoyer les Genres
-               </Button>
-               {cleanResults && (
-                 <p className="text-[10px] text-center opacity-60 italic">{cleanResults.cleaned} fiche(s) nettoyée(s) (doublons/espaces retirés).</p>
-               )}
-               <p className="text-[10px] text-center opacity-40 font-bold uppercase tracking-widest mt-4">Statut : En ligne et sécurisé</p>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="glass-card border-none bg-white/60 shadow-lg">
+          <CardHeader className="p-10 border-b border-primary/5">
+            <CardTitle className="font-headline text-2xl italic flex items-center gap-3">
+              <Landmark className="h-6 w-6 text-amber-500" /> Maintenance Système
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-10 flex flex-col gap-4">
+            <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+              {isSyncingAuthors ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Synchroniser les Auteurs
+            </Button>
+            <Button variant="outline" onClick={fillMissingDescriptions} disabled={isFillingDescriptions} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+              {isFillingDescriptions ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Compléter les résumés manquants
+            </Button>
+            {isFillingDescriptions && (
+              <div className="space-y-1">
+                <Progress value={fillProgress} className="h-2 bg-primary/10" />
+                <p className="text-[10px] text-center opacity-40 italic">{fillProgress}%</p>
+              </div>
+            )}
+            {fillResults && (
+              <p className="text-[10px] text-center opacity-60 italic">
+                {fillResults.filled} résumés complétés, {fillResults.notFound} introuvables, {fillResults.skipped} en avaient déjà un.
+              </p>
+            )}
+            <Button variant="outline" onClick={cleanRawHtmlDescriptions} disabled={isCleaningDescriptions} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+              {isCleaningDescriptions ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Nettoyer les résumés (HTML brut)
+            </Button>
+            <Button variant="outline" onClick={cleanGenres} disabled={isCleaningGenres} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
+              {isCleaningGenres ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Nettoyer les Genres
+            </Button>
+            {cleanResults && (
+              <p className="text-[10px] text-center opacity-60 italic">{cleanResults.cleaned} fiche(s) nettoyée(s).</p>
+            )}
+            <p className="text-[10px] text-center opacity-40 font-bold uppercase tracking-widest mt-4">Statut : En ligne et sécurisé</p>
+          </CardContent>
+        </Card>
+
       </div>
     </div>
   );
