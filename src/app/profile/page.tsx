@@ -705,11 +705,11 @@ export default function ProfilePage() {
         <section className="space-y-10 pt-10">
           <div className="flex items-center justify-between">
             <h2 className="text-4xl font-headline italic flex items-center gap-4">
-              <Sparkles className="h-8 w-8 text-copper/60" /> Mes Recommandations
+              <Sparkles className="h-8 w-8 text-copper/60" /> Pépites Incontournables
             </h2>
           </div>
           <p className="text-sm italic text-muted-foreground -mt-6">
-            Les livres que tu recommandes à la communauté des lectrices.
+            Les livres que tu as aimés et que tu recommandes à d'autres lectrices.
           </p>
           <BookShelf books={stats.recommendedBooks} />
         </section>

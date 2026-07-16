@@ -1263,13 +1263,13 @@ export default function BookDetailPage() {
                    className="mt-0.5 border-copper/30 data-[state=checked]:bg-copper data-[state=checked]:border-copper"
                  />
                  <span className="space-y-1">
-                   <span className="block font-headline italic text-lg">Recommander à la communauté des lectrices</span>
+                   <span className="block font-headline italic text-lg">Pépite Incontournable</span>
                    <span className="block text-xs text-muted-foreground leading-relaxed">
-                     Ce livre apparaît alors dans "Mes Recommandations" sur ton profil, et sur ton profil visible par les autres lectrices si "Visible dans la communauté" est activé.
+                     Un livre que tu as aimé et que tu recommandes à d'autres lectrices. Il apparaît alors dans "Pépites Incontournables" sur ton profil, et sur ton profil visible par les autres lectrices si "Visible dans la communauté" est activé.
                    </span>
                    {profile && !profile.communityVisible && (
                      <span className="block text-[10px] text-muted-foreground italic">
-                       Active "Visible dans la communauté" dans ton profil pour que tes recommandations soient vues par les autres lectrices.
+                       Active "Visible dans la communauté" dans ton profil pour que tes pépites soient vues par les autres lectrices.
                      </span>
                    )}
                  </span>

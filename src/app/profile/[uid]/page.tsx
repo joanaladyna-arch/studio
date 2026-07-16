@@ -149,7 +149,7 @@ export default function PublicProfilePage() {
       {toArray<any>(p.recommendedBooks).length > 0 && (
         <div className="space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-copper/70 flex items-center justify-center gap-2">
-            <Sparkles className="h-3.5 w-3.5" /> Recommandations de {p.name || "cette lectrice"}
+            <Sparkles className="h-3.5 w-3.5" /> Pépites Incontournables de {p.name || "cette lectrice"}
           </p>
           <div className="flex gap-3 overflow-x-auto pb-2 px-1 no-scrollbar">
             {toArray<any>(p.recommendedBooks).map((b) => (
