@@ -146,7 +146,6 @@ export default function AdminPage() {
     let filled = 0; let notFound = 0; let skipped = 0;
     try {
       const snap = await getDocs(collection(db, "masterBooks"));
-      // On ne traite que les fiches où ISBN ou éditeur est manquant
       const candidates = snap.docs.filter(d => {
         const data = d.data();
         return !data.isbn13?.toString().trim() || !data.publisher?.toString().trim();
@@ -156,35 +155,68 @@ export default function AdminPage() {
       for (let i = 0; i < candidates.length; i++) {
         const bookDoc = candidates[i];
         const data = bookDoc.data();
-        const title  = (data.title  || "").toString().trim();
-        const author = (data.author || "").toString().trim();
+
+        // Nettoyer le titre : retirer les préfixes "1 - ", "Tome 1 : ", etc.
+        const rawTitle = (data.title  || "").toString().trim();
+        const title    = rawTitle.replace(/^[\d]+\s*[-–:]\s*/u, "").trim() || rawTitle;
+        const author   = (data.author || "").toString().trim();
+        const isbn10   = (data.isbn10 || "").toString().replace(/[-\s]/g, "").trim();
+
         if (!title) { notFound++; setIsbnProgress(Math.round(((i+1)/candidates.length)*100)); continue; }
 
-        let foundIsbn      = "";
-        let foundPublisher = "";
+        let foundIsbn        = "";
+        let foundPublisher   = "";
         let foundDescription = "";
 
-        try {
-          // Recherche BnF par titre + auteur
-          const q = author ? `${title} ${author}` : title;
-          const results = await searchBnF(q, "general");
-
-          // On cherche d'abord une correspondance exacte de titre
-          const match = results.find(r =>
-            r.title?.toLowerCase().trim() === title.toLowerCase().trim()
-          ) || results[0]; // sinon premier résultat
+        // Fonction utilitaire : tester une correspondance dans les résultats BnF
+        const applyMatch = (results: any[]) => {
+          if (!results.length) return;
+          // 1. Correspondance exacte de titre (nettoyé)
+          let match = results.find(r =>
+            r.title?.toLowerCase().replace(/^[\d]+\s*[-–:]\s*/u, "").trim() === title.toLowerCase().trim()
+          );
+          // 2. Titre contient notre titre (ou inversement)
+          if (!match) match = results.find(r => {
+            const rt = (r.title || "").toLowerCase();
+            const lt = title.toLowerCase();
+            return rt.includes(lt) || lt.includes(rt);
+          });
+          // 3. Premier résultat si auteur correspond
+          if (!match && author) match = results.find(r =>
+            (r.author || "").toLowerCase().includes(author.split(" ").pop()?.toLowerCase() || "")
+          );
+          // 4. Premier résultat en dernier recours
+          if (!match) match = results[0];
 
           if (match) {
-            if (!data.isbn13?.toString().trim() && match.isbn?.trim())
-              foundIsbn = match.isbn.trim();
-            if (!data.publisher?.toString().trim() && match.publisher?.trim())
-              foundPublisher = match.publisher.trim();
-            // Bonus : résumé si manquant
+            if (!data.isbn13?.toString().trim() && match.isbn?.trim()) foundIsbn = match.isbn.trim();
+            if (!data.publisher?.toString().trim() && match.publisher?.trim()) foundPublisher = match.publisher.trim();
             if (!data.description?.toString().trim() && match.description?.trim())
               foundDescription = cleanDescriptionHtml(match.description);
           }
+        };
+
+        try {
+          // Stratégie 1 : recherche par ISBN 10 (le plus précis)
+          if (isbn10 && isbn10.length >= 10) {
+            const r = await searchBnF(isbn10, "isbn");
+            applyMatch(r);
+          }
+
+          // Stratégie 2 : titre seul (plus fiable que titre+auteur car BnF formate différemment)
+          if (!foundIsbn && !foundPublisher) {
+            const r = await searchBnF(title, "general");
+            applyMatch(r);
+          }
+
+          // Stratégie 3 : titre + nom de famille de l'auteur uniquement
+          if (!foundIsbn && !foundPublisher && author) {
+            const lastName = author.split(" ").pop() || author;
+            const r = await searchBnF(`${title} ${lastName}`, "general");
+            applyMatch(r);
+          }
         } catch (err) {
-          console.error("BnF search error:", title, err);
+          console.error("BnF search error:", rawTitle, err);
         }
 
         if (foundIsbn || foundPublisher || foundDescription) {
@@ -196,7 +228,7 @@ export default function AdminPage() {
             await setDoc(doc(db, "masterBooks", bookDoc.id), updates, { merge: true });
             filled++;
           } catch (err) {
-            console.error("Write error:", title, err);
+            console.error("Write error:", rawTitle, err);
             notFound++;
           }
         } else {
