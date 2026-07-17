@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, doc, addDoc, deleteDoc, updateDoc, orderBy, query, serverTimestamp, arrayUnion } from "firebase/firestore";
-import { ArrowLeft, Cloud, FileDown, Plus, Loader2, X, BookOpen } from "lucide-react";
+import { ArrowLeft, Cloud, FileDown, Plus, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -26,16 +26,6 @@ const FR_STOP = new Set([
 
 const CLOUD_COLORS = ["#C07A40","#8A72C7","#7BAA6A","#5496B6","#E07098","#F0845A","#F5C400"];
 
-async function fetchDicolink(mot: string, type: "definitions" | "synonymes") {
-  try {
-    const res = await fetch(`/api/dicolink?mot=${encodeURIComponent(mot)}&type=${type}`);
-    const data = await res.json();
-    return data.results || [];
-  } catch {
-    return [];
-  }
-}
-
 export default function NuagePage() {
   const { user } = useUser();
   const db = useFirestore();
@@ -43,13 +33,11 @@ export default function NuagePage() {
   const isAmbientDark = useAmbientDark();
   const cloudRef = useRef<HTMLDivElement>(null);
 
-  const [wordInput, setWordInput]       = useState("");
-  const [isAdding, setIsAdding]         = useState(false);
-  const [isExporting, setIsExporting]   = useState(false);
-  const [selected, setSelected]         = useState<any>(null); // mot sélectionné pour afficher définition
-  const [loadingDef, setLoadingDef]     = useState(false);
+  const [wordInput, setWordInput]     = useState("");
+  const [isAdding, setIsAdding]       = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  // Profil (pour les mots auto supprimés)
+  // Profil (mots auto supprimés)
   const profileRef = useMemo(() => db && user ? doc(db, "users", user.uid) : null, [db, user]);
   const { data: profile } = useDoc(profileRef);
   const deletedAutoWords = useMemo(() => new Set<string>(profile?.nuageDeletedWords || []), [profile]);
@@ -74,7 +62,7 @@ export default function NuagePage() {
   }, [db, user]);
   const { data: books = [] } = useCollection(booksQuery);
 
-  // Calcul fréquences auto
+  // Fréquences auto
   const autoFrequencies = useMemo(() => {
     const texts = [
       ...(entries as any[]).map(e => e.content || ""),
@@ -94,28 +82,24 @@ export default function NuagePage() {
     return freq;
   }, [entries, books]);
 
-  // Nuage combiné : auto (sans supprimés) + manuels
+  // Nuage combiné
   const cloudWords = useMemo(() => {
-    const manualSet = new Set((manualWords as any[]).map(m => m.word));
+    const manualSet = new Set((manualWords as any[]).map((m: any) => m.word));
     const maxAuto   = Math.max(...Object.values(autoFrequencies), 1);
-    const meanAuto  = Math.round(maxAuto * 0.45); // taille moyenne pour les mots manuels
+    const meanAuto  = Math.round(maxAuto * 0.45);
 
-    // Mots auto filtrés
     const auto = Object.entries(autoFrequencies)
       .filter(([w]) => !deletedAutoWords.has(w) && !manualSet.has(w))
       .sort((a, b) => b[1] - a[1])
       .slice(0, 60)
-      .map(([word, count], i) => ({ word, count, color: CLOUD_COLORS[i % CLOUD_COLORS.length], isManual: false, id: null, definition: "", synonymes: [] as string[] }));
+      .map(([word, count], i) => ({ word, count, color: CLOUD_COLORS[i % CLOUD_COLORS.length], isManual: false, id: null as string | null }));
 
-    // Mots manuels
-    const manual = (manualWords as any[]).map((m, i) => ({
+    const manual = (manualWords as any[]).map((m: any, i: number) => ({
       word: m.word,
       count: meanAuto,
       color: m.color || CLOUD_COLORS[(auto.length + i) % CLOUD_COLORS.length],
       isManual: true,
-      id: m.id,
-      definition: m.definition || "",
-      synonymes: m.synonymes || [] as string[],
+      id: m.id as string,
     }));
 
     return [...manual, ...auto];
@@ -127,7 +111,7 @@ export default function NuagePage() {
     return Math.round(13 + ratio * 44);
   };
 
-  // ── Ajouter un mot manuellement ──────────────────────────────────────
+  // ── Ajouter un mot ────────────────────────────────────────────────────
   const addWord = async () => {
     const word = wordInput.trim().toLowerCase();
     if (!word || !db || !user) return;
@@ -136,22 +120,14 @@ export default function NuagePage() {
     }
     setIsAdding(true);
     try {
-      // Récupérer définition + synonymes
-      const [defs, syns] = await Promise.all([
-        fetchDicolink(word, "definitions"),
-        fetchDicolink(word, "synonymes"),
-      ]);
-      const definition = defs[0]?.definition || "";
-      const synonymes  = (syns as string[]).slice(0, 8);
-
       await addDoc(collection(db, "users", user.uid, "nuageWords"), {
-        word, definition, synonymes,
+        word,
         color: CLOUD_COLORS[manualWords.length % CLOUD_COLORS.length],
         addedAt: serverTimestamp(),
       });
       setWordInput("");
-      toast({ title: `"${word}" ajouté au nuage${definition ? " avec définition" : ""}` });
-    } catch (err) {
+      toast({ title: `"${word}" ajouté au nuage` });
+    } catch {
       toast({ variant: "destructive", title: "Erreur d'ajout" });
     } finally {
       setIsAdding(false);
@@ -159,46 +135,24 @@ export default function NuagePage() {
   };
 
   // ── Supprimer un mot ──────────────────────────────────────────────────
-  const deleteWord = async (word: string, isManual: boolean, manualId: string | null) => {
+  const deleteWord = async (word: string, isManual: boolean, id: string | null) => {
     if (!db || !user) return;
     try {
-      if (isManual && manualId) {
-        await deleteDoc(doc(db, "users", user.uid, "nuageWords", manualId));
-      } else {
-        // Mot auto : l'ajouter à la liste des supprimés sur le profil
-        if (profileRef) await updateDoc(profileRef, { nuageDeletedWords: arrayUnion(word) });
+      if (isManual && id) {
+        await deleteDoc(doc(db, "users", user.uid, "nuageWords", id));
+      } else if (profileRef) {
+        await updateDoc(profileRef, { nuageDeletedWords: arrayUnion(word) });
       }
-      if (selected?.word === word) setSelected(null);
-      toast({ title: `"${word}" retiré du nuage` });
+      toast({ title: `"${word}" retiré` });
     } catch {
-      toast({ variant: "destructive", title: "Erreur de suppression" });
+      toast({ variant: "destructive", title: "Erreur" });
     }
   };
 
-  // ── Cliquer sur un mot → afficher définition ─────────────────────────
-  const selectWord = async (entry: typeof cloudWords[0]) => {
-    if (selected?.word === entry.word) { setSelected(null); return; }
-    if (entry.definition) { setSelected(entry); return; }
-    setLoadingDef(true);
-    setSelected({ ...entry, definition: "Chargement…", synonymes: [] });
-    const [defs, syns] = await Promise.all([
-      fetchDicolink(entry.word, "definitions"),
-      fetchDicolink(entry.word, "synonymes"),
-    ]);
-    setSelected({
-      ...entry,
-      definition: defs[0]?.definition || "Définition non disponible pour ce mot.",
-      nature:     defs[0]?.nature || "",
-      exemple:    defs[0]?.exemple || "",
-      synonymes:  (syns as string[]).slice(0, 8),
-    });
-    setLoadingDef(false);
-  };
-
-  // ── Export PDF ─────────────────────────────────────────────────────────
+  // ── Export PDF ────────────────────────────────────────────────────────
   const exportPDF = async () => {
     if (!cloudRef.current || cloudWords.length === 0) {
-      toast({ title: "Pas encore assez de mots pour générer le nuage" }); return;
+      toast({ title: "Pas encore assez de mots" }); return;
     }
     setIsExporting(true);
     try {
@@ -222,19 +176,19 @@ export default function NuagePage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
-      {/* Header */}
       <div className="pt-2">
         <Link href="/journal" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Journal
         </Link>
       </div>
+
       <div className="flex items-start justify-between flex-wrap gap-4">
         <header>
           <h1 className={cn("text-3xl sm:text-4xl font-headline italic", isAmbientDark && "text-[#F5F1E8]")}>
             Nuage des mots
           </h1>
           <p className={cn("italic font-medium text-sm mt-1", isAmbientDark ? "text-[#F5F1E8]/70" : "text-primary/60")}>
-            {cloudWords.length > 0 ? `${cloudWords.length} mots — cliquez un mot pour sa définition` : "Ajoutez des mots ou prenez des notes pour construire votre nuage"}
+            {cloudWords.length > 0 ? `${cloudWords.length} mots — survolez pour supprimer` : "Ajoutez des mots ou prenez des notes"}
           </p>
         </header>
         <button onClick={exportPDF} disabled={isExporting || cloudWords.length === 0}
@@ -243,30 +197,26 @@ export default function NuagePage() {
         </button>
       </div>
 
-      {/* Ajouter un mot manuellement */}
+      {/* Ajouter un mot */}
       <div className="flex gap-2">
-        <input
-          value={wordInput}
-          onChange={e => setWordInput(e.target.value)}
+        <input value={wordInput} onChange={e => setWordInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && addWord()}
           placeholder="Ajouter un mot au nuage…"
           className="flex-1 h-12 px-4 rounded-2xl bg-white/60 glass-card border-none shadow-sm italic text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
         <button onClick={addWord} disabled={isAdding || !wordInput.trim()}
           className="h-12 px-5 rounded-2xl bg-primary text-white font-headline italic text-sm shadow-md hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center gap-2">
-          {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-          Ajouter
+          {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Ajouter
         </button>
       </div>
 
-      {/* Nuage des mots */}
+      {/* Nuage */}
       {cloudWords.length > 0 ? (
         <div ref={cloudRef}
           className="p-8 rounded-[2rem] bg-white/70 glass-card border-none shadow-sm min-h-[350px] flex flex-wrap gap-x-6 gap-y-4 items-center justify-center">
           {cloudWords.map((entry) => (
             <div key={entry.word} className="relative group/word inline-flex items-center">
-              <button
-                onClick={() => selectWord(entry)}
+              <span
                 style={{
                   fontSize: getSize(entry.count),
                   color: entry.color,
@@ -277,14 +227,12 @@ export default function NuagePage() {
                   textDecoration: entry.isManual ? "underline dotted" : "none",
                   textUnderlineOffset: "3px",
                 }}
-                className="font-headline cursor-pointer transition-opacity hover:opacity-100"
-                title={entry.isManual ? "Mot ajouté manuellement" : undefined}
+                className="font-headline select-none cursor-default"
               >
                 {entry.word}
-              </button>
-              {/* Bouton supprimer */}
+              </span>
               <button
-                onClick={(e) => { e.stopPropagation(); deleteWord(entry.word, entry.isManual, entry.id); }}
+                onClick={() => deleteWord(entry.word, entry.isManual, entry.id)}
                 className="absolute -top-2 -right-3 h-5 w-5 rounded-full bg-white shadow-sm flex items-center justify-center text-muted-foreground opacity-0 group-hover/word:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
                 title="Retirer du nuage"
               >
@@ -304,61 +252,9 @@ export default function NuagePage() {
         </div>
       )}
 
-      {/* Panneau définition */}
-      {selected && (
-        <div className="glass-card rounded-[2rem] bg-white/80 border-none shadow-md p-6 space-y-4 animate-in slide-in-from-bottom-2 duration-300">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-headline italic text-2xl" style={{ color: selected.color }}>
-                {selected.word}
-              </h3>
-              {selected.nature && <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">{selected.nature}</p>}
-            </div>
-            <button onClick={() => setSelected(null)} className="h-8 w-8 rounded-full bg-primary/5 flex items-center justify-center text-primary/40 hover:text-primary hover:bg-primary/10 transition-colors shrink-0">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {loadingDef ? (
-            <div className="flex items-center gap-2 text-sm italic opacity-50">
-              <Loader2 className="h-4 w-4 animate-spin" /> Recherche dans Dicolink…
-            </div>
-          ) : (
-            <>
-              {selected.definition && selected.definition !== "Chargement…" && (
-                <p className="text-sm leading-relaxed italic text-muted-foreground">{selected.definition}</p>
-              )}
-              {selected.exemple && (
-                <p className="text-xs italic text-primary/50 border-l-2 border-primary/20 pl-3">"{selected.exemple}"</p>
-              )}
-              {selected.synonymes?.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest opacity-40">Synonymes</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selected.synonymes.map((s: string) => (
-                      <button key={s} onClick={() => setWordInput(s)}
-                        className="px-3 py-1 rounded-full text-xs font-bold bg-primary/5 text-primary/70 border border-primary/15 hover:bg-primary/10 transition-colors">
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-[9px] italic opacity-35">Cliquez un synonyme pour l'ajouter au nuage</p>
-                </div>
-              )}
-              {selected.definition === "Définition non disponible pour ce mot." && (
-                <p className="text-xs italic opacity-40">
-                  Définition non trouvée dans Dicolink. Vérifiez que la clé API est configurée dans Vercel → Environment Variables → DICOLINK_API_KEY.
-                </p>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Légende */}
       {cloudWords.length > 0 && (
         <p className="text-[10px] text-center opacity-35 italic">
-          Mots soulignés = ajoutés manuellement · Survolez un mot pour le supprimer · Cliquez pour sa définition
+          Mots soulignés = ajoutés manuellement · Survolez un mot pour le supprimer
         </p>
       )}
     </div>
