@@ -1,18 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, HelpCircle, Library, Plus, User, Heart, Newspaper, BookOpen, BarChart3, Users, Share2, Feather, Sparkles } from "lucide-react";
+import { ArrowLeft, HelpCircle, Library, Plus, User, Heart, Newspaper, BookOpen, BarChart3, Users, Share2, Feather, Sparkles, MessageCircle, Cloud } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { cn } from "@/lib/utils";
 
-/**
- * "Comment utiliser Lectoria" — guide simple des fonctionnalités,
- * accessible depuis Profil. Maintenu à la main à chaque évolution
- * importante de l'app (aucune mise à jour "automatique" possible :
- * l'app ne peut pas deviner seule ce qui a changé et l'expliquer
- * clairement — c'est une tenue à jour humaine, comme les récaps PDF).
- */
 const SECTIONS = [
   {
     icon: Library,
@@ -37,12 +30,12 @@ const SECTIONS = [
     icon: BookOpen,
     title: "La fiche d'un livre",
     items: [
-      "\"Ma Note\" : ta note personnelle sur 5 étoiles, demi-étoiles possibles (3,5 / 4,5).",
-      "\"Mon Rang\" (la Palme) : réservé à tes tout meilleurs souvenirs de lecture — plus rare et plus précieux qu'une simple bonne note. Le petit (i) à côté de chacun explique la différence.",
-      "Renseigne les pages lues (ou la durée d'écoute pour l'audio) : ça alimente ton Bilan de lecture.",
-      "\"Service de presse\" : coche cette case pour un livre reçu en service de presse — un petit ruban \"SP\" apparaît alors sur sa couverture.",
-      "\"Pépite Incontournable\" : coche cette case pour recommander ce livre à la communauté — il apparaîtra sur ton profil (et sur ton profil public, si activé).",
+      "\"Ma Note\" : ta note personnelle sur 5 étoiles. Le petit (i) explique la différence avec la Palme.",
+      "\"Mon Rang\" (la Palme) : réservé à tes tout meilleurs souvenirs de lecture — plus rare et plus précieux qu'une simple bonne note.",
+      "\"Service de presse\" : coche cette case pour un livre reçu en service de presse — un ruban SP apparaît sur sa couverture.",
+      "\"Pépite Incontournable\" : recommande ce livre à la communauté — il apparaît sur ton profil public.",
       "Le bouton \"Suivre\" à côté de la Maison d'édition permet d'être alertée des nouveautés de cet éditeur.",
+      "✦ Nouveau — \"Exporter l'avis\" dans l'onglet Mon Journal : génère une carte stylisée à partager sur Instagram ou TikTok (4 templates, palette de couleurs, texte libre, export PNG ou PDF).",
     ],
   },
   {
@@ -58,17 +51,19 @@ const SECTIONS = [
     title: "Journal",
     items: [
       "\"Notes au fil de l'eau\" : notes rapides liées à un livre en cours ou dans ta PAL — le livre disparaît automatiquement de la liste dès qu'il est marqué comme lu.",
-      "\"Carnet de Citations\" : les passages que tu choisis de garder, livre par livre.",
-      "Tes avis complets, écrits depuis la fiche de chaque livre, sont aussi rassemblés ici.",
+      "✦ Nouveau — \"Mes notes de lecture\" : retrouve toutes tes notes avec la possibilité de les catégoriser (Citation, Réflexion, Personnage, Intrigue, Émotion) et d'ajouter une humeur (😍 😤 😭 😱). Vue \"Par livre\" pour regrouper par roman. Export PDF de toutes tes notes.",
+      "✦ Nouveau — \"Nuage des mots\" : un nuage visuel construit automatiquement depuis toutes tes notes, citations et avis. Ajoute tes propres mots manuellement, supprime ceux qui ne t'intéressent pas. Export PDF.",
+      "\"Mon Avis & Réflexions\" : retrouve tous tes avis rédigés depuis les fiches livres.",
+      "\"Carnet de Citations\" : toutes les citations favorites que tu as notées sur chaque fiche livre.",
+      "\"Mes Recommandations\" : les livres auxquels tu as attribué une Palme, avec un bouton Partager.",
     ],
   },
   {
     icon: BarChart3,
     title: "Bilan de lecture",
     items: [
-      "Ton nombre de livres lus, ton rythme, ton genre dominant, ta maison d'édition la plus lue...",
-      "L'Objectif Annuel ne compte que les livres lus depuis le 1er janvier de l'année en cours.",
-      "Exportable en PDF depuis le bouton en haut de la page.",
+      "Un tableau de bord complet : livres lus par mois, répartition des genres, objectif annuel et progression.",
+      "\"Récap de l'année\" : une carte visuelle à exporter et partager.",
     ],
   },
   {
@@ -93,6 +88,7 @@ const SECTIONS = [
     items: [
       "Génère une carte élégante pour un livre précis, à partager sur Instagram, TikTok, Twitch, Snapchat ou Facebook.",
       "\"Récap de l'année\" : une carte à part qui résume toute ton année de lecture en un coup d'œil.",
+      "✦ Nouveau — \"Exporter l'avis\" depuis la fiche d'un livre (onglet Mon Journal) : 4 templates (Polaroid, Journal, Minimal, Bold), palette de couleurs personnalisable, texte libre repositionnable, export en PNG ou PDF.",
     ],
   },
   {
@@ -135,8 +131,8 @@ export default function GuidePage() {
               <ul className="space-y-3 pb-2 pl-2">
                 {section.items.map((item, j) => (
                   <li key={j} className="flex gap-3 text-sm italic text-muted-foreground leading-relaxed">
-                    <span className="text-copper shrink-0">✦</span>
-                    <span>{item}</span>
+                    <span className="text-copper shrink-0">{item.startsWith("✦ Nouveau") ? "🆕" : "✦"}</span>
+                    <span>{item.startsWith("✦ Nouveau") ? item.slice(10) : item}</span>
                   </li>
                 ))}
               </ul>
@@ -147,7 +143,7 @@ export default function GuidePage() {
 
       <p className="text-center text-[10px] italic text-muted-foreground/60 pt-4">
         <Sparkles className="h-3 w-3 inline mr-1.5" />
-        Ce guide est mis à jour à la main à chaque nouvelle fonctionnalité importante.
+        Ce guide est mis à jour à chaque nouvelle fonctionnalité importante.
       </p>
     </div>
   );

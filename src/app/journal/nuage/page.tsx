@@ -10,18 +10,44 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 const FR_STOP = new Set([
+  // Articles & prépositions
   "le","la","les","de","du","des","un","une","et","en","au","aux","à","a",
-  "je","il","elle","ils","elles","nous","vous","on","me","te","se","lui",
+  "par","pour","sur","sous","dans","avec","sans","vers","chez","entre","après",
+  "avant","pendant","depuis","lors","lors","dès","jusque","jusqu","malgré",
+  // Pronoms
+  "je","il","elle","ils","elles","nous","vous","on","me","te","se","lui","eux",
   "mon","ma","mes","ton","ta","tes","son","sa","ses","notre","nos","leur","leurs",
-  "ce","cet","cette","ces","cela","ceci","ça","ca",
-  "qui","que","quoi","dont","où","quand","comment","pourquoi",
-  "plus","très","bien","tout","tous","toute","toutes","mais","ou","donc","ni","car",
-  "ne","pas","rien","jamais","aussi","ainsi","si","comme",
-  "avec","pour","sur","dans","par","sans","sous","entre","vers","chez",
-  "après","avant","pendant","depuis","lors","même",
+  "ce","cet","cette","ces","cela","ceci","ça","ca","ceux","celles","celui",
+  "qui","que","quoi","dont","où","quand","comment","pourquoi","quel","quelle",
+  // Verbes courants
   "est","sont","était","étaient","être","avoir","fait","faire","dit","dire",
-  "peut","vais","aller","suis","ai","ont","avait","été","vas","va",
-  "alors","puis","voilà","voila","qu","c","d","l","m","n","j","s","t","y",
+  "peut","peut-être","pourrait","pourrais","vais","aller","suis","ai","ont",
+  "avait","été","vas","va","allait","allaient","vient","venu","venait","venir",
+  "voir","vu","voyait","voient","savoir","sait","savait","savaient",
+  "vouloir","veux","veut","voulait","voulais","devoir","doit","devait",
+  "prendre","prend","prenait","mettre","met","mettait","tenir","tient",
+  "rester","reste","restait","rendre","rend","rendait","passer","passe",
+  "donner","donne","donnait","trouver","trouve","trouvait","sembler","semble",
+  "regarder","regarde","regardait","entendre","entend","entendait",
+  "sentir","sent","sentait","parler","parle","parlait","penser","pense","pensait",
+  "aimer","aime","aimait","demander","demande","demandait","répondre","répond",
+  // Adverbes & conjonctions
+  "plus","très","bien","tout","tous","toute","toutes","mais","ou","donc","ni","car",
+  "ne","pas","rien","jamais","aussi","ainsi","si","comme","même","encore","déjà",
+  "alors","puis","voilà","voila","après","enfin","surtout","vraiment","tellement",
+  "trop","peu","beaucoup","assez","plutôt","quand","alors","pourtant","cependant",
+  "toujours","souvent","parfois","maintenant","bientôt","aussitôt","soudain",
+  // Minuscules & fragments
+  "qu","c","d","l","m","n","j","s","t","y","y","en","on",
+  // Mots très courants dans la fiction (corps, gestes, temps)
+  "main","mains","bras","yeux","oeil","œil","tête","dos","jambe","jambes",
+  "bouche","lèvres","levre","regard","visage","voix","sourire","corps","cœur",
+  "coeur","bras","épaule","épaules","doigt","doigts","pied","pieds",
+  "moment","temps","jour","jours","nuit","nuits","fois","heure","heures",
+  "chose","choses","façon","fond","bout","côté","coup","côté","genre",
+  "homme","femme","hommes","femmes","fille","garçon","petit","grande",
+  "autre","autres","même","mêmes","seul","seule","seuls","seules",
+  "vieux","vieille","jeune","jeunes","long","longue","grand","grande",
 ]);
 
 const CLOUD_COLORS = ["#C07A40","#8A72C7","#7BAA6A","#5496B6","#E07098","#F0845A","#F5C400"];
@@ -72,7 +98,7 @@ export default function NuagePage() {
 
     const words = texts
       .toLowerCase()
-      .replace(/[^a-zàâäéèêëïîôùûüç\s'-]/g, " ")
+      .replace(/[''\u2019]/g, " ").replace(/[^a-zàâäéèêëïîôùûüç\s-]/g, " ")
       .split(/\s+/)
       .map(w => w.replace(/^[-']+|[-']+$/g, ""))
       .filter(w => w.length > 3 && !FR_STOP.has(w));
