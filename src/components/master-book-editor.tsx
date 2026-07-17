@@ -221,7 +221,7 @@ export function MasterBookEditor({
           </div>
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">ISBN 13</Label>
-            <Input value={form.isbn13 || ""} onChange={(e) => setForm((p: any) => ({ ...p, isbn13: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" disabled={!isNew} />
+            <Input value={form.isbn13 || ""} onChange={(e) => setForm((p: any) => ({ ...p, isbn13: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
           </div>
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">ISBN 10</Label>
