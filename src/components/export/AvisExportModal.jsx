@@ -282,7 +282,7 @@ export default function AvisExportModal({ isOpen, onClose, book = {} }) {
           </div>
 
           {/* Carte + Panneau */}
-          <div className="flex gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             {/* Aperçu carte */}
             <div className="flex-1 flex justify-center items-start">
               <div>
@@ -304,7 +304,7 @@ export default function AvisExportModal({ isOpen, onClose, book = {} }) {
             </div>
 
             {/* Panneau */}
-            <div className="w-48 shrink-0 space-y-2.5">
+            <div className="w-full md:w-48 shrink-0 space-y-2.5">
               {/* Texte libre */}
               <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-3 space-y-2">
                 <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Texte libre</p>
@@ -326,7 +326,7 @@ export default function AvisExportModal({ isOpen, onClose, book = {} }) {
               {/* Éléments */}
               <div className="bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-200 dark:border-zinc-700 p-3">
                 <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider mb-2">Éléments</p>
-                <div className="space-y-1">
+                <div className="grid grid-cols-2 md:grid-cols-1 gap-0.5">
                   {ELEM_LIST.filter(({id}) => id !== 'sp' || bookSP).map(({id, label}) => (
                     <div key={id} className="flex items-center justify-between py-0.5">
                       <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>

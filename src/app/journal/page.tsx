@@ -424,10 +424,10 @@ export default function JournalPage() {
           <h2 className="text-base md:text-2xl font-headline italic">Notes au fil de l'eau</h2>
         </div>
         <div className="flex gap-3">
-          <Link href="/journal/notes" className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-primary text-white font-headline italic shadow-md hover:bg-primary/90 transition-colors text-sm md:text-base">
+          <Link href="/journal/notes" className="flex-1 flex items-center justify-center gap-2 py-3 sm:py-4 rounded-2xl bg-primary text-white font-headline italic shadow-md hover:bg-primary/90 transition-colors text-sm">
             <BookMarked className="h-5 w-5" /> Mes notes de lecture
           </Link>
-          <Link href="/journal/nuage" className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-white/60 glass-card border-none text-primary/70 font-headline italic shadow-sm hover:bg-white/80 transition-colors text-sm md:text-base">
+          <Link href="/journal/nuage" className="flex-1 flex items-center justify-center gap-2 py-3 sm:py-4 rounded-2xl bg-white/60 glass-card border-none text-primary/70 font-headline italic shadow-sm hover:bg-white/80 transition-colors text-sm">
             <Cloud className="h-5 w-5" /> Nuage des mots
           </Link>
         </div>

@@ -217,7 +217,7 @@ export default function NotesPage() {
               <div className="flex flex-wrap gap-2">
                 {NOTE_TAGS.map(tag => (
                   <button key={tag.id} onClick={() => setNoteTag(noteTag === tag.id ? "" : tag.id)}
-                    className={cn("px-3 py-1.5 rounded-full text-xs font-bold border transition-all",
+                    className={cn("px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-xs font-bold border transition-all",
                       noteTag === tag.id ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40 border-primary/20 text-primary/60 hover:border-primary/40")}>
                     {tag.emoji} {tag.label}
                   </button>
@@ -231,7 +231,7 @@ export default function NotesPage() {
               <div className="flex gap-3">
                 {NOTE_HUMEURS.map(h => (
                   <button key={h.id} onClick={() => setNoteHumeur(noteHumeur === h.id ? "" : h.id)} title={h.label}
-                    className={cn("h-10 w-10 rounded-full text-xl transition-all",
+                    className={cn("h-9 w-9 sm:h-10 sm:w-10 rounded-full text-lg sm:text-xl transition-all",
                       noteHumeur === h.id ? "bg-primary/15 scale-110 shadow-sm ring-2 ring-primary/30" : "opacity-50 hover:opacity-100 hover:scale-110")}>
                     {h.id}
                   </button>
@@ -302,12 +302,12 @@ function NoteCard({ entry, onDelete }: { entry: any; onDelete: () => void }) {
       {/* Bouton supprimer */}
       <button
         onClick={onDelete}
-        className="absolute top-3 right-3 h-6 w-6 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
+        className="absolute top-3 right-3 h-6 w-6 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
         title="Supprimer cette note"
       >
         <X className="h-3.5 w-3.5" />
       </button>
-      <CardContent className="p-5 flex gap-4 pr-10">
+      <CardContent className="p-4 sm:p-5 flex gap-3 sm:gap-4 pr-10">
         <div className={cn(
           "h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm text-lg",
           entry.humeur ? "" : entry.type === "lecture" ? "bg-primary/10 text-primary" : "bg-blue-50 text-blue-400"

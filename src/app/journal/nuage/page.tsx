@@ -239,7 +239,7 @@ export default function NuagePage() {
       {/* Nuage */}
       {cloudWords.length > 0 ? (
         <div ref={cloudRef}
-          className="p-8 rounded-[2rem] bg-white/70 glass-card border-none shadow-sm min-h-[350px] flex flex-wrap gap-x-6 gap-y-4 items-center justify-center">
+          className="p-4 sm:p-8 rounded-[2rem] bg-white/70 glass-card border-none shadow-sm min-h-[300px] flex flex-wrap gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4 items-center justify-center">
           {cloudWords.map((entry) => (
             <div key={entry.word} className="relative group/word inline-flex items-center">
               <span
@@ -259,7 +259,7 @@ export default function NuagePage() {
               </span>
               <button
                 onClick={() => deleteWord(entry.word, entry.isManual, entry.id)}
-                className="absolute -top-2 -right-3 h-5 w-5 rounded-full bg-white shadow-sm flex items-center justify-center text-muted-foreground opacity-0 group-hover/word:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
+                className="absolute -top-2 -right-3 h-5 w-5 rounded-full bg-white shadow-sm flex items-center justify-center text-muted-foreground opacity-100 md:opacity-0 md:group-hover/word:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
                 title="Retirer du nuage"
               >
                 <X className="h-3 w-3" />
