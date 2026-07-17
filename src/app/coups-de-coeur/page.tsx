@@ -123,45 +123,6 @@ export default function CoupsDeCoeurPage() {
     })();
   }, [db, isAdmin, activeView, allAuthors]);
 
-  // Éditeurs suivis — écoute le profil pour récupérer followedPublishers
-  useEffect(() => {
-    if (!db || !user || activeView !== "editeurs") return;
-    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      const pubs: string[] = snap.data()?.followedPublishers || [];
-      setFollowedPublishers(pubs);
-    }, () => setFollowedPublishers([]));
-    return () => unsub();
-  }, [db, user, activeView]);
-
-  // Calcul des livres par éditeur dès que followedPublishers et allUserBooks sont prêts
-  useEffect(() => {
-    if (!db || !followedPublishers) return;
-    if (followedPublishers.length === 0) { setPublisherBooksMap({}); return; }
-    if ((allUserBooks as any[]).length === 0) return;
-
-    let cancelled = false;
-    setLoadingPublishers(true);
-
-    const compute = async () => {
-      const booksMap: Record<string, any[]> = {};
-      for (const pub of followedPublishers) {
-        if (cancelled) return;
-        try {
-          const snap = await getDocs(query(collection(db, "masterBooks"), where("publisher", "==", pub)));
-          const ids = new Set(snap.docs.map(d => d.id));
-          booksMap[pub] = (allUserBooks as any[]).filter((b: any) => ids.has(b.masterBookId));
-        } catch {
-          booksMap[pub] = [];
-        }
-      }
-      if (!cancelled) { setPublisherBooksMap(booksMap); setLoadingPublishers(false); }
-    };
-
-    compute().catch(() => { if (!cancelled) setLoadingPublishers(false); });
-    return () => { cancelled = true; };
-  }, [db, followedPublishers, allUserBooks]);
-
-
   const openMasterEditor = async (masterBookId?: string) => {
     if (!db || !masterBookId) return;
     setIsLoadingEditBook(true);
@@ -192,6 +153,38 @@ export default function CoupsDeCoeurPage() {
   const { data: allUserBooks = [], loading } = useCollection(allBooksQuery);
 
   const rankedBooks = useMemo(() => allUserBooks.filter((b: any) => b.plumeRank && b.plumeRank !== "dnf"), [allUserBooks]);
+
+  // Éditeurs suivis — placés ICI pour que allUserBooks soit déjà déclaré
+  useEffect(() => {
+    if (!db || !user || activeView !== "editeurs") return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      const pubs: string[] = snap.data()?.followedPublishers || [];
+      setFollowedPublishers(pubs);
+    }, () => setFollowedPublishers([]));
+    return () => unsub();
+  }, [db, user, activeView]);
+
+  useEffect(() => {
+    if (!db || !followedPublishers) return;
+    if (followedPublishers.length === 0) { setPublisherBooksMap({}); return; }
+    if (allUserBooks.length === 0) return;
+    let cancelled = false;
+    setLoadingPublishers(true);
+    const compute = async () => {
+      const booksMap: Record<string, any[]> = {};
+      for (const pub of followedPublishers) {
+        if (cancelled) return;
+        try {
+          const snap = await getDocs(query(collection(db, "masterBooks"), where("publisher", "==", pub)));
+          const ids = new Set(snap.docs.map(d => d.id));
+          booksMap[pub] = allUserBooks.filter((b: any) => ids.has(b.masterBookId));
+        } catch { booksMap[pub] = []; }
+      }
+      if (!cancelled) { setPublisherBooksMap(booksMap); setLoadingPublishers(false); }
+    };
+    compute().catch(() => { if (!cancelled) setLoadingPublishers(false); });
+    return () => { cancelled = true; };
+  }, [db, followedPublishers, allUserBooks]);
 
   const giftBooks = useMemo(() => sortBySaga(allUserBooks.filter((b: any) => b.toGift) as any[]), [allUserBooks]);
 
