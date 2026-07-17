@@ -417,240 +417,26 @@ export default function JournalPage() {
         </div>
       </section>
 
-      {/* ── Notes de lecture + Nuage des mots (2 onglets) ── */}
-      <div className="space-y-6">
+      {/* ── Notes + Nuage : navigation vers pages dédiées ── */}
+      <div className="space-y-5">
         <div className="flex items-center gap-2 md:gap-3">
           <MessageCircle className="h-4 w-4 md:h-6 md:w-6 text-primary/40" />
           <h2 className="text-base md:text-2xl font-headline italic">Notes au fil de l'eau</h2>
         </div>
-
-        <Tabs defaultValue="notes" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6 h-12 bg-white/40 p-1 rounded-2xl">
-            <TabsTrigger value="notes" className="rounded-xl flex gap-2 font-headline italic text-sm">
-              <BookMarked className="h-4 w-4" /> Mes notes de lecture
-            </TabsTrigger>
-            <TabsTrigger value="nuage" className="rounded-xl flex gap-2 font-headline italic text-sm">
-              <Cloud className="h-4 w-4" /> Nuage des mots
-            </TabsTrigger>
-          </TabsList>
-
-          {/* ── TAB 1 : Mes notes de lecture ── */}
-          <TabsContent value="notes" className="space-y-8">
-            {/* Formulaire */}
-            <Tabs defaultValue="reading" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-8 h-14 bg-white/40 p-1.5 rounded-2xl">
-                <TabsTrigger value="reading" className="rounded-xl flex gap-2 font-headline italic">
-                  <BookOpen className="h-4 w-4" /> Lecture
-                </TabsTrigger>
-                <TabsTrigger value="listening" className="rounded-xl flex gap-2 font-headline italic">
-                  <Headset className="h-4 w-4" /> Écoute
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="space-y-8">
-                <Card className="glass-card shadow-lg border-none bg-white/60">
-                  <CardHeader>
-                    <Select value={title} onValueChange={setTitle}>
-                      <SelectTrigger className="text-2xl font-headline italic border-none bg-transparent h-auto px-0 focus:ring-0 [&>span]:truncate">
-                        <SelectValue placeholder="Choisir un livre..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {notableBooks.length > 0 ? (
-                          notableBooks.map((b: any) => (
-                            <SelectItem key={b.id} value={`${cleanBookTitle(b.title)}${b.author ? " — " + cleanAuthorName(b.author) : ""}`}>
-                              <span className="italic">{b.status === "progress" ? "📖 " : "📚 "}{cleanBookTitle(b.title)}</span>
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <div className="px-2 py-3 text-sm italic opacity-50 text-center">Aucun livre en cours ou en PAL pour le moment.</div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <CardDescription className="italic">Partagez votre réflexion du moment.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-5">
-                    <TabsContent value="reading" className="m-0">
-                      <Textarea
-                        placeholder="Quelles émotions ce passage a-t-il éveillé en vous ?"
-                        className="min-h-[180px] bg-white/40 border-none rounded-3xl p-6 italic shadow-inner resize-none"
-                        value={readingNotes}
-                        onChange={e => setReadingNotes(e.target.value)}
-                      />
-                    </TabsContent>
-                    <TabsContent value="listening" className="m-0">
-                      <Textarea
-                        placeholder="Quelles notes, quels arguments retenez-vous ?"
-                        className="min-h-[180px] bg-white/40 border-none rounded-3xl p-6 italic shadow-inner resize-none"
-                        value={listeningNotes}
-                        onChange={e => setListeningNotes(e.target.value)}
-                      />
-                    </TabsContent>
-
-                    {/* Tags */}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">Catégorie</p>
-                      <div className="flex flex-wrap gap-2">
-                        {NOTE_TAGS.map(tag => (
-                          <button
-                            key={tag.id}
-                            onClick={() => setNoteTag(noteTag === tag.id ? "" : tag.id)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-full text-xs font-bold border transition-all",
-                              noteTag === tag.id
-                                ? "bg-primary text-white border-primary shadow-sm"
-                                : "bg-white/40 border-primary/20 text-primary/60 hover:border-primary/40"
-                            )}
-                          >
-                            {tag.emoji} {tag.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Humeur */}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest opacity-50">Humeur</p>
-                      <div className="flex gap-3">
-                        {NOTE_HUMEURS.map(h => (
-                          <button
-                            key={h.id}
-                            onClick={() => setNoteHumeur(noteHumeur === h.id ? "" : h.id)}
-                            title={h.label}
-                            className={cn(
-                              "h-10 w-10 rounded-full text-xl transition-all",
-                              noteHumeur === h.id
-                                ? "bg-primary/15 scale-110 shadow-sm ring-2 ring-primary/30"
-                                : "opacity-50 hover:opacity-100 hover:scale-110"
-                            )}
-                          >
-                            {h.id}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => handleSaveNote(readingNotes ? "lecture" : "écoute")}
-                      disabled={(!readingNotes && !listeningNotes) || !user}
-                      className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 font-headline italic text-xl"
-                    >
-                      <Save className="mr-3 h-5 w-5" /> Enregistrer la note
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Historique */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <h3 className="text-xl font-headline italic flex items-center gap-2 text-muted-foreground/60">
-                      <History className="h-5 w-5" /> Historique
-                      {pastEntries.length > 10 && (
-                        <Link href="/journal/notes" className="text-xs text-primary underline underline-offset-2 font-normal not-italic ml-2">
-                          Voir tout ({pastEntries.length})
-                        </Link>
-                      )}
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setViewByBook(v => !v)}
-                        className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all",
-                          viewByBook
-                            ? "bg-primary text-white border-primary"
-                            : "bg-white/40 border-primary/20 text-primary/60 hover:border-primary/40"
-                        )}
-                      >
-                        <LayoutList className="h-3.5 w-3.5" /> Par livre
-                      </button>
-                      <button
-                        onClick={exportNotesPDF}
-                        disabled={isExportingNotes || pastEntries.length === 0}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-primary/20 bg-white/40 text-primary/60 hover:bg-primary/5 transition-all disabled:opacity-40"
-                      >
-                        <FileDown className="h-3.5 w-3.5" /> {isExportingNotes ? "Export…" : "PDF"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Vue par livre */}
-                  {viewByBook ? (
-                    <div className="space-y-6">
-                      {notesByBook.length === 0 ? <EmptyNotes /> : notesByBook.map(([bookTitle, entries]) => (
-                        <div key={bookTitle} className="space-y-3">
-                          <h4 className="font-headline italic text-lg text-primary/80 border-b border-primary/10 pb-2">{bookTitle}</h4>
-                          <div className="grid gap-3 pl-2">
-                            {(entries as any[]).map((entry, i) => <NoteCard key={i} entry={entry} />)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid gap-4">
-                      {pastEntries.length === 0 ? <EmptyNotes /> :
-                        pastEntries.slice(0, 10).map((entry, i) => <NoteCard key={i} entry={entry} />)
-                      }
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Tabs>
-          </TabsContent>
-
-          {/* ── TAB 2 : Nuage des mots ── */}
-          <TabsContent value="nuage" className="space-y-6">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <p className="text-sm italic text-muted-foreground">
-                Construit à partir de vos notes, citations et avis
-                {wordFrequencies.length > 0 && ` — ${wordFrequencies.length} mots`}.
-              </p>
-              <button
-                onClick={exportWordCloudPDF}
-                disabled={isExportingCloud || wordFrequencies.length === 0}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-primary/20 bg-white/40 text-primary/60 hover:bg-primary/5 transition-all disabled:opacity-40"
-              >
-                <FileDown className="h-3.5 w-3.5" /> {isExportingCloud ? "Export…" : "PDF"}
-              </button>
-            </div>
-
-            {wordFrequencies.length > 0 ? (
-              <div
-                ref={wordCloudRef}
-                className="p-8 rounded-[2rem] bg-white/70 glass-card border-none shadow-sm min-h-[300px] flex flex-wrap gap-x-5 gap-y-3 items-center justify-center"
-              >
-                {wordFrequencies.map(({ word, count, color }, i) => (
-                  <span
-                    key={word}
-                    style={{
-                      fontSize: getSize(count),
-                      color,
-                      opacity: 0.55 + (count / maxCount) * 0.45,
-                      fontStyle: i % 3 === 0 ? "italic" : "normal",
-                      fontWeight: count > maxCount * 0.6 ? 700 : count > maxCount * 0.3 ? 500 : 400,
-                      lineHeight: 1.2,
-                    }}
-                    className="font-headline cursor-default select-none transition-opacity hover:opacity-100"
-                    title={`${count} occurrence${count > 1 ? "s" : ""}`}
-                  >
-                    {word}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="py-16 text-center glass-card rounded-[2rem] border-dashed border-primary/20 bg-white/20">
-                <Cloud className="h-10 w-10 mx-auto text-primary/20 mb-4" />
-                <p className="italic text-muted-foreground">
-                  Commencez à prendre des notes pour voir votre nuage de mots apparaître ici.
-                </p>
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+        <div className="flex gap-3">
+          <Link href="/journal/notes" className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-primary text-white font-headline italic shadow-md hover:bg-primary/90 transition-colors text-sm md:text-base">
+            <BookMarked className="h-5 w-5" /> Mes notes de lecture
+          </Link>
+          <Link href="/journal/nuage" className="flex-1 flex items-center justify-center gap-2 py-4 rounded-2xl bg-white/60 glass-card border-none text-primary/70 font-headline italic shadow-sm hover:bg-white/80 transition-colors text-sm md:text-base">
+            <Cloud className="h-5 w-5" /> Nuage des mots
+          </Link>
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Composant carte de note ───────────────────────────────────────────────
+// ─── Composant carte de note ──────────────────────────────────────────────
 function NoteCard({ entry }: { entry: any }) {
   const tag = NOTE_TAGS.find(t => t.id === entry.tag);
   return (
@@ -660,10 +446,7 @@ function NoteCard({ entry }: { entry: any }) {
           "h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm text-lg",
           entry.humeur ? "" : entry.type === "lecture" ? "bg-primary/10 text-primary" : "bg-blue-50 text-blue-400"
         )}>
-          {entry.humeur || (entry.type === "lecture"
-            ? <BookOpen className="h-5 w-5" />
-            : <Headset className="h-5 w-5" />
-          )}
+          {entry.humeur || (entry.type === "lecture" ? <BookOpen className="h-5 w-5" /> : <Headset className="h-5 w-5" />)}
         </div>
         <div className="space-y-1.5 w-full min-w-0">
           <div className="flex justify-between items-start flex-wrap gap-1">
@@ -684,7 +467,6 @@ function NoteCard({ entry }: { entry: any }) {
   );
 }
 
-// ─── État vide ────────────────────────────────────────────────────────────
 function EmptyNotes() {
   return (
     <div className="py-12 text-center glass-card rounded-2xl border-dashed border-primary/20 bg-white/20">
