@@ -28,7 +28,8 @@ import {
   RefreshCw,
   CalendarDays,
   Gift,
-  Sun
+  Sun,
+  Info
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Slider } from "@/components/ui/slider";
@@ -45,7 +46,7 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey } from "@/lib/utils";
 import { TagDropdown } from "@/components/tag-dropdown";
-import { UserBook, MasterBook, STATUSES, RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
+import { UserBook, MasterBook, STATUSES, RANKS, SELECTABLE_RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useStorage } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
@@ -80,6 +81,8 @@ export default function BookDetailPage() {
   const taxonomy = useTaxonomy();
   const [showMasterEditor, setShowMasterEditor] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [showNoteInfo, setShowNoteInfo] = useState(false);
+  const [showRangInfo, setShowRangInfo] = useState(false);
 
   const userBookRef = useMemo(() => {
     if (!db || !user || !bookId) return null;
@@ -519,9 +522,19 @@ export default function BookDetailPage() {
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label>
+             <div className="flex items-center gap-2">
+               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label>
+               <button onClick={() => setShowRangInfo(v => !v)} className="text-primary/30 hover:text-primary transition-colors">
+                 <Info className="h-3.5 w-3.5" />
+               </button>
+             </div>
+             {showRangInfo && (
+               <p className="text-[11px] italic text-muted-foreground bg-primary/5 rounded-xl px-3 py-2 leading-relaxed">
+                 La <strong>Palme</strong> est votre appréciation globale du livre — indépendante des étoiles. Les étoiles notent la qualité littéraire ; la Palme reflète votre coup de cœur personnel. Un livre peut avoir 3 étoiles et une Palme Éternelle si vous l'avez adoré malgré ses défauts.
+               </p>
+             )}
              <div className="flex flex-wrap gap-2">
-               {Object.entries(RANKS).map(([k, v]) => {
+               {Object.entries(RANKS).filter(([k]) => (SELECTABLE_RANKS as string[]).includes(k)).map(([k, v]) => {
                  const isActive = editedData.plumeRank === k;
                  const RankIcon = v.icon;
                  return (
@@ -886,7 +899,12 @@ export default function BookDetailPage() {
                )}
                <div className="space-y-6">
                  <div className="flex items-center justify-between flex-wrap gap-4">
-                   <Label className="italic text-3xl font-headline">Ma Note</Label>
+                   <div className="flex items-center gap-2">
+                     <Label className="italic text-3xl font-headline">Ma Note</Label>
+                     <button onClick={() => setShowNoteInfo(v => !v)} className="text-primary/30 hover:text-primary transition-colors mt-1">
+                       <Info className="h-4 w-4" />
+                     </button>
+                   </div>
                    <Dialog open={ratingGridOpen} onOpenChange={setRatingGridOpen}>
                      <DialogTrigger asChild>
                        <Button variant="outline" className="rounded-2xl h-11 px-6 italic font-headline border-primary/20">
@@ -931,6 +949,11 @@ export default function BookDetailPage() {
                      </DialogContent>
                    </Dialog>
                  </div>
+                 {showNoteInfo && (
+                   <p className="text-[11px] italic text-muted-foreground bg-primary/5 rounded-xl px-3 py-2 leading-relaxed -mt-2">
+                     Les <strong>étoiles</strong> notent la qualité objective du livre (écriture, rythme, personnages…). La <strong>Palme</strong> dans "Mon Rang" ci-dessus reflète votre coup de cœur personnel — les deux sont indépendants.
+                   </p>
+                 )}
                  <div className="flex gap-4">
                    {[1,2,3,4,5].map(s => (
                     <Star 
