@@ -4,14 +4,14 @@
 import { useMemo, useState, useEffect } from "react";
 import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { RANKS, RankType } from "@/app/library/page";
-import { Diamond, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart, Gift, Sun, X } from "lucide-react";
+import { Diamond, Sparkles, Heart, Pencil, Loader2, User as UserIcon, BookHeart, Gift, Sun, X, Building2 } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
-import { collection, doc, getDoc, getDocs, updateDoc, onSnapshot } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, updateDoc, onSnapshot, query, where } from "firebase/firestore";
 import { cn, ADMIN_EMAILS, authorKey, sortBySaga, defaultAvatarUrl } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
@@ -26,7 +26,10 @@ export default function CoupsDeCoeurPage() {
   const isAmbientDark = useAmbientDark();
   const [editingMasterBook, setEditingMasterBook] = useState<any | null>(null);
   const [isLoadingEditBook, setIsLoadingEditBook] = useState(false);
-  const [activeView, setActiveView] = useState<"lectures" | "auteurs">("lectures");
+  const [activeView, setActiveView] = useState<"lectures" | "auteurs" | "editeurs">("lectures");
+  const [followedPublishers, setFollowedPublishers] = useState<string[] | null>(null);
+  const [publisherBooksMap, setPublisherBooksMap] = useState<Record<string, any[]> | null>(null);
+  const [loadingPublishers, setLoadingPublishers] = useState(false);
   const [followedAuthors, setFollowedAuthors] = useState<{ slug: string; name: string; photo: string | null }[] | null>(null);
   const [allAuthors, setAllAuthors] = useState<{ slug: string; name: string; photo: string | null }[] | null>(null);
 
@@ -119,6 +122,45 @@ export default function CoupsDeCoeurPage() {
       }
     })();
   }, [db, isAdmin, activeView, allAuthors]);
+
+  // Éditeurs suivis — écoute le profil pour récupérer followedPublishers
+  useEffect(() => {
+    if (!db || !user || activeView !== "editeurs") return;
+    const unsub = onSnapshot(doc(db, "users", user.uid), (snap) => {
+      const pubs: string[] = snap.data()?.followedPublishers || [];
+      setFollowedPublishers(pubs);
+    }, () => setFollowedPublishers([]));
+    return () => unsub();
+  }, [db, user, activeView]);
+
+  // Calcul des livres par éditeur dès que followedPublishers et allUserBooks sont prêts
+  useEffect(() => {
+    if (!db || !followedPublishers) return;
+    if (followedPublishers.length === 0) { setPublisherBooksMap({}); return; }
+    if ((allUserBooks as any[]).length === 0) return;
+
+    let cancelled = false;
+    setLoadingPublishers(true);
+
+    const compute = async () => {
+      const booksMap: Record<string, any[]> = {};
+      for (const pub of followedPublishers) {
+        if (cancelled) return;
+        try {
+          const snap = await getDocs(query(collection(db, "masterBooks"), where("publisher", "==", pub)));
+          const ids = new Set(snap.docs.map(d => d.id));
+          booksMap[pub] = (allUserBooks as any[]).filter((b: any) => ids.has(b.masterBookId));
+        } catch {
+          booksMap[pub] = [];
+        }
+      }
+      if (!cancelled) { setPublisherBooksMap(booksMap); setLoadingPublishers(false); }
+    };
+
+    compute().catch(() => { if (!cancelled) setLoadingPublishers(false); });
+    return () => { cancelled = true; };
+  }, [db, followedPublishers, allUserBooks]);
+
 
   const openMasterEditor = async (masterBookId?: string) => {
     if (!db || !masterBookId) return;
@@ -214,6 +256,15 @@ export default function CoupsDeCoeurPage() {
         >
           <BookHeart className="h-4 w-4" /> {isAdmin ? "Tous les Auteurs (admin)" : "Auteurs coup de cœur"}
         </button>
+        <button
+          onClick={() => setActiveView("editeurs")}
+          className={cn(
+            "h-12 px-6 rounded-2xl italic font-headline text-sm transition-all flex items-center gap-2",
+            activeView === "editeurs" ? "bg-primary text-white shadow-lg" : "bg-white/40 text-primary/60 hover:bg-white/60"
+          )}
+        >
+          <Building2 className="h-4 w-4" /> Maisons d'édition suivies
+        </button>
       </div>
 
       {activeView === "auteurs" && (
@@ -254,6 +305,71 @@ export default function CoupsDeCoeurPage() {
                   <p className="font-headline italic text-sm leading-tight">{author.name}</p>
                 </Link>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeView === "editeurs" && (
+        <div className="max-w-4xl mx-auto px-4 pb-12 space-y-10">
+          {loadingPublishers ? (
+            <div className="py-24 text-center italic text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary/30" />
+              Chargement des maisons d'édition…
+            </div>
+          ) : followedPublishers === null ? (
+            <div className="py-24 text-center italic text-muted-foreground">Ouverture de l'écrin…</div>
+          ) : followedPublishers.length === 0 ? (
+            <div className="py-24 text-center space-y-6">
+              <Building2 className="h-16 w-16 mx-auto text-primary/10" />
+              <p className="text-muted-foreground italic text-lg">
+                Tu ne suis encore aucune maison d'édition.<br />
+                Va sur la fiche d'un livre et clique sur "Suivre" à côté du nom de l'éditeur.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-12">
+              {followedPublishers.map((pub) => {
+                const pubBooks = publisherBooksMap?.[pub] || [];
+                return (
+                  <div key={pub} className="space-y-4">
+                    {/* Header éditeur */}
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center shadow-sm shrink-0">
+                        <span className="font-headline italic text-xl text-primary/60 font-bold">
+                          {pub.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="font-headline italic text-2xl">{pub}</h3>
+                        <p className="text-xs italic text-muted-foreground/60">
+                          {pubBooks.length > 0 ? `${pubBooks.length} livre${pubBooks.length > 1 ? "s" : ""} dans ta bibliothèque` : "Aucun livre de cet éditeur dans ta bibliothèque pour le moment"}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Livres de cet éditeur */}
+                    {pubBooks.length > 0 ? (
+                      <div className="flex gap-4 overflow-x-auto pb-3 no-scrollbar">
+                        {pubBooks.map((book: any) => (
+                          <Link key={book.id} href={`/book/${book.id}`} className="shrink-0 group space-y-2 w-24 sm:w-28">
+                            <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-md group-hover:shadow-xl transition-shadow">
+                              <BookCover src={book.cover} alt={book.title} className="object-cover" />
+                            </div>
+                            <p className="text-xs italic font-headline line-clamp-2 text-center leading-tight group-hover:text-primary transition-colors">
+                              {book.title}
+                            </p>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="h-24 rounded-2xl border-dashed border-primary/15 bg-white/20 flex items-center justify-center">
+                        <p className="text-xs italic text-muted-foreground/50">Aucun livre de cet éditeur dans ta bibliothèque</p>
+                      </div>
+                    )}
+                    <div className="border-b border-primary/5" />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
