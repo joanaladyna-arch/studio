@@ -123,6 +123,7 @@ export default function BookDetailPage() {
   const taxonomy = useTaxonomy();
   const [showMasterEditor, setShowMasterEditor] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [showDates, setShowDates] = useState(false);
 
   const userBookRef = useMemo(() => {
     if (!db || !user || !bookId) return null;
