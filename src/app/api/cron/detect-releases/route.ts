@@ -16,7 +16,6 @@ import { FieldValue } from "firebase-admin/firestore";
  * date de publication Google Books, pour ne remonter que de vraies
  * nouveautés et non tout le fonds de catalogue d'un auteur ou éditeur.
  */
-const RECENT_WINDOW_DAYS = 365;
 
 function normalize(s: string) {
   return (s || "").toLowerCase().trim().replace(/\s+/g, " ");
@@ -81,7 +80,6 @@ export async function GET(req: NextRequest) {
     actualitesSnap.forEach((d) => knownTitles.add(normalize(d.data()?.title)));
     pendingSnap.forEach((d) => knownTitles.add(normalize(d.data()?.title)));
 
-    const cutoff = Date.now() - RECENT_WINDOW_DAYS * 24 * 60 * 60 * 1000;
     let detected = 0;
 
     // Recherche générique réutilisée pour un auteur ou un éditeur — seul
@@ -105,13 +103,6 @@ export async function GET(req: NextRequest) {
         if (!title || knownTitles.has(normalize(title))) continue;
 
         const publishedDate = info.publishedDate || "";
-        // Accepter les dates année seule (ex: "2025") ou complètes
-        const dateToCheck = publishedDate.length === 4 ? `${publishedDate}-12-31` : publishedDate;
-        const publishedMillis = dateToCheck ? new Date(dateToCheck).getTime() : NaN;
-        if (isNaN(publishedMillis) || publishedMillis < cutoff) {
-          console.log(`[cron] exclu par date: "${title}" → ${publishedDate}`);
-          continue;
-        }
 
         const docRef = db.collection("actualitesPending").doc();
         await docRef.set({
