@@ -789,6 +789,66 @@ export default function BookDetailPage() {
              <p className="text-[10px] text-muted-foreground italic">Cliquez à nouveau sur un rang pour le retirer.</p>
            </div>
 
+           {/* ── Niveau Spicy ── */}
+           <div className="space-y-3 pt-4 border-t border-primary/5">
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">
+               Niveau Spicy <span className="font-normal opacity-50">(optionnel)</span>
+             </Label>
+             <div className="flex items-center gap-3 flex-wrap">
+               <Button
+                 variant="outline"
+                 size="sm"
+                 onClick={() => setEditedData({ ...editedData, spicyLevel: 0 } as any)}
+                 className={cn(
+                   "rounded-full text-[10px] h-8 px-3 font-bold transition-all",
+                   !((editedData as any).spicyLevel) ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40"
+                 )}
+               >
+                 Ne pas noter
+               </Button>
+               <div className="flex gap-2">
+                 {[1,2,3,4,5].map(s => (
+                   <Flame
+                     key={s}
+                     onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)}
+                     className={cn(
+                       "h-7 w-7 cursor-pointer transition-all hover:scale-110",
+                       s <= ((editedData as any).spicyLevel || 0)
+                         ? "text-orange-500 fill-orange-500 drop-shadow-sm"
+                         : "text-muted-foreground/15"
+                     )}
+                   />
+                 ))}
+               </div>
+             </div>
+             <p className="text-[10px] text-muted-foreground italic">0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la dernière flamme pour revenir à 0.</p>
+           </div>
+
+           {/* ── Format ── */}
+           <div className="space-y-3 pt-4 border-t border-primary/5">
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">
+               Format <span className="font-normal opacity-50">(optionnel)</span>
+             </Label>
+             <div className="flex flex-wrap gap-2">
+               {["Broché", "Relié", "Poche", "Ebook", "Audio"].map(fmt => (
+                 <Button
+                   key={fmt}
+                   variant="outline"
+                   size="sm"
+                   onClick={() => setEditedData({ ...editedData, bookFormat: (editedData as any).bookFormat === fmt ? "" : fmt } as any)}
+                   className={cn(
+                     "rounded-full h-8 px-3 text-[10px] font-bold uppercase tracking-wide transition-all",
+                     (editedData as any).bookFormat === fmt
+                       ? "bg-primary text-white border-primary shadow-sm"
+                       : "bg-white/40"
+                   )}
+                 >
+                   {fmt}
+                 </Button>
+               ))}
+             </div>
+           </div>
+
            <div className="space-y-4 pt-4 border-t border-primary/5">
              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label>
              <div className="flex flex-wrap gap-2">
