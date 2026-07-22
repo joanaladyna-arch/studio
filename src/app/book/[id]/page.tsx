@@ -723,247 +723,109 @@ export default function BookDetailPage() {
   }
 
   return (
-    <div className="space-y-12 animate-paper pb-32 max-w-7xl mx-auto px-4">
+    <div className="space-y-8 animate-paper pb-32 max-w-7xl mx-auto px-4">
+
+      {/* ── Header ── */}
       <header className="flex justify-between items-center pt-4">
         <Button asChild variant="ghost" className="font-headline italic text-lg hover:bg-white/40 rounded-xl">
           <Link href="/library"><ArrowLeft className="mr-3 h-5 w-5" /> Bibliothèque</Link>
         </Button>
-        <div className="flex gap-4">
-          <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-14 px-10 shadow-xl font-headline italic text-xl">
-            {isSaving ? <Loader2 className="animate-spin h-6 w-6" /> : <Save className="mr-3 h-6 w-6" />} Graver
-          </Button>
-        </div>
+        <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-14 px-10 shadow-xl font-headline italic text-xl">
+          {isSaving ? <Loader2 className="animate-spin h-6 w-6" /> : <Save className="mr-3 h-6 w-6" />} Graver
+        </Button>
       </header>
 
-      <div className="flex flex-col sm:flex-row gap-10 items-start">
-        <div className="space-y-6 w-full sm:w-[260px] shrink-0 mx-auto sm:mx-0">
-          <div className="relative aspect-[2/3] rounded-[3rem] overflow-hidden shadow-2xl border border-white/60 bg-secondary/5 group">
-            <BookCover
-              src={editedData.cover || masterBook?.cover}
-              alt={masterBook?.title || "Livre"} 
-              className="object-contain" 
-            />
+      {/* ── Couverture + Titre + Métadonnées ── */}
+      <div className="flex flex-col sm:flex-row gap-8 items-start">
+        <div className="space-y-4 w-full sm:w-[200px] shrink-0 mx-auto sm:mx-0">
+          <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-xl border border-white/60 bg-secondary/5 group">
+            <BookCover src={editedData.cover || masterBook?.cover} alt={masterBook?.title || "Livre"} className="object-contain" />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-               <Label className="cursor-pointer bg-white text-primary px-4 py-2 rounded-full flex items-center gap-2 font-headline italic">
-                 <Camera className="h-4 w-4" /> Changer
-                 <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
-               </Label>
+              <Label className="cursor-pointer bg-white text-primary px-4 py-2 rounded-full flex items-center gap-2 font-headline italic">
+                <Camera className="h-4 w-4" /> Changer
+                <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />
+              </Label>
             </div>
           </div>
-
-          <Button variant="ghost" onClick={handleDelete} className="w-full text-destructive hover:text-destructive hover:bg-rose-50 rounded-2xl h-14 italic font-headline text-lg">
+          <Button variant="ghost" onClick={handleDelete} className="w-full text-destructive hover:text-destructive hover:bg-rose-50 rounded-2xl h-12 italic font-headline">
             <Trash2 className="mr-3 h-5 w-5" /> Retirer de la réserve
           </Button>
         </div>
+        <div className="flex-1 min-w-0 space-y-4">
+          <h1 className="text-5xl sm:text-6xl font-headline italic leading-tight">
+            {cleanBookTitle(masterBook?.title || userBook.title)}
+            {((editedData as any).volume || masterBook?.volume) && (
+              <span className="text-3xl text-primary/50 ml-3">— {(editedData as any).volume || masterBook?.volume}</span>
+            )}
+          </h1>
+          <Link href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
+            className="text-2xl font-headline text-primary italic hover:underline inline-flex items-center gap-3">
+            {authorPhoto && (
+              <span className="relative h-9 w-9 rounded-full overflow-hidden shadow-sm flex-shrink-0 inline-block">
+                <Image src={authorPhoto} alt="" fill className="object-cover" />
+              </span>
+            )}
+            {cleanAuthorName(masterBook?.author || userBook.author)}
+            <ChevronRight className="h-5 w-5 opacity-40 shrink-0" />
+          </Link>
+          {masterBook?.translator && (
+            <p className="text-sm text-muted-foreground italic">Traduit par {cleanAuthorName(masterBook.translator)}</p>
+          )}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[11px] font-bold uppercase tracking-[0.2em] opacity-60 pt-2">
+            <div className="space-y-1"><div className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> Pages</div><span className="text-foreground">{masterBook?.pageCount || masterBook?.pages || "N/A"}</span></div>
+            <div className="space-y-1"><div className="flex items-center gap-2"><Hash className="h-4 w-4" /> ISBN</div><span className="text-foreground">{masterBook?.isbn13 || masterBook?.isbn || "N/A"}</span></div>
+            <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{(userBook as any)?.publisher || masterBook?.publisher || "N/A"}</span></div>
+            <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Langue</div><span className="text-foreground">{masterBook?.language || "N/A"}</span></div>
+          </div>
+          <div className="flex flex-wrap gap-4">
+            <button onClick={() => { setEditionsOpen(true); findOtherEditions(); }}
+              className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors">
+              <Library className="h-4 w-4" /> Voir les éditions
+            </button>
+            <button onClick={handleSyncFromMaster} disabled={isSyncingMaster}
+              className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors disabled:opacity-50">
+              {isSyncingMaster ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Mettre à jour la fiche
+            </button>
+          </div>
+        </div>
+      </div>
 
-        <Card className="glass-card p-8 border-none bg-white/60 space-y-8 shadow-sm flex-1 w-full">
-           <div className="space-y-4">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Statut de lecture</Label>
-             <div className="flex flex-wrap gap-2">
-               {Object.entries(STATUSES).map(([k, v]) => (
-                 <Button 
-                  key={k} 
-                  variant="outline" 
-                  onClick={() => setEditedData({ ...editedData, status: k as any })} 
-                  className={cn(
-                    "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all", 
-                    editedData.status === k ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
-                  )}
-                 >
-                   {v.label}
-                 </Button>
-               ))}
-             </div>
-             {editedData.status === "progress" && (
-               <div className="space-y-3 pt-2">
-                 <div className="flex items-center justify-between">
-                   <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Progression</Label>
-                   <span className="text-primary font-headline italic text-lg">{(editedData as any).progress ?? 0}%</span>
-                 </div>
-                 <Slider
-                   value={[(editedData as any).progress ?? 0]}
-                   min={0}
-                   max={100}
-                   step={5}
-                   onValueChange={(v) => setEditedData({ ...editedData, progress: v[0] } as any)}
-                 />
-               </div>
-             )}
-           </div>
-
-           <div className="space-y-4 pt-4 border-t border-primary/5">
-             <div className="flex items-center gap-2">
-               <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label><InfoTip>Cliquez à nouveau sur le même rang pour le retirer.</InfoTip></div>
-               <InfoBadge text="Ton système de «coup de cœur» à part, pour distinguer tes toutes meilleures lectures — bien plus rare qu'une simple bonne note. C'est différent de «Ma Note» plus haut : les étoiles disent combien tu as aimé sur le moment, la Palme dit si ce livre mérite une place à part dans ta bibliothèque." />
-             </div>
-             <div className="flex flex-wrap gap-2">
-               {SELECTABLE_RANKS.map((k) => {
-                 const v = RANKS[k];
-                 const isActive = editedData.plumeRank === k;
-                 const RankIcon = v.icon;
-                 return (
-                   <Button
-                    key={k}
-                    variant="outline"
-                    onClick={() => setEditedData({ ...editedData, plumeRank: isActive ? null : (k as RankType) } as any)}
-                    className={cn(
-                      "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
-                      isActive ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
-                    )}
-                   >
-                     <RankIcon className={cn("h-3.5 w-3.5", isActive ? "text-white" : v.color)} />
-                     {v.label}
-                   </Button>
-                 );
-               })}
-             </div>
-           </div>
-
-           {/* ── Niveau Spicy ── */}
-           <div className="space-y-3 pt-4 border-t border-primary/5">
-             <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Niveau Spicy</Label><InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip></div>
-             <div className="flex items-center gap-3 flex-wrap">
-               <Button
-                 variant="outline"
-                 size="sm"
-                 onClick={() => setEditedData({ ...editedData, spicyLevel: 0 } as any)}
-                 className={cn(
-                   "rounded-full text-[10px] h-8 px-3 font-bold transition-all",
-                   !((editedData as any).spicyLevel) ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40"
-                 )}
-               >
-                 Ne pas noter
-               </Button>
-               <div className="flex gap-2">
-                 {[1,2,3,4,5].map(s => (
-                   <Flame
-                     key={s}
-                     onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)}
-                     className={cn(
-                       "h-7 w-7 cursor-pointer transition-all hover:scale-110",
-                       s <= ((editedData as any).spicyLevel || 0)
-                         ? "text-orange-500 fill-orange-500 drop-shadow-sm"
-                         : "text-muted-foreground/15"
-                     )}
-                   />
-                 ))}
-               </div>
-             </div>
-           </div>
-
-           {/* ── Format ── */}
-           <div className="space-y-3 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center">Format<InfoTip>Format physique de ta version du livre.</InfoTip></Label>
-             <div className="flex flex-wrap gap-2">
-               {["Broché", "Relié", "Poche", "Ebook", "Audio"].map(fmt => (
-                 <Button
-                   key={fmt}
-                   variant="outline"
-                   size="sm"
-                   onClick={() => setEditedData({ ...editedData, bookFormat: (editedData as any).bookFormat === fmt ? "" : fmt } as any)}
-                   className={cn(
-                     "rounded-full h-8 px-3 text-[10px] font-bold uppercase tracking-wide transition-all",
-                     (editedData as any).bookFormat === fmt
-                       ? "bg-primary text-white border-primary shadow-sm"
-                       : "bg-white/40"
-                   )}
-                 >
-                   {fmt}
-                 </Button>
-               ))}
-             </div>
-           </div>
-
-           {/* ── Âge requis ── */}
-           <div className="space-y-3 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center">Âge requis<InfoTip>Optionnel. Aide à identifier le public cible du livre.</InfoTip></Label>
-             <select
-               value={(editedData as any).ageRating || ""}
-               onChange={(e) => setEditedData({ ...editedData, ageRating: e.target.value } as any)}
-               className="h-11 w-full rounded-xl bg-white/40 border-none shadow-inner italic px-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20"
-             >
-               <option value="">— Non classifié —</option>
-               <option value="Tout public">Tout public</option>
-               <option value="Dès 12 ans">Dès 12 ans</option>
-               <option value="Dès 14 ans">Dès 14 ans</option>
-               <option value="Dès 16 ans">Dès 16 ans</option>
-               <option value="Dès 18 ans (New Adult)">Dès 18 ans (New Adult)</option>
-               <option value="Adulte — Contenu explicite">Adulte — Contenu explicite</option>
-             </select>
-           </div>
-
-           <div className="space-y-4 pt-4 border-t border-primary/5">
-             <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label><InfoTip>Listes de suivi personnalisées — "À offrir" et "Relecture d'été".</InfoTip></div>
-             <div className="flex flex-wrap gap-2">
-               <Button
-                 variant="outline"
-                 onClick={() => setEditedData({ ...editedData, toGift: !(editedData as any).toGift } as any)}
-                 className={cn(
-                   "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
-                   (editedData as any).toGift ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
-                 )}
-               >
-                 <Gift className="h-3.5 w-3.5" /> À offrir
-               </Button>
-               <Button
-                 variant="outline"
-                 onClick={() => {
-                   const isPrestige = editedData.plumeRank === "diamant" || editedData.plumeRank === "royale";
-                   const effectivelyIn = (editedData as any).summerReread === true || ((editedData as any).summerReread !== false && isPrestige);
-                   setEditedData({ ...editedData, summerReread: !effectivelyIn } as any);
-                 }}
-                 className={cn(
-                   "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
-                   ((editedData as any).summerReread === true || ((editedData as any).summerReread !== false && (editedData.plumeRank === "diamant" || editedData.plumeRank === "royale")))
-                     ? "bg-primary text-white border-primary shadow-md" : "bg-white/40"
-                 )}
-               >
-                 <Sun className="h-3.5 w-3.5" /> Relecture d'été
-               </Button>
-             </div>
-           </div>
-
-           <div className="space-y-4 pt-4 border-t border-primary/5">
-              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center gap-2">
-                <LinkIcon className="h-3 w-3" /> URL Couverture
-              </Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={newCoverUrl} 
-                  onChange={(e) => setNewCoverUrl(e.target.value)} 
-                  placeholder="https://..." 
-                  className="h-10 text-xs italic bg-white/40 border-none rounded-xl"
-                />
-                <Button onClick={() => handleCoverUpdate(newCoverUrl)} variant="secondary" className="h-10 px-4 rounded-xl italic">OK</Button>
+      {/* Dialog Éditions */}
+      <Dialog open={editionsOpen} onOpenChange={setEditionsOpen}>
+        <DialogContent className="glass-card border-none max-w-lg p-10 bg-white/95 backdrop-blur-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl italic flex items-center gap-3">
+              <Library className="h-6 w-6 text-primary" /> Éditions référencées
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <div className="rounded-2xl bg-primary/5 p-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase opacity-50">Cette édition</p>
+                <p className="text-sm italic truncate">{masterBook?.publisher || "Éditeur inconnu"} {masterBook?.language ? `· ${masterBook.language}` : ""}</p>
               </div>
-           </div>
-        </Card>
-      </div>
+              {(masterBook?.isbn13 || masterBook?.isbn) && <span className="text-[10px] opacity-40 shrink-0">{masterBook?.isbn13 || masterBook?.isbn}</span>}
+            </div>
+            {editionsLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin opacity-40" /></div>
+            ) : otherEditions && otherEditions.length > 0 ? (
+              otherEditions.map((ed) => (
+                <div key={ed.id} className="rounded-2xl bg-white/60 p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm italic truncate">{ed.publisher || "Éditeur inconnu"} {ed.language ? `· ${ed.language}` : ""}</p>
+                    {ed.translator && <p className="text-[10px] opacity-50 italic">Traduit par {cleanAuthorName(ed.translator)}</p>}
+                  </div>
+                  {(ed.isbn13 || ed.isbn) && <span className="text-[10px] opacity-40 shrink-0">{ed.isbn13 || ed.isbn}</span>}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm italic opacity-50 text-center py-6">Aucune autre édition référencée pour le moment.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      <div className="space-y-4">
-        <h1 className="text-6xl font-headline italic leading-tight">
-          {cleanBookTitle(masterBook?.title || userBook.title)}
-          {((editedData as any).volume || masterBook?.volume) && (
-            <span className="text-3xl text-primary/50 ml-3">— {(editedData as any).volume || masterBook?.volume}</span>
-          )}
-        </h1>
-        <Link
-          href={`/author/${encodeURIComponent(masterBook?.author || userBook.author || "")}`}
-          className="text-3xl font-headline text-primary italic hover:underline inline-flex items-center gap-3"
-        >
-          {authorPhoto && (
-            <span className="relative h-9 w-9 rounded-full overflow-hidden shadow-sm flex-shrink-0 inline-block">
-              <Image src={authorPhoto} alt="" fill className="object-cover" />
-            </span>
-          )}
-          {cleanAuthorName(masterBook?.author || userBook.author)}
-          <ChevronRight className="h-5 w-5 opacity-40 shrink-0" />
-        </Link>
-        {masterBook?.translator && (
-          <p className="text-sm text-muted-foreground italic">Traduit par {cleanAuthorName(masterBook.translator)}</p>
-        )}
-      </div>
-
+      {/* Admin mode */}
       {adminMode && masterBook && (
         <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-5 flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
@@ -979,617 +841,544 @@ export default function BookDetailPage() {
         </div>
       )}
 
+      {/* ══════════════════════ TABS ══════════════════════ */}
       <Tabs defaultValue="overview">
-            <TabsList className="bg-transparent border-b h-14 justify-start p-0 gap-12 mb-10 rounded-none w-full">
-              <TabsTrigger value="overview" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">L'Œuvre</TabsTrigger>
-              <TabsTrigger value="journal" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">Mon Journal</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="overview" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-[11px] font-bold uppercase tracking-[0.2em] opacity-60">
-                 <div className="space-y-1"><div className="flex items-center gap-2"><BookOpen className="h-4 w-4" /> Pages</div><span className="text-foreground">{masterBook?.pageCount || masterBook?.pages || "N/A"}</span></div>
-                 <div className="space-y-1"><div className="flex items-center gap-2"><Hash className="h-4 w-4" /> ISBN</div><span className="text-foreground">{masterBook?.isbn13 || masterBook?.isbn || "N/A"}</span></div>
-                 <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{(userBook as any)?.publisher || masterBook?.publisher || "N/A"}</span></div>
-                 <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Langue</div><span className="text-foreground">{masterBook?.language || "N/A"}</span></div>
-               </div>
-               <div className="flex flex-wrap gap-6">
-                 <button
-                   onClick={() => { setEditionsOpen(true); findOtherEditions(); }}
-                   className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors"
-                 >
-                   <Library className="h-4 w-4" /> Voir les éditions
-                 </button>
-                 <button
-                   onClick={handleSyncFromMaster}
-                   disabled={isSyncingMaster}
-                   className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors disabled:opacity-50"
-                 >
-                   {isSyncingMaster ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} Mettre à jour la fiche
-                 </button>
-               </div>
+        <TabsList className="bg-transparent border-b h-14 justify-start p-0 gap-12 mb-10 rounded-none w-full">
+          <TabsTrigger value="overview" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">L'Œuvre</TabsTrigger>
+          <TabsTrigger value="journal" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">Mon Journal</TabsTrigger>
+        </TabsList>
 
-               <Dialog open={editionsOpen} onOpenChange={setEditionsOpen}>
-                 <DialogContent className="glass-card border-none max-w-lg p-10 bg-white/95 backdrop-blur-3xl max-h-[80vh] overflow-y-auto">
-                   <DialogHeader>
-                     <DialogTitle className="font-headline text-2xl italic flex items-center gap-3">
-                       <Library className="h-6 w-6 text-primary" /> Éditions référencées
-                     </DialogTitle>
-                   </DialogHeader>
-                   <p className="text-xs italic opacity-50 -mt-2">D'après ce que la communauté Lectoria a déjà ajouté — pas forcément exhaustif.</p>
-                   <div className="space-y-3 pt-2">
-                     <div className="rounded-2xl bg-primary/5 p-4 flex items-center justify-between gap-3">
-                       <div className="min-w-0">
-                         <p className="text-xs font-bold uppercase opacity-50">Cette édition</p>
-                         <p className="text-sm italic truncate">{masterBook?.publisher || "Éditeur inconnu"} {masterBook?.language ? `· ${masterBook.language}` : ""}</p>
-                       </div>
-                       {(masterBook?.isbn13 || masterBook?.isbn) && <span className="text-[10px] opacity-40 shrink-0">{masterBook?.isbn13 || masterBook?.isbn}</span>}
-                     </div>
-                     {editionsLoading ? (
-                       <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin opacity-40" /></div>
-                     ) : otherEditions && otherEditions.length > 0 ? (
-                       otherEditions.map((ed) => (
-                         <div key={ed.id} className="rounded-2xl bg-white/60 p-4 flex items-center justify-between gap-3">
-                           <div className="min-w-0">
-                             <p className="text-sm italic truncate">{ed.publisher || "Éditeur inconnu"} {ed.language ? `· ${ed.language}` : ""}</p>
-                             {ed.translator && <p className="text-[10px] opacity-50 italic">Traduit par {cleanAuthorName(ed.translator)}</p>}
-                           </div>
-                           {(ed.isbn13 || ed.isbn) && <span className="text-[10px] opacity-40 shrink-0">{ed.isbn13 || ed.isbn}</span>}
-                         </div>
-                       ))
-                     ) : (
-                       <p className="text-sm italic opacity-50 text-center py-6">Aucune autre édition référencée pour le moment.</p>
-                     )}
-                   </div>
-                 </DialogContent>
-               </Dialog>
-               <div className="grid sm:grid-cols-2 gap-6 max-w-xl">
-                 <div className="space-y-3">
-                   <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline">Tome / Volume</Label><InfoTip>Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</InfoTip></div>
-                   <Input
-                     value={(editedData as any).volume || ""}
-                     onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)}
-                     placeholder="ex : Tome 1"
-                     className="h-11 rounded-xl bg-white/40 border-none italic"
-                   />
-                 </div>
-                 <div className="space-y-3">
-                   <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline">Saga</Label><InfoTip>Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</InfoTip></div>
-                   <Input
-                     value={(editedData as any).saga || ""}
-                     onChange={(e) => setEditedData({ ...editedData, saga: e.target.value } as any)}
-                     placeholder="ex : Legacy of God"
-                     className="h-11 rounded-xl bg-white/40 border-none italic"
-                   />
-                 </div>
-               </div>
+        {/* ══ L'ŒUVRE ══ */}
+        <TabsContent value="overview" className="animate-in fade-in slide-in-from-bottom-2">
+          <div className="grid md:grid-cols-[1fr_320px] gap-8">
 
-               <div className="space-y-3">
-                 <Label className="italic text-xl font-headline">Date de sortie</Label>
-                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                   <div className="space-y-2">
-                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">US</Label>
-                     <Input
-                       value={(editedData as any).releaseDateUS || ""}
-                       onChange={(e) => setEditedData({ ...editedData, releaseDateUS: e.target.value } as any)}
-                       placeholder="ex : 2023"
-                       className="h-11 rounded-xl bg-white/40 border-none italic"
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">FR</Label>
-                     <Input
-                       value={(editedData as any).releaseDateFR || ""}
-                       onChange={(e) => setEditedData({ ...editedData, releaseDateFR: e.target.value } as any)}
-                       placeholder="ex : 2024"
-                       className="h-11 rounded-xl bg-white/40 border-none italic"
-                     />
-                   </div>
-                   <div className="space-y-2">
-                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">UE</Label>
-                     <Input
-                       value={(editedData as any).releaseDateUE || ""}
-                       onChange={(e) => setEditedData({ ...editedData, releaseDateUE: e.target.value } as any)}
-                       placeholder="ex : 2024"
-                       className="h-11 rounded-xl bg-white/40 border-none italic"
-                     />
-                   </div>
-                 </div>
-               </div>
-               <div className="p-10 rounded-[3rem] bg-white/40 border border-white/60 shadow-sm space-y-4">
-                 <h4 className="font-headline text-2xl italic opacity-40">Résumé de la pépite</h4>
-                 <Textarea
-                   value={cleanDescriptionHtml((editedData as any).description) || cleanDescriptionHtml(masterBook?.description) || ""}
-                   onChange={(e) => setEditedData({ ...editedData, description: e.target.value } as any)}
-                   placeholder="Cette œuvre attend que vous en décriviez l'essence."
-                   className="italic text-lg leading-relaxed text-muted-foreground bg-transparent border-none focus-visible:ring-1 focus-visible:ring-primary/20 resize-none min-h-[140px] p-0"
-                 />
-               </div>
-               <div className="space-y-3 max-w-md">
-                 <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Lien de référence</Label><InfoTip>Page d'achat, fiche Goodreads, interview de l'auteur… tout lien utile. L'aimant capture le résumé et la couverture depuis cette page.</InfoTip></div>
-                 <div className="flex gap-2">
-                   <Input
-                     value={(editedData as any).referenceLink || ""}
-                     onChange={(e) => setEditedData({ ...editedData, referenceLink: e.target.value } as any)}
-                     placeholder="https://..."
-                     className="h-11 rounded-xl bg-white/40 border-none italic"
-                   />
-                   <Button
-                     onClick={handleFetchLinkInfo}
-                     disabled={isFetchingLink || !(editedData as any).referenceLink}
-                     variant="secondary"
-                     title="Capturer le résumé et la couverture depuis ce lien"
-                     className="h-11 px-4 rounded-xl shrink-0"
-                   >
-                     {isFetchingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Magnet className="h-4 w-4" />}
-                   </Button>
-                 </div>
-                 <p className="text-xs italic text-muted-foreground leading-relaxed">
-                   L'aimant capture le résumé et la couverture sur cette page (sans jamais écraser ce qui est déjà renseigné).
-                 </p>
-                 {(editedData as any).referenceLink && (
-                   <a href={(editedData as any).referenceLink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline italic break-all">
-                     {(editedData as any).referenceLink}
-                   </a>
-                 )}
-               </div>
-               <TagDropdown
-                 label="Genres"
-                 options={taxonomy.genres}
-                 selected={toArray<string>(editedData.genres)}
-                 onToggle={(v) => toggleTag("genres", v)}
-                 accent="primary"
-               />
+            {/* ── Colonne gauche ── */}
+            <div className="space-y-8">
 
-               <TagDropdown
-                 label="Tropes"
-                 options={taxonomy.tropes}
-                 selected={toArray<string>(editedData.tropes)}
-                 onToggle={(v) => toggleTag("tropes", v)}
-                 accent="secondary"
-                 helperText="Cumulez 5 lectures avec le même genre ou trope pour débloquer le badge correspondant sur votre profil."
-               />
+              {/* L'univers du livre */}
+              <div className="glass-card bg-white/60 border-none p-8 rounded-[2rem] shadow-sm space-y-6">
+                <h3 className="font-headline italic text-2xl text-primary/70 flex items-center gap-3">
+                  <BookOpen className="h-6 w-6" /> L'univers du livre
+                </h3>
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline">Tome / Volume</Label><InfoTip>Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</InfoTip></div>
+                    <Input value={(editedData as any).volume || ""} onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)} placeholder="ex : Tome 1" className="h-11 rounded-xl bg-white/40 border-none italic" />
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline">Saga</Label><InfoTip>Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</InfoTip></div>
+                    <Input value={(editedData as any).saga || ""} onChange={(e) => setEditedData({ ...editedData, saga: e.target.value } as any)} placeholder="ex : Legacy of God" className="h-11 rounded-xl bg-white/40 border-none italic" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="italic text-xl font-headline">Date de sortie</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">US</Label>
+                      <Input value={(editedData as any).releaseDateUS || ""} onChange={(e) => setEditedData({ ...editedData, releaseDateUS: e.target.value } as any)} placeholder="ex : 2023" className="h-11 rounded-xl bg-white/40 border-none italic" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">FR</Label>
+                      <Input value={(editedData as any).releaseDateFR || ""} onChange={(e) => setEditedData({ ...editedData, releaseDateFR: e.target.value } as any)} placeholder="ex : 2024" className="h-11 rounded-xl bg-white/40 border-none italic" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">UE</Label>
+                      <Input value={(editedData as any).releaseDateUE || ""} onChange={(e) => setEditedData({ ...editedData, releaseDateUE: e.target.value } as any)} placeholder="ex : 2024" className="h-11 rounded-xl bg-white/40 border-none italic" />
+                    </div>
+                  </div>
+                </div>
+                {/* Âge requis + Niveau Spicy côte à côte */}
+                <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center">Âge requis<InfoTip>Optionnel. Aide à identifier le public cible du livre.</InfoTip></Label>
+                    <select value={(editedData as any).ageRating || ""} onChange={(e) => setEditedData({ ...editedData, ageRating: e.target.value } as any)}
+                      className="h-11 w-full rounded-xl bg-white/40 border-none shadow-inner italic px-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20">
+                      <option value="">— Non classifié —</option>
+                      <option value="Tout public">Tout public</option>
+                      <option value="Dès 12 ans">Dès 12 ans</option>
+                      <option value="Dès 14 ans">Dès 14 ans</option>
+                      <option value="Dès 16 ans">Dès 16 ans</option>
+                      <option value="Dès 18 ans (New Adult)">Dès 18 ans (New Adult)</option>
+                      <option value="Adulte — Contenu explicite">Adulte — Contenu explicite</option>
+                    </select>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Niveau Spicy</Label><InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip></div>
+                    <div className="flex items-center gap-2">
+                      {[1,2,3,4,5].map(s => (
+                        <Flame key={s} onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)}
+                          className={cn("h-7 w-7 cursor-pointer transition-all hover:scale-110", s <= ((editedData as any).spicyLevel || 0) ? "text-orange-500 fill-orange-500" : "text-muted-foreground/15")} />
+                      ))}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setEditedData({ ...editedData, spicyLevel: 0 } as any)}
+                      className={cn("rounded-full text-[10px] h-7 px-3 font-bold", !((editedData as any).spicyLevel) ? "bg-primary text-white border-primary" : "bg-white/40")}>
+                      Ne pas noter
+                    </Button>
+                  </div>
+                </div>
+                {/* Résumé */}
+                <div className="space-y-3">
+                  <Label className="italic text-xl font-headline">Résumé de la pépite</Label>
+                  <Textarea value={cleanDescriptionHtml((editedData as any).description) || cleanDescriptionHtml(masterBook?.description) || ""}
+                    onChange={(e) => setEditedData({ ...editedData, description: e.target.value } as any)}
+                    placeholder="Cette œuvre attend que vous en décriviez l'essence."
+                    className="italic text-base leading-relaxed text-muted-foreground bg-white/40 border-none focus-visible:ring-1 focus-visible:ring-primary/20 resize-none min-h-[120px] rounded-2xl p-5" />
+                </div>
+              </div>
 
-               <TagDropdown
-                 label="Thèmes principaux"
-                 options={taxonomy.themes}
-                 selected={toArray<string>((editedData as any).themes)}
-                 onToggle={(v) => toggleTag("themes", v)}
-                 accent="primary"
-                 helperText="De quoi parle vraiment ce livre sur le fond — à ne pas confondre avec les tropes ci-dessus, qui décrivent le schéma de la relation amoureuse."
-               />
+              {/* Lien de référence + URL Couverture */}
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Lien de référence</Label><InfoTip>Page d'achat, fiche Goodreads, interview de l'auteur… tout lien utile. L'aimant capture le résumé et la couverture depuis cette page.</InfoTip></div>
+                  <div className="flex gap-2">
+                    <Input value={(editedData as any).referenceLink || ""} onChange={(e) => setEditedData({ ...editedData, referenceLink: e.target.value } as any)} placeholder="https://..." className="h-11 rounded-xl bg-white/40 border-none italic" />
+                    <Button onClick={handleFetchLinkInfo} disabled={isFetchingLink || !(editedData as any).referenceLink} variant="secondary" title="Capturer le résumé et la couverture depuis ce lien" className="h-11 px-4 rounded-xl shrink-0">
+                      {isFetchingLink ? <Loader2 className="h-4 w-4 animate-spin" /> : <Magnet className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {(editedData as any).referenceLink && (
+                    <a href={(editedData as any).referenceLink} target="_blank" rel="noopener noreferrer" className="text-xs text-primary underline italic break-all">{(editedData as any).referenceLink}</a>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  <Label className="italic text-xl font-headline flex items-center gap-2"><LinkIcon className="h-4 w-4" /> URL Couverture</Label>
+                  <div className="flex gap-2">
+                    <Input value={newCoverUrl} onChange={(e) => setNewCoverUrl(e.target.value)} placeholder="https://..." className="h-11 text-xs italic bg-white/40 border-none rounded-xl" />
+                    <Button onClick={() => handleCoverUpdate(newCoverUrl)} variant="secondary" className="h-11 px-4 rounded-xl italic">OK</Button>
+                  </div>
+                </div>
+              </div>
 
-               <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-12 px-8 font-headline italic">
-                 {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer
-               </Button>
+              {/* Genres / Tropes / Thèmes */}
+              <TagDropdown label="Genres" options={taxonomy.genres} selected={toArray<string>(editedData.genres)} onToggle={(v) => toggleTag("genres", v)} accent="primary" />
+              <TagDropdown label="Tropes" options={taxonomy.tropes} selected={toArray<string>(editedData.tropes)} onToggle={(v) => toggleTag("tropes", v)} accent="secondary" />
+              <TagDropdown label="Thèmes principaux" options={taxonomy.themes} selected={toArray<string>((editedData as any).themes)} onToggle={(v) => toggleTag("themes", v)} accent="primary" />
 
-               {/* Section recommandations — scan masterBooks lourd,
-                   déclenché UNIQUEMENT sur demande de la lectrice via
-                   le bouton ci-dessous, jamais automatiquement à
-                   l'ouverture de la fiche (trop lent). */}
-               {masterBook && (
-                 <div className="pt-6 border-t border-primary/5">
-                   {recommendations === null ? (
-                     <button
-                       onClick={fetchRecommendations}
-                       className="text-xs italic text-primary/50 hover:text-primary transition-colors underline underline-offset-4"
-                     >
-                       Voir les livres dans le même genre →
-                     </button>
-                   ) : recommendations.length > 0 ? (
-                     <div className="space-y-6">
-                       <div className="space-y-1">
-                         <h3 className="font-headline italic text-2xl">Ils ont aussi lu</h3>
-                         <p className="text-[11px] italic opacity-50">Les lecteurs ayant mis ce roman dans leur bibliothèque ont également lu…</p>
-                       </div>
-                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
-                         {recommendations.map((rec) => (
-                           <Link key={rec.id} href={`/add?prefill=${encodeURIComponent(JSON.stringify({ title: rec.title, author: rec.author, cover: rec.cover, masterBookId: rec.id }))}`} className="group space-y-2">
-                             <div className="aspect-[2/3] rounded-xl overflow-hidden bg-primary/5 shadow-sm group-hover:shadow-md transition-shadow">
-                               {rec.cover ? (
-                                 <img src={rec.cover} alt={rec.title} className="w-full h-full object-cover" />
-                               ) : (
-                                 <div className="w-full h-full flex items-center justify-center">
-                                   <BookOpen className="h-8 w-8 text-primary/20" />
-                                 </div>
-                               )}
-                             </div>
-                             <p className="text-[10px] font-headline italic line-clamp-2 text-center">{rec.title}</p>
-                             <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold text-center line-clamp-1">{rec.author}</p>
-                           </Link>
-                         ))}
-                       </div>
-                     </div>
-                   ) : (
-                     <p className="text-xs italic opacity-40">Pas encore assez de données pour des recommandations.</p>
-                   )}
-                 </div>
-               )}
-            </TabsContent>
+              <Button onClick={handleSave} disabled={isSaving} className="rounded-2xl bg-primary h-12 px-8 font-headline italic">
+                {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer
+              </Button>
 
-            <TabsContent value="journal" className="space-y-10 animate-in fade-in slide-in-from-bottom-2">
-               {/* Dates de lecture — un seul emplacement consolidé (il y en
-                   avait deux avant, un doublon source de confusion). La
-                   date de fin sert au classement par mois dans la
-                   bibliothèque et le bilan annuel.
-                   Aucune date déjà enregistrée n'est perdue : si seule
-                   l'ancienne "Date de fin de lecture" (dateRead) existait,
-                   elle continue de s'afficher ici tant que la lectrice ne
-                   modifie pas elle-même le champ — la nouvelle valeur est
-                   alors enregistrée dans readEndDate, déjà prioritaire
-                   dans le classement par mois. */}
-               {(editedData.status === "read" || editedData.status === "reread" || (editedData as any).dateRead || (editedData as any).readStartDate || (editedData as any).readEndDate) && (
-                 <div className="glass-card bg-primary/5 border-none p-5 rounded-2xl space-y-4">
-                   <div className="grid sm:grid-cols-2 gap-5">
-                     <div className="flex items-center gap-3">
-                       <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
-                       <div className="flex-1 space-y-1">
-                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de début de lecture</Label>
-                         <input
-                           type="date"
-                           value={(editedData as any).readStartDate || ""}
-                           onChange={(e) => setEditedData({ ...editedData, readStartDate: e.target.value } as any)}
-                           className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full"
-                         />
-                       </div>
-                     </div>
-                     <div className="flex items-center gap-3">
-                       <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
-                       <div className="flex-1 space-y-1">
-                         <div className="flex items-center gap-1.5"><Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label><InfoTip>Sert au classement par mois dans votre bibliothèque.</InfoTip></div>
-                         <input
-                           type="date"
-                           value={
-                             (editedData as any).readEndDate ||
-                             (() => {
-                               const raw = (editedData as any).dateRead;
-                               if (!raw) return "";
-                               const d = raw?.toDate ? raw.toDate() : new Date(raw);
-                               return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
-                             })()
-                           }
-                           onChange={(e) => setEditedData({ ...editedData, readEndDate: e.target.value } as any)}
-                           className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full"
-                         />
-                       </div>
-                     </div>
-                   </div>
-                   <InfoTip>La date de fin sert au classement par mois dans votre bibliothèque.</InfoTip>
-                 </div>
-               )}
+              {/* Recommandations */}
+              {masterBook && (
+                <div className="pt-6 border-t border-primary/5">
+                  {recommendations === null ? (
+                    <button onClick={fetchRecommendations} className="text-xs italic text-primary/50 hover:text-primary transition-colors underline underline-offset-4">
+                      Voir les livres dans le même genre →
+                    </button>
+                  ) : recommendations.length > 0 ? (
+                    <div className="space-y-6">
+                      <div className="space-y-1">
+                        <h3 className="font-headline italic text-2xl">Ils ont aussi lu</h3>
+                        <p className="text-[11px] italic opacity-50">Les lecteurs ayant mis ce roman dans leur bibliothèque ont également lu…</p>
+                      </div>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-4">
+                        {recommendations.map((rec) => (
+                          <Link key={rec.id} href={`/add?prefill=${encodeURIComponent(JSON.stringify({ title: rec.title, author: rec.author, cover: rec.cover, masterBookId: rec.id }))}`} className="group space-y-2">
+                            <div className="aspect-[2/3] rounded-xl overflow-hidden bg-primary/5 shadow-sm group-hover:shadow-md transition-shadow">
+                              {rec.cover ? <img src={rec.cover} alt={rec.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><BookOpen className="h-8 w-8 text-primary/20" /></div>}
+                            </div>
+                            <p className="text-[10px] font-headline italic line-clamp-2 text-center">{rec.title}</p>
+                            <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold text-center line-clamp-1">{rec.author}</p>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs italic opacity-40">Pas encore assez de données pour des recommandations.</p>
+                  )}
+                </div>
+              )}
+            </div>
 
-               {/* Pages ou durée d'écoute selon le format — alimente les
-                   statistiques du Bilan et de l'Accueil (pages parcourues,
-                   heures d'écoute), qui affichaient toujours 0 faute d'un
-                   endroit pour saisir cette information. */}
-               <div className="glass-card bg-primary/5 border-none p-5 rounded-2xl">
-                 <div className="flex items-center gap-3">
-                   {["audio", "audible", "audiolib"].includes((editedData as any).format) ? (
-                     <>
-                       <Headphones className="h-5 w-5 text-primary/40 shrink-0" />
-                       <div className="flex-1 space-y-1">
-                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Durée d'écoute (en heures)</Label>
-                         <Input
-                           type="number"
-                           min="0"
-                           step="0.5"
-                           inputMode="decimal"
-                           value={(editedData as any).audioHoursListened ?? ""}
-                           onChange={(e) => setEditedData({ ...editedData, audioHoursListened: e.target.value === "" ? null : Number(e.target.value) } as any)}
-                           placeholder="Ex : 8.5"
-                           className="h-10 border-none bg-transparent px-0 italic focus-visible:ring-0"
-                         />
-                       </div>
-                     </>
-                   ) : (
-                     <>
-                       <BookOpen className="h-5 w-5 text-primary/40 shrink-0" />
-                       <div className="flex-1 space-y-1">
-                         <div className="flex items-center gap-1.5"><Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Nombre de pages</Label><InfoTip>Alimente les pages parcourues et le rythme de lecture dans ton Bilan.</InfoTip></div>
-                         <Input
-                           type="number"
-                           min="0"
-                           inputMode="numeric"
-                           value={(editedData as any).pagesRead ?? ""}
-                           onChange={(e) => setEditedData({ ...editedData, pagesRead: e.target.value === "" ? null : Number(e.target.value) } as any)}
-                           placeholder={masterBook?.pageCount || masterBook?.pages ? `Ex : ${masterBook.pageCount || masterBook.pages}` : "Ex : 320"}
-                           className="h-10 border-none bg-transparent px-0 italic focus-visible:ring-0"
-                         />
-                       </div>
-                     </>
-                   )}
-                 </div>
-               </div>
+            {/* ── Colonne droite ── */}
+            <div className="space-y-6">
 
-               {/* Éditeur — modifiable ici, prioritaire sur la fiche
-                   partagée (souvent vide selon la source d'import). Avant
-                   ce champ, rien ne permettait de corriger un éditeur
-                   manquant : "N/A" s'affichait alors quoi qu'on fasse. */}
-               <div className="flex items-center gap-3 glass-card bg-primary/5 border-none p-5 rounded-2xl">
-                 <Landmark className="h-5 w-5 text-primary/40 shrink-0" />
-                 <div className="flex-1 space-y-1">
-                   <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Maison d'édition</Label>
-                   <Input
-                     value={(editedData as any).publisher ?? ""}
-                     onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value } as any)}
-                     placeholder={masterBook?.publisher || "Ex : Hugo Poche"}
-                     className="h-10 border-none bg-transparent px-0 italic focus-visible:ring-0"
-                   />
-                 </div>
-                 {(() => {
-                   const publisherName = ((editedData as any).publisher || masterBook?.publisher || "").trim();
-                   if (!publisherName) return null;
-                   const isFollowingPublisher = toArray<string>(profile?.followedPublishers).some(
-                     (p) => p.toLowerCase() === publisherName.toLowerCase()
-                   );
-                   const togglePublisherFollow = async () => {
-                     if (!db || !user) return;
-                     try {
-                       await setDoc(
-                         doc(db, "users", user.uid),
-                         { followedPublishers: isFollowingPublisher ? arrayRemove(publisherName) : arrayUnion(publisherName) },
-                         { merge: true }
-                       );
-                       toast({
-                         title: isFollowingPublisher ? "Éditeur retiré du suivi" : "Éditeur suivi",
-                         description: isFollowingPublisher ? undefined : "Ses nouveautés pourront apparaître dans tes Actualités.",
-                       });
-                     } catch (err) {
-                       console.error("Toggle Publisher Follow Error:", err);
-                     }
-                   };
-                   return (
-                     <Button
-                       type="button"
-                       variant="ghost"
-                       onClick={togglePublisherFollow}
-                       className={cn("rounded-xl h-9 px-3 shrink-0 gap-1.5", isFollowingPublisher ? "text-copper" : "text-muted-foreground/50")}
-                     >
-                       <Heart className={cn("h-4 w-4", isFollowingPublisher && "fill-copper")} />
-                       <span className="text-[10px] font-bold uppercase hidden sm:inline">{isFollowingPublisher ? "Suivi" : "Suivre"}</span>
-                     </Button>
-                   );
-                 })()}
-               </div>
+              {/* Mon Rang */}
+              <div className="glass-card bg-white/60 border-none p-6 rounded-[2rem] shadow-sm space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label><InfoTip>Cliquez à nouveau sur le même rang pour le retirer.</InfoTip></div>
+                  <InfoBadge text="Ton système de «coup de cœur» à part, pour distinguer tes toutes meilleures lectures — bien plus rare qu'une simple bonne note." />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {SELECTABLE_RANKS.map((k) => {
+                    const v = RANKS[k];
+                    const isActive = editedData.plumeRank === k;
+                    const RankIcon = v.icon;
+                    return (
+                      <Button key={k} variant="outline" onClick={() => setEditedData({ ...editedData, plumeRank: isActive ? null : (k as RankType) } as any)}
+                        className={cn("rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5", isActive ? "bg-primary text-white border-primary shadow-md" : "bg-white/40")}>
+                        <RankIcon className={cn("h-3.5 w-3.5", isActive ? "text-white" : v.color)} />{v.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
 
-               {/* ── Ma Note + Niveau Spicy côte à côte ── */}
-               <div className="grid grid-cols-2 gap-6">
-                 {/* Ma Note — colonne gauche */}
-                 <div className="space-y-4">
-                   <div className="flex items-center gap-2 flex-wrap">
-                     <div className="flex items-center gap-2">
-                       <Label className="italic text-2xl font-headline">Ma Note</Label>
-                       <InfoBadge text="Ta note personnelle sur ce livre, de 1 à 5 étoiles. C'est différent de «Mon Rang» : la note dit combien tu as aimé, la Palme dit si ce livre fait partie de tes tout meilleurs souvenirs de lecture." />
-                     </div>
-                     <Dialog open={ratingGridOpen} onOpenChange={setRatingGridOpen}>
-                       <DialogTrigger asChild>
-                         <Button variant="outline" className="rounded-2xl h-9 px-4 italic font-headline border-primary/20 text-sm">
-                           <ClipboardList className="mr-2 h-4 w-4" /> Évaluer
-                         </Button>
-                       </DialogTrigger>
-                       <DialogContent className="max-w-lg glass-card border-none bg-white/95 backdrop-blur-3xl shadow-2xl">
-                         <DialogHeader>
-                           <DialogTitle className="font-headline text-3xl italic">Grille d'évaluation</DialogTitle>
-                         </DialogHeader>
-                         <div className="space-y-5 py-2">
-                           {EVALUATION_CRITERIA.map((c) => (
-                             <div key={c.key} className="flex items-center justify-between gap-4">
-                               <Label className="italic text-sm">{c.label}</Label>
-                               <div className="flex gap-1 shrink-0">
-                                 {[1,2,3,4,5].map(s => (
-                                   <Star
-                                     key={s}
-                                     onClick={() => setEditedData({
-                                       ...editedData,
-                                       detailedRatings: { ...((editedData as any).detailedRatings || {}), [c.key]: s }
-                                     } as any)}
-                                     className={cn(
-                                       "h-5 w-5 cursor-pointer transition-all hover:scale-110",
-                                       s <= (((editedData as any).detailedRatings || {})[c.key] || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/15"
-                                     )}
-                                   />
-                                 ))}
-                               </div>
-                             </div>
-                           ))}
-                         </div>
-                         <DialogFooter>
-                           <Button
-                             onClick={async () => { await handleSave(); setRatingGridOpen(false); }}
-                             disabled={isSaving}
-                             className="w-full rounded-2xl bg-primary h-12 font-headline italic"
-                           >
-                             {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="mr-2 h-5 w-5" />} Enregistrer
-                           </Button>
-                         </DialogFooter>
-                       </DialogContent>
-                     </Dialog>
-                   </div>
-                   <StarRating
-                     rating={editedData.rating || 0}
-                     size={40}
-                     interactive
-                     onChange={(v) => setEditedData({ ...editedData, rating: v })}
-                     gap="gap-2"
-                     colorClass="text-amber-400 fill-amber-400 drop-shadow-md"
-                     emptyClass="text-muted-foreground/10"
-                   />
-                 </div>
+              {/* Format */}
+              <div className="glass-card bg-white/60 border-none p-6 rounded-[2rem] shadow-sm space-y-3">
+                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center">Format<InfoTip>Format physique de ta version du livre.</InfoTip></Label>
+                <div className="flex flex-wrap gap-2">
+                  {["Broché", "Relié", "Poche", "Ebook", "Audio"].map(fmt => (
+                    <Button key={fmt} variant="outline" size="sm"
+                      onClick={() => setEditedData({ ...editedData, bookFormat: (editedData as any).bookFormat === fmt ? "" : fmt } as any)}
+                      className={cn("rounded-full h-8 px-3 text-[10px] font-bold uppercase tracking-wide transition-all", (editedData as any).bookFormat === fmt ? "bg-primary text-white border-primary shadow-sm" : "bg-white/40")}>
+                      {fmt}
+                    </Button>
+                  ))}
+                </div>
+              </div>
 
-                 {/* Séparateur vertical */}
-                 <div className="border-l border-primary/10 pl-6 space-y-4">
-                   <div className="flex items-center gap-1.5">
-                     <Label className="italic text-2xl font-headline">Niveau Spicy</Label>
-                     <InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip>
-                   </div>
-                   <div className="flex gap-3">
-                     {[1,2,3,4,5].map(s => (
-                       <Flame
-                         key={s}
-                         onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)}
-                         className={cn(
-                           "h-10 w-10 cursor-pointer transition-all hover:scale-110",
-                           s <= ((editedData as any).spicyLevel || 0) ? "text-orange-500 fill-orange-500 drop-shadow-md" : "text-muted-foreground/10"
-                         )}
-                       />
-                     ))}
-                   </div>
-                 </div>
-               </div>
+              {/* Statut de lecture */}
+              <div className="glass-card bg-white/60 border-none p-6 rounded-[2rem] shadow-sm space-y-4">
+                <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Statut de lecture</Label>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(STATUSES).filter(([k]) => k !== 'pause').map(([k, v]) => (
+                    <Button key={k} variant="outline" onClick={() => setEditedData({ ...editedData, status: k as any })}
+                      className={cn("rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all", editedData.status === k ? "bg-primary text-white border-primary shadow-md" : "bg-white/40")}>
+                      {v.label}
+                    </Button>
+                  ))}
+                </div>
+                {editedData.status === "progress" && (
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Progression</Label>
+                      <span className="text-primary font-headline italic text-lg">{(editedData as any).progress ?? 0}%</span>
+                    </div>
+                    <Slider value={[(editedData as any).progress ?? 0]} min={0} max={100} step={5} onValueChange={(v) => setEditedData({ ...editedData, progress: v[0] } as any)} />
+                  </div>
+                )}
+                {/* Listes spéciales */}
+                <div className="space-y-3 pt-3 border-t border-primary/5">
+                  <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label><InfoTip>Listes de suivi personnalisées — "À offrir" et "Relecture d'été".</InfoTip></div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={() => setEditedData({ ...editedData, toGift: !(editedData as any).toGift } as any)}
+                      className={cn("rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5", (editedData as any).toGift ? "bg-primary text-white border-primary shadow-md" : "bg-white/40")}>
+                      <Gift className="h-3.5 w-3.5" /> À offrir
+                    </Button>
+                    <Button variant="outline"
+                      onClick={() => {
+                        const isPrestige = editedData.plumeRank === "diamant" || editedData.plumeRank === "royale";
+                        const effectivelyIn = (editedData as any).summerReread === true || ((editedData as any).summerReread !== false && isPrestige);
+                        setEditedData({ ...editedData, summerReread: !effectivelyIn } as any);
+                      }}
+                      className={cn("rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
+                        ((editedData as any).summerReread === true || ((editedData as any).summerReread !== false && (editedData.plumeRank === "diamant" || editedData.plumeRank === "royale")))
+                          ? "bg-primary text-white border-primary shadow-md" : "bg-white/40")}>
+                      <Sun className="h-3.5 w-3.5" /> Relecture d'été
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
 
-               <div className="space-y-6">
-                 <Label className="italic text-3xl font-headline">Mon Avis & Réflexions</Label>
-                 <Textarea 
-                  value={editedData.review || ""} 
-                  onChange={(e) => setEditedData({ ...editedData, review: e.target.value })} 
-                  placeholder="Qu'est-ce que cette lecture a gravé en vous ?"
-                  className="min-h-[250px] rounded-[2rem] bg-white/40 border-none p-10 italic text-xl shadow-inner resize-none focus-visible:ring-1 focus-visible:ring-primary/20" 
-                 />
-                 {profile && !profile.communityVisible && (
-                   <p className="text-[10px] text-muted-foreground italic">
-                     Active "Visible dans la communauté" dans ton profil pour que ton avis apparaisse ici pour les autres lectrices.
-                   </p>
-                 )}
-               </div>
+        {/* ══ MON JOURNAL ══ */}
+        <TabsContent value="journal" className="space-y-8 animate-in fade-in slide-in-from-bottom-2">
 
-               <label className="flex items-start gap-4 p-5 rounded-2xl bg-rose/5 border border-rose/10 cursor-pointer">
-                 <Checkbox
-                   checked={Boolean((editedData as any).isPressService)}
-                   onCheckedChange={(v) => setEditedData({ ...editedData, isPressService: Boolean(v) } as any)}
-                   className="mt-0.5 border-rose/30 data-[state=checked]:bg-rose data-[state=checked]:border-rose"
-                 />
-                 <span className="space-y-1">
-                   <span className="block font-headline italic text-lg">Service de presse</span>
-                   
-                 </span>
-               </label>
+          {/* Ma lecture */}
+          <div className="glass-card bg-white/60 border-none p-8 rounded-[2rem] shadow-sm space-y-6">
+            <h3 className="font-headline italic text-2xl text-primary/70 flex items-center gap-3">
+              <BookOpen className="h-6 w-6" /> Ma lecture
+            </h3>
+            <div className="grid sm:grid-cols-2 gap-6">
+              {/* Pages ou heures */}
+              <div className="flex items-center gap-3">
+                {["audio", "audible", "audiolib"].includes((editedData as any).format) ? (
+                  <>
+                    <Headphones className="h-5 w-5 text-primary/40 shrink-0" />
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Durée d'écoute (en heures)</Label>
+                      <Input type="number" min="0" step="0.5" inputMode="decimal" value={(editedData as any).audioHoursListened ?? ""}
+                        onChange={(e) => setEditedData({ ...editedData, audioHoursListened: e.target.value === "" ? null : Number(e.target.value) } as any)}
+                        placeholder="Ex : 8.5" className="h-10 border-none bg-white/40 px-3 italic rounded-xl" />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <BookOpen className="h-5 w-5 text-primary/40 shrink-0" />
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-1.5"><Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Nombre de pages</Label><InfoTip>Alimente les pages parcourues et le rythme de lecture dans ton Bilan.</InfoTip></div>
+                      <Input type="number" min="0" inputMode="numeric" value={(editedData as any).pagesRead ?? ""}
+                        onChange={(e) => setEditedData({ ...editedData, pagesRead: e.target.value === "" ? null : Number(e.target.value) } as any)}
+                        placeholder={masterBook?.pageCount || masterBook?.pages ? `Ex : ${masterBook.pageCount || masterBook.pages}` : "Ex : 320"}
+                        className="h-10 border-none bg-white/40 px-3 italic rounded-xl" />
+                    </div>
+                  </>
+                )}
+              </div>
+              {/* Éditeur */}
+              <div className="flex items-center gap-3">
+                <Landmark className="h-5 w-5 text-primary/40 shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Maison d'édition</Label>
+                  <Input value={(editedData as any).publisher ?? ""} onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value } as any)}
+                    placeholder={masterBook?.publisher || "Ex : Hugo Poche"} className="h-10 border-none bg-white/40 px-3 italic rounded-xl" />
+                </div>
+                {(() => {
+                  const publisherName = ((editedData as any).publisher || masterBook?.publisher || "").trim();
+                  if (!publisherName) return null;
+                  const isFollowingPublisher = toArray<string>(profile?.followedPublishers).some((p) => p.toLowerCase() === publisherName.toLowerCase());
+                  const togglePublisherFollow = async () => {
+                    if (!db || !user) return;
+                    try {
+                      await setDoc(doc(db, "users", user.uid), { followedPublishers: isFollowingPublisher ? arrayRemove(publisherName) : arrayUnion(publisherName) }, { merge: true });
+                      toast({ title: isFollowingPublisher ? "Éditeur retiré du suivi" : "Éditeur suivi", description: isFollowingPublisher ? undefined : "Ses nouveautés pourront apparaître dans tes Actualités." });
+                    } catch (err) { console.error("Toggle Publisher Follow Error:", err); }
+                  };
+                  return (
+                    <Button type="button" variant="ghost" onClick={togglePublisherFollow}
+                      className={cn("rounded-xl h-9 px-3 shrink-0 gap-1.5", isFollowingPublisher ? "text-copper" : "text-muted-foreground/50")}>
+                      <Heart className={cn("h-4 w-4", isFollowingPublisher && "fill-copper")} />
+                      <span className="text-[10px] font-bold uppercase hidden sm:inline">{isFollowingPublisher ? "Suivi" : "Suivre"}</span>
+                    </Button>
+                  );
+                })()}
+              </div>
+            </div>
 
-               <label className="flex items-start gap-4 p-5 rounded-2xl bg-copper/5 border border-copper/10 cursor-pointer">
-                 <Checkbox
-                   checked={Boolean((editedData as any).isRecommended)}
-                   onCheckedChange={(v) => setEditedData({ ...editedData, isRecommended: Boolean(v) } as any)}
-                   className="mt-0.5 border-copper/30 data-[state=checked]:bg-copper data-[state=checked]:border-copper"
-                 />
-                 <span className="space-y-1">
-                   <span className="block font-headline italic text-lg">Pépite Incontournable</span>
-                   <span className="block text-xs text-muted-foreground leading-relaxed">
-                     Un livre que tu as aimé et que tu recommandes à d'autres lectrices. Il apparaît alors dans "Pépites Incontournables" sur ton profil, et sur ton profil visible par les autres lectrices si "Visible dans la communauté" est activé.
-                   </span>
-                   {profile && !profile.communityVisible && (
-                     <span className="block text-[10px] text-muted-foreground italic">
-                       Active "Visible dans la communauté" dans ton profil pour que tes pépites soient vues par les autres lectrices.
-                     </span>
-                   )}
-                 </span>
-               </label>
+            {/* Évaluer les dates — toujours visible, collapsible */}
+            <div className="space-y-3">
+              <Button variant="outline" onClick={() => setShowDates(!showDates)}
+                className="w-full justify-between rounded-2xl h-11 font-headline italic border-primary/20 px-5 text-sm">
+                <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary/60" /> Évaluer mes dates de lecture</span>
+                <ChevronRight className={cn("h-4 w-4 text-primary/40 transition-transform", showDates && "rotate-90")} />
+              </Button>
+              {showDates && (
+                <div className="glass-card bg-primary/5 border-none p-5 rounded-2xl space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <div className="flex items-center gap-3">
+                      <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de début de lecture</Label>
+                        <input type="date" value={(editedData as any).readStartDate || ""} onChange={(e) => setEditedData({ ...editedData, readStartDate: e.target.value } as any)}
+                          className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-1.5"><Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label><InfoTip>Sert au classement par mois dans votre bibliothèque.</InfoTip></div>
+                        <input type="date"
+                          value={(editedData as any).readEndDate || (() => { const raw = (editedData as any).dateRead; if (!raw) return ""; const d = raw?.toDate ? raw.toDate() : new Date(raw); return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10); })()}
+                          onChange={(e) => setEditedData({ ...editedData, readEndDate: e.target.value } as any)}
+                          className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
-               <div className="space-y-4">
-                 <Label className="italic text-2xl font-headline flex items-center gap-3">
-                   <Paperclip className="h-5 w-5 text-primary/40" /> Documents & Revues
-                 </Label>
-                 <p className="text-[11px] text-muted-foreground italic">
-                   Coupure de presse, capture d'une critique lue ailleurs, ou ton propre avis rédigé dans un autre outil — attache-le ici. Uniquement visible par toi, même avec la communauté activée.
-                 </p>
-                 {toArray<any>((editedData as any).reviewDocuments).length > 0 && (
-                   <div className="grid sm:grid-cols-2 gap-3">
-                     {toArray<any>((editedData as any).reviewDocuments).map((doc: any) => (
-                       <div key={doc.path} className="flex items-center gap-3 bg-white/40 rounded-2xl p-4 border border-primary/5">
-                         {doc.type?.startsWith("image/") ? (
-                           <div className="relative h-12 w-12 rounded-lg overflow-hidden shrink-0 bg-primary/5">
-                             <img src={doc.url} alt={doc.name} className="w-full h-full object-cover" />
-                           </div>
-                         ) : (
-                           <div className="h-12 w-12 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
-                             <FileText className="h-5 w-5 text-primary/50" />
-                           </div>
-                         )}
-                         <div className="min-w-0 flex-1 space-y-0.5">
-                           <p className="text-xs font-bold truncate">{doc.name}</p>
-                           <p className="text-[9px] text-muted-foreground uppercase tracking-widest">
-                             {new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}
-                           </p>
-                         </div>
-                         <a href={doc.url} target="_blank" rel="noopener noreferrer" className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary shrink-0 hover:scale-110 transition-transform" title="Ouvrir">
-                           <Download className="h-3.5 w-3.5" />
-                         </a>
-                         <button onClick={() => handleDocDelete(doc)} className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-destructive shrink-0 hover:scale-110 transition-transform" title="Supprimer">
-                           <Trash2 className="h-3.5 w-3.5" />
-                         </button>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-                 <label className="flex items-center justify-center gap-3 h-14 rounded-2xl border-2 border-dashed border-primary/15 text-primary/60 italic text-sm cursor-pointer hover:bg-primary/5 transition-colors">
-                   {isUploadingDoc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                   {isUploadingDoc ? "Envoi en cours..." : "Ajouter un document (PDF ou image, 15 Mo max)"}
-                   <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleDocUpload} disabled={isUploadingDoc} />
-                 </label>
-               </div>
+            {/* Évaluer le livre */}
+            <Dialog open={ratingGridOpen} onOpenChange={setRatingGridOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full justify-between rounded-2xl h-11 font-headline italic border-primary/20 px-5 text-sm">
+                  <span className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary/60" /> Évaluer le livre</span>
+                  <ChevronRight className="h-4 w-4 text-primary/40" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg glass-card border-none bg-white/95 backdrop-blur-3xl shadow-2xl">
+                <DialogHeader>
+                  <DialogTitle className="font-headline text-3xl italic">Grille d'évaluation</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-5 py-2">
+                  {EVALUATION_CRITERIA.map((c) => (
+                    <div key={c.key} className="flex items-center justify-between gap-4">
+                      <Label className="italic text-sm">{c.label}</Label>
+                      <div className="flex gap-1 shrink-0">
+                        {[1,2,3,4,5].map(s => (
+                          <Star key={s} onClick={() => setEditedData({ ...editedData, detailedRatings: { ...((editedData as any).detailedRatings || {}), [c.key]: s } } as any)}
+                            className={cn("h-5 w-5 cursor-pointer transition-all hover:scale-110", s <= (((editedData as any).detailedRatings || {})[c.key] || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/15")} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button onClick={async () => { await handleSave(); setRatingGridOpen(false); }} disabled={isSaving} className="w-full rounded-2xl bg-primary h-12 font-headline italic">
+                    {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="mr-2 h-5 w-5" />} Enregistrer l'évaluation
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
 
-               {otherReaderReviews.length > 0 && (
-                 <div className="space-y-6 pt-6 border-t border-primary/5">
-                   <Label className="italic text-2xl font-headline flex items-center gap-3">
-                     <Users className="h-5 w-5 text-rose" /> Avis des lectrices ({otherReaderReviews.length})
-                   </Label>
-                   <div className="grid sm:grid-cols-2 gap-4">
-                     {otherReaderReviews.map((r: any) => (
-                       <Link key={r.id} href={`/profile/${r.id}`} className="glass-card bg-white/50 border-none shadow-sm rounded-2xl p-5 space-y-2 block hover:bg-white/70 transition-colors">
-                         <div className="flex items-center gap-2">
-                           <Avatar className="h-7 w-7 shrink-0">
-                             <AvatarImage src={r.avatarUrl} className="object-cover" />
-                             <AvatarFallback className="text-[10px] font-headline italic">{(r.userName || "?").charAt(0).toUpperCase()}</AvatarFallback>
-                           </Avatar>
-                           <span className="font-headline italic text-sm truncate">{r.userName || "Lectrice Lectoria"}</span>
-                           {r.rating > 0 && (
-                             <div className="flex gap-0.5 ml-auto shrink-0">
-                               {[1,2,3,4,5].map((s) => (
-                                 <Star key={s} className={cn("h-3 w-3", s <= r.rating ? "text-copper fill-copper" : "text-muted-foreground/15")} />
-                               ))}
-                             </div>
-                           )}
-                         </div>
-                         {r.review && <p className="text-xs italic text-muted-foreground leading-relaxed line-clamp-4">"{r.review}"</p>}
-                       </Link>
-                     ))}
-                   </div>
-                 </div>
-               )}
+          {/* Ma Note + Niveau Spicy côte à côte */}
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Label className="italic text-2xl font-headline">Ma Note</Label>
+                  <InfoBadge text="Ta note personnelle sur ce livre, de 1 à 5 étoiles. C'est différent de «Mon Rang» : la note dit combien tu as aimé, la Palme dit si ce livre fait partie de tes tout meilleurs souvenirs de lecture." />
+                </div>
+              </div>
+              <StarRating rating={editedData.rating || 0} size={40} interactive onChange={(v) => setEditedData({ ...editedData, rating: v })} gap="gap-2" colorClass="text-amber-400 fill-amber-400 drop-shadow-md" emptyClass="text-muted-foreground/10" />
+            </div>
+            <div className="border-l border-primary/10 pl-6 space-y-4">
+              <div className="flex items-center gap-1.5">
+                <Label className="italic text-2xl font-headline">Niveau Spicy</Label>
+                <InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip>
+              </div>
+              <div className="flex gap-3">
+                {[1,2,3,4,5].map(s => (
+                  <Flame key={s} onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)}
+                    className={cn("h-10 w-10 cursor-pointer transition-all hover:scale-110", s <= ((editedData as any).spicyLevel || 0) ? "text-orange-500 fill-orange-500 drop-shadow-md" : "text-muted-foreground/10")} />
+                ))}
+              </div>
+            </div>
+          </div>
 
-               <div className="grid sm:grid-cols-2 gap-6">
-                 <div className="space-y-3">
-                   <Label className="italic text-xl font-headline">Citation préférée</Label>
-                   <Textarea
-                     value={editedData.favoriteQuote || ""}
-                     onChange={(e) => setEditedData({ ...editedData, favoriteQuote: e.target.value })}
-                     placeholder="Une phrase qui vous a marquée..."
-                     className="min-h-[120px] rounded-2xl bg-white/40 border-none p-6 italic resize-none focus-visible:ring-1 focus-visible:ring-primary/20"
-                   />
-                 </div>
-                 <div className="space-y-3">
-                   <Label className="italic text-xl font-headline">Votre personnage pépite</Label>
-                   <Input
-                     value={(editedData as any).favoriteCharacter || ""}
-                     onChange={(e) => setEditedData({ ...editedData, favoriteCharacter: e.target.value } as any)}
-                     placeholder="Le personnage qui vous a le plus marquée"
-                     className="h-12 rounded-xl bg-white/40 border-none italic"
-                   />
-                 </div>
-               </div>
+          {/* Mon Avis */}
+          <div className="space-y-6">
+            <Label className="italic text-3xl font-headline">Mon Avis & Réflexions</Label>
+            <Textarea value={editedData.review || ""} onChange={(e) => setEditedData({ ...editedData, review: e.target.value })}
+              placeholder="Qu'est-ce que cette lecture a gravé en vous ?"
+              className="min-h-[250px] rounded-[2rem] bg-white/40 border-none p-10 italic text-xl shadow-inner resize-none focus-visible:ring-1 focus-visible:ring-primary/20" />
+            {profile && !profile.communityVisible && (
+              <p className="text-[10px] text-muted-foreground italic">Active "Visible dans la communauté" dans ton profil pour que ton avis apparaisse ici pour les autres lectrices.</p>
+            )}
+          </div>
 
-               <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                 <Button onClick={handleSave} disabled={isSaving} className="flex-1 h-14 rounded-2xl bg-primary font-headline italic text-lg shadow-md">
-                   {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer mon journal
-                 </Button>
-                 <Button asChild variant="outline" className="flex-1 h-14 rounded-2xl font-headline italic text-lg border-primary/20">
-                   <Link href={`/share?book=${bookId}`}><Share2 className="mr-3 h-5 w-5" /> Partager</Link>
-                 </Button>
-                 <Button onClick={() => setExportOpen(true)} variant="outline" className="flex-1 h-14 rounded-2xl font-headline italic text-lg border-primary/20">
-                   <Sparkles className="mr-3 h-5 w-5" /> Exporter l'avis
-                 </Button>
-               </div>
-            </TabsContent>
-          </Tabs>
+          {/* Service de presse + Pépite */}
+          <label className="flex items-start gap-4 p-5 rounded-2xl bg-rose/5 border border-rose/10 cursor-pointer">
+            <Checkbox checked={Boolean((editedData as any).isPressService)} onCheckedChange={(v) => setEditedData({ ...editedData, isPressService: Boolean(v) } as any)}
+              className="mt-0.5 border-rose/30 data-[state=checked]:bg-rose data-[state=checked]:border-rose" />
+            <span className="space-y-1">
+              <span className="block font-headline italic text-lg">Service de presse</span>
+              <InfoTip>Un triangle "SP" apparaît sur la couverture dans la bibliothèque — repère visuel uniquement.</InfoTip>
+            </span>
+          </label>
+          <label className="flex items-start gap-4 p-5 rounded-2xl bg-copper/5 border border-copper/10 cursor-pointer">
+            <Checkbox checked={Boolean((editedData as any).isRecommended)} onCheckedChange={(v) => setEditedData({ ...editedData, isRecommended: Boolean(v) } as any)}
+              className="mt-0.5 border-copper/30 data-[state=checked]:bg-copper data-[state=checked]:border-copper" />
+            <span className="space-y-1">
+              <span className="block font-headline italic text-lg">Pépite Incontournable</span>
+              <InfoTip>Recommande ce livre à d'autres lectrices. Il apparaîtra dans "Pépites Incontournables" sur ton profil si "Visible dans la communauté" est activé.</InfoTip>
+            </span>
+          </label>
 
-      <AvisExportModal
+          {/* Documents & Revues */}
+          <div className="space-y-4">
+            <Label className="italic text-2xl font-headline flex items-center gap-3"><Paperclip className="h-5 w-5 text-primary/40" /> Documents & Revues</Label>
+            <p className="text-[11px] text-muted-foreground italic">Coupure de presse, capture d'une critique lue ailleurs, ou ton propre avis rédigé dans un autre outil — attache-le ici. Uniquement visible par toi, même avec la communauté activée.</p>
+            {toArray<any>((editedData as any).reviewDocuments).length > 0 && (
+              <div className="grid sm:grid-cols-2 gap-3">
+                {toArray<any>((editedData as any).reviewDocuments).map((doc: any) => (
+                  <div key={doc.path} className="flex items-center gap-3 bg-white/40 rounded-2xl p-4 border border-primary/5">
+                    {doc.type?.startsWith("image/") ? (
+                      <div className="relative h-12 w-12 rounded-lg overflow-hidden shrink-0 bg-primary/5"><img src={doc.url} alt={doc.name} className="w-full h-full object-cover" /></div>
+                    ) : (
+                      <div className="h-12 w-12 rounded-lg bg-primary/5 flex items-center justify-center shrink-0"><FileText className="h-5 w-5 text-primary/50" /></div>
+                    )}
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <p className="text-xs font-bold truncate">{doc.name}</p>
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-widest">{new Date(doc.uploadedAt).toLocaleDateString("fr-FR")}</p>
+                    </div>
+                    <a href={doc.url} target="_blank" rel="noopener noreferrer" className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary shrink-0 hover:scale-110 transition-transform" title="Ouvrir">
+                      <Download className="h-3.5 w-3.5" />
+                    </a>
+                    <button onClick={() => handleDocDelete(doc)} className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-destructive shrink-0 hover:scale-110 transition-transform" title="Supprimer">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="flex items-center justify-center gap-3 h-14 rounded-2xl border-2 border-dashed border-primary/15 text-primary/60 italic text-sm cursor-pointer hover:bg-primary/5 transition-colors">
+              {isUploadingDoc ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {isUploadingDoc ? "Envoi en cours..." : "Ajouter un document (PDF ou image, 15 Mo max)"}
+              <input type="file" className="hidden" accept="application/pdf,image/*" onChange={handleDocUpload} disabled={isUploadingDoc} />
+            </label>
+          </div>
+
+          {/* Où trouver ce livre */}
+          {(() => {
+            const bookTitle = encodeURIComponent((masterBook?.title || userBook?.title || "").replace(/^\d+\s*[-–:]\s*/u, "").trim());
+            const bookAuthor = encodeURIComponent(cleanAuthorName(masterBook?.author || userBook?.author || ""));
+            const q = `${bookTitle}+${bookAuthor}`;
+            return (
+              <div className="space-y-4">
+                <Label className="italic text-2xl font-headline flex items-center gap-3">
+                  <Globe className="h-5 w-5 text-primary/40" /> Où trouver ce livre
+                </Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { name: "Fnac", url: `https://recherche.fnac.com/SearchResult/ResultList.aspx?SCat=2!1&Search=${q}` },
+                    { name: "Amazon", url: `https://www.amazon.fr/s?k=${q}&i=stripbooks` },
+                    { name: "Cultura", url: `https://www.cultura.com/recherche/produits?q=${q}` },
+                    { name: "Gilbert", url: `https://www.gilbert.fr/recherche?q=${q}` },
+                  ].map(({ name, url }) => (
+                    <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-primary/15 bg-white/60 text-sm font-headline italic text-primary/70 hover:bg-white/90 hover:text-primary transition-all shadow-sm">
+                      <Globe className="h-4 w-4" /> {name}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Citation + Personnage */}
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <Label className="italic text-xl font-headline">Citation préférée</Label>
+              <Textarea value={editedData.favoriteQuote || ""} onChange={(e) => setEditedData({ ...editedData, favoriteQuote: e.target.value })}
+                placeholder="Une phrase qui vous a marquée..." className="min-h-[120px] rounded-2xl bg-white/40 border-none p-6 italic resize-none focus-visible:ring-1 focus-visible:ring-primary/20" />
+            </div>
+            <div className="space-y-3">
+              <Label className="italic text-xl font-headline">Votre personnage pépite</Label>
+              <Input value={(editedData as any).favoriteCharacter || ""} onChange={(e) => setEditedData({ ...editedData, favoriteCharacter: e.target.value } as any)}
+                placeholder="Le personnage qui vous a le plus marquée" className="h-12 rounded-xl bg-white/40 border-none italic" />
+            </div>
+          </div>
+
+          {/* Avis des lectrices */}
+          {otherReaderReviews.length > 0 && (
+            <div className="space-y-6 pt-6 border-t border-primary/5">
+              <Label className="italic text-2xl font-headline flex items-center gap-3">
+                <Users className="h-5 w-5 text-rose" /> Avis des lectrices ({otherReaderReviews.length})
+              </Label>
+              <div className="grid sm:grid-cols-2 gap-4">
+                {otherReaderReviews.map((r: any) => (
+                  <Link key={r.id} href={`/profile/${r.id}`} className="glass-card bg-white/50 border-none shadow-sm rounded-2xl p-5 space-y-2 block hover:bg-white/70 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-7 w-7 shrink-0">
+                        <AvatarImage src={r.avatarUrl} className="object-cover" />
+                        <AvatarFallback className="text-[10px] font-headline italic">{(r.userName || "?").charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="font-headline italic text-sm truncate">{r.userName || "Lectrice Lectoria"}</span>
+                      {r.rating > 0 && (
+                        <div className="flex gap-0.5 ml-auto shrink-0">
+                          {[1,2,3,4,5].map((s) => <Star key={s} className={cn("h-3 w-3", s <= r.rating ? "text-copper fill-copper" : "text-muted-foreground/15")} />)}
+                        </div>
+                      )}
+                    </div>
+                    {r.review && <p className="text-xs italic text-muted-foreground leading-relaxed line-clamp-4">"{r.review}"</p>}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Boutons de sauvegarde */}
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <Button onClick={handleSave} disabled={isSaving} className="flex-1 h-14 rounded-2xl bg-primary font-headline italic text-lg shadow-md">
+              {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer mon journal
+            </Button>
+            <Button asChild variant="outline" className="flex-1 h-14 rounded-2xl font-headline italic text-lg border-primary/20">
+              <Link href={`/share?book=${bookId}`}><Share2 className="mr-3 h-5 w-5" /> Partager</Link>
+            </Button>
+            <Button onClick={() => setExportOpen(true)} variant="outline" className="flex-1 h-14 rounded-2xl font-headline italic text-lg border-primary/20">
+              <Sparkles className="mr-3 h-5 w-5" /> Exporter l'avis
+            </Button>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+
+            <AvisExportModal
         isOpen={exportOpen}
         onClose={() => setExportOpen(false)}
         book={{
