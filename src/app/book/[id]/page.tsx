@@ -793,7 +793,7 @@ export default function BookDetailPage() {
 
            <div className="space-y-4 pt-4 border-t border-primary/5">
              <div className="flex items-center gap-2">
-               <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label>
+               <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Mon Rang</Label><InfoTip>Cliquez à nouveau sur le même rang pour le retirer.</InfoTip></div>
                <InfoBadge text="Ton système de «coup de cœur» à part, pour distinguer tes toutes meilleures lectures — bien plus rare qu'une simple bonne note. C'est différent de «Ma Note» plus haut : les étoiles disent combien tu as aimé sur le moment, la Palme dit si ce livre mérite une place à part dans ta bibliothèque." />
              </div>
              <div className="flex flex-wrap gap-2">
@@ -817,14 +817,11 @@ export default function BookDetailPage() {
                  );
                })}
              </div>
-             <InfoTip>Cliquez à nouveau sur le même rang pour le retirer.</InfoTip>
            </div>
 
            {/* ── Niveau Spicy ── */}
            <div className="space-y-3 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">
-               Niveau Spicy <span className="font-normal opacity-50">(optionnel)</span>
-             </Label>
+             <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Niveau Spicy</Label><InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip></div>
              <div className="flex items-center gap-3 flex-wrap">
                <Button
                  variant="outline"
@@ -852,7 +849,6 @@ export default function BookDetailPage() {
                  ))}
                </div>
              </div>
-             <InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip>
            </div>
 
            {/* ── Format ── */}
@@ -897,7 +893,7 @@ export default function BookDetailPage() {
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label>
+             <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label><InfoTip>Listes de suivi personnalisées — "À offrir" et "Relecture d'été".</InfoTip></div>
              <div className="flex flex-wrap gap-2">
                <Button
                  variant="outline"
@@ -925,7 +921,6 @@ export default function BookDetailPage() {
                  <Sun className="h-3.5 w-3.5" /> Relecture d'été
                </Button>
              </div>
-             <InfoTip>Les livres Palme Diamant/Royale y apparaissent déjà par défaut. Ce bouton permet d'en ajouter un autre ou d'en retirer un.</InfoTip>
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">
@@ -1049,24 +1044,22 @@ export default function BookDetailPage() {
                </Dialog>
                <div className="grid sm:grid-cols-2 gap-6 max-w-xl">
                  <div className="space-y-3">
-                   <Label className="italic text-xl font-headline">Tome / Volume</Label>
+                   <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline">Tome / Volume</Label><InfoTip>Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</InfoTip></div>
                    <Input
                      value={(editedData as any).volume || ""}
                      onChange={(e) => setEditedData({ ...editedData, volume: e.target.value } as any)}
                      placeholder="ex : Tome 1"
                      className="h-11 rounded-xl bg-white/40 border-none italic"
                    />
-                   <InfoTip>Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</InfoTip>
                  </div>
                  <div className="space-y-3">
-                   <Label className="italic text-xl font-headline">Saga (facultatif)</Label>
+                   <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline">Saga</Label><InfoTip>Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</InfoTip></div>
                    <Input
                      value={(editedData as any).saga || ""}
                      onChange={(e) => setEditedData({ ...editedData, saga: e.target.value } as any)}
                      placeholder="ex : Legacy of God"
                      className="h-11 rounded-xl bg-white/40 border-none italic"
                    />
-                   <InfoTip>Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</InfoTip>
                  </div>
                </div>
 
@@ -1112,9 +1105,7 @@ export default function BookDetailPage() {
                  />
                </div>
                <div className="space-y-3 max-w-md">
-                 <Label className="italic text-xl font-headline flex items-center gap-2">
-                   <LinkIcon className="h-4 w-4" /> Lien de référence
-                 </Label>
+                 <div className="flex items-center gap-1.5"><Label className="italic text-xl font-headline flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Lien de référence</Label><InfoTip>Page d'achat, fiche Goodreads, interview de l'auteur… tout lien utile. L'aimant capture le résumé et la couverture depuis cette page.</InfoTip></div>
                  <div className="flex gap-2">
                    <Input
                      value={(editedData as any).referenceLink || ""}
@@ -1140,7 +1131,6 @@ export default function BookDetailPage() {
                      {(editedData as any).referenceLink}
                    </a>
                  )}
-                 <InfoTip>Page d'achat, fiche Goodreads, interview de l'auteur… tout lien utile à garder sous la main.</InfoTip>
                </div>
                <TagDropdown
                  label="Genres"
@@ -1245,7 +1235,7 @@ export default function BookDetailPage() {
                      <div className="flex items-center gap-3">
                        <CalendarDays className="h-5 w-5 text-primary/40 shrink-0" />
                        <div className="flex-1 space-y-1">
-                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label>
+                         <div className="flex items-center gap-1.5"><Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Date de fin de lecture</Label><InfoTip>Sert au classement par mois dans votre bibliothèque.</InfoTip></div>
                          <input
                            type="date"
                            value={
@@ -1294,7 +1284,7 @@ export default function BookDetailPage() {
                      <>
                        <BookOpen className="h-5 w-5 text-primary/40 shrink-0" />
                        <div className="flex-1 space-y-1">
-                         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Nombre de pages</Label>
+                         <div className="flex items-center gap-1.5"><Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Nombre de pages</Label><InfoTip>Alimente les pages parcourues et le rythme de lecture dans ton Bilan.</InfoTip></div>
                          <Input
                            type="number"
                            min="0"
@@ -1308,7 +1298,6 @@ export default function BookDetailPage() {
                      </>
                    )}
                  </div>
-                 <InfoTip>Alimente les pages parcourues et le rythme de lecture dans ton Bilan.</InfoTip>
                </div>
 
                {/* Éditeur — modifiable ici, prioritaire sur la fiche
@@ -1424,7 +1413,7 @@ export default function BookDetailPage() {
                </div>
 
                <div className="space-y-6">
-                 <Label className="italic text-3xl font-headline">Niveau Spicy</Label>
+                 <div className="flex items-center gap-1.5"><Label className="italic text-3xl font-headline">Niveau Spicy</Label><InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip></div>
                  <div className="flex gap-4">
                    {[1,2,3,4,5].map(s => (
                     <Flame 
@@ -1437,7 +1426,6 @@ export default function BookDetailPage() {
                     />
                    ))}
                  </div>
-                 <InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip>
                </div>
 
                <div className="space-y-6">

@@ -826,12 +826,12 @@ export function BookCard({ book }: { book: UserBook }) {
   const isPressService = Boolean((book as any).isPressService);
   const isAmbientDark = useAmbientDark();
   return (
-    <div className="space-y-2 group cursor-pointer transition-transform duration-150 active:scale-[1.02]">
-      <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-sm border border-white/60 group-hover:shadow-2xl transition-all duration-700 bg-secondary/5 flex items-center justify-center">
+    <div className="space-y-2 group cursor-pointer">
+      <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-md border border-white/60 group-hover:shadow-2xl group-active:shadow-2xl transition-all duration-300 bg-secondary/5 flex items-center justify-center">
         <BookCover
           src={book.cover}
           alt={book.title || ""} 
-          className="object-contain transition-transform duration-300 group-hover:scale-105 group-active:scale-105" 
+          className="object-contain transition-all duration-300 group-hover:scale-110 group-active:scale-110" 
         />
         {isPressService && (
           <div
@@ -938,12 +938,21 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
                   {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
                 </button>
               )}
+              {!selectMode && (
+                <button
+                  onClick={(e) => quickDeleteBook(book.id, (book as any).title || "ce livre", e)}
+                  className="absolute top-1.5 right-1.5 z-20 h-7 w-7 rounded-full bg-white/95 shadow-md flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 active:text-red-500 transition-all touch-manipulation border border-zinc-100"
+                  title="Retirer de la bibliothèque"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
               {selectMode ? (
                 <div onClick={() => toggleSelect(book.id)} className="group block cursor-pointer">
                   <BookCard book={book} />
                 </div>
               ) : (
-                <Link href={`/book/${book.id}`} className="group block transition-transform duration-200 hover:scale-[1.05] active:scale-[1.04]">
+                <Link href={`/book/${book.id}`} className="group block">
                   <BookCard book={book} />
                 </Link>
               )}
