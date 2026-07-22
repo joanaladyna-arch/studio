@@ -16,7 +16,7 @@ import { FieldValue } from "firebase-admin/firestore";
  * date de publication Google Books, pour ne remonter que de vraies
  * nouveautés et non tout le fonds de catalogue d'un auteur ou éditeur.
  */
-const RECENT_WINDOW_DAYS = 45;
+const RECENT_WINDOW_DAYS = 180;
 
 function normalize(s: string) {
   return (s || "").toLowerCase().trim().replace(/\s+/g, " ");
@@ -51,10 +51,23 @@ export async function GET(req: NextRequest) {
     }
 
     // 2. Résolution slug → nom d'affichage via la fiche auteur partagée.
+    // Fallback amélioré : si l'auteur n'existe pas en base, on convertit
+    // le slug en nom lisible (tirets → espaces, majuscules, sans préfixe "auteur-")
+    function slugToName(slug: string): string {
+      return slug
+        .replace(/^auteur-/i, "")          // retirer le préfixe "auteur-" si présent
+        .split("-")
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ")
+        .trim();
+    }
+
     const authorNames: { slug: string; name: string }[] = [];
     for (const slug of followedSlugs) {
       const authorDoc = await db.collection("authors").doc(slug).get();
-      const name = authorDoc.exists ? (authorDoc.data()?.name || slug) : slug;
+      const name = authorDoc.exists
+        ? (authorDoc.data()?.name || slugToName(slug))
+        : slugToName(slug);
       authorNames.push({ slug, name });
     }
 
@@ -75,7 +88,7 @@ export async function GET(req: NextRequest) {
     // le paramètre de requête Google Books et les champs déposés dans
     // actualitesPending diffèrent.
     async function detectFrom(query: string, extraFields: Record<string, any>) {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=5`;
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=10&langRestrict=fr`;
       const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
@@ -120,7 +133,10 @@ export async function GET(req: NextRequest) {
 
     for (const publisherName of followedPublishers) {
       try {
-        await detectFrom(`inpublisher:"${publisherName}"`, {
+        // Retirer les informations de localisation entre parenthèses
+        // ex: "Editions Addictives (paris)" → "Editions Addictives"
+        const cleanPublisher = publisherName.replace(/\s*\([^)]*\)\s*/g, "").trim();
+        await detectFrom(`inpublisher:"${cleanPublisher}"`, {
           content: `Nouvelle parution détectée automatiquement chez l'éditeur ${publisherName} : à vérifier avant publication.`,
           publisherName,
         });
