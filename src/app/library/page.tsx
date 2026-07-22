@@ -935,6 +935,15 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
                   {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
                 </button>
               )}
+              {!selectMode && (
+                <button
+                  onClick={(e) => quickDeleteBook(book.id, (book as any).title || "ce livre", e)}
+                  className="absolute top-1 right-1 z-20 h-8 w-8 rounded-full bg-white/95 shadow-md flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 active:text-red-500 active:scale-95 transition-all touch-manipulation"
+                  title="Retirer de la bibliothèque"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
               {selectMode ? (
                 <div onClick={() => toggleSelect(book.id)} className="group block cursor-pointer">
                   <BookCard book={book} />
