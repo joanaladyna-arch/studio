@@ -1351,80 +1351,88 @@ export default function BookDetailPage() {
                  })()}
                </div>
 
-               <div className="space-y-6">
-                 <div className="flex items-center justify-between flex-wrap gap-4">
-                   <div className="flex items-center gap-2">
-                     <Label className="italic text-3xl font-headline">Ma Note</Label>
-                     <InfoBadge text="Ta note personnelle sur ce livre, de 1 à 5 étoiles (les demi-étoiles comme 3,5 ou 4,5 sont possibles). C'est différent de «Mon Rang» plus bas : la note dit combien tu as aimé, la Palme dit si ce livre fait partie de tes tout meilleurs souvenirs de lecture." />
-                   </div>
-                   <Dialog open={ratingGridOpen} onOpenChange={setRatingGridOpen}>
-                     <DialogTrigger asChild>
-                       <Button variant="outline" className="rounded-2xl h-11 px-6 italic font-headline border-primary/20">
-                         <ClipboardList className="mr-2 h-4 w-4" /> Évaluer
-                       </Button>
-                     </DialogTrigger>
-                     <DialogContent className="max-w-lg glass-card border-none bg-white/95 backdrop-blur-3xl shadow-2xl">
-                       <DialogHeader>
-                         <DialogTitle className="font-headline text-3xl italic">Grille d'évaluation</DialogTitle>
-                       </DialogHeader>
-                       <div className="space-y-5 py-2">
-                         {EVALUATION_CRITERIA.map((c) => (
-                           <div key={c.key} className="flex items-center justify-between gap-4">
-                             <Label className="italic text-sm">{c.label}</Label>
-                             <div className="flex gap-1 shrink-0">
-                               {[1,2,3,4,5].map(s => (
-                                 <Star
-                                   key={s}
-                                   onClick={() => setEditedData({
-                                     ...editedData,
-                                     detailedRatings: { ...((editedData as any).detailedRatings || {}), [c.key]: s }
-                                   } as any)}
-                                   className={cn(
-                                     "h-5 w-5 cursor-pointer transition-all hover:scale-110",
-                                     s <= (((editedData as any).detailedRatings || {})[c.key] || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/15"
-                                   )}
-                                 />
-                               ))}
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                       <DialogFooter>
-                         <Button
-                           onClick={async () => { await handleSave(); setRatingGridOpen(false); }}
-                           disabled={isSaving}
-                           className="w-full rounded-2xl bg-primary h-12 font-headline italic"
-                         >
-                           {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="mr-2 h-5 w-5" />} Enregistrer l'évaluation
+               {/* ── Ma Note + Niveau Spicy côte à côte ── */}
+               <div className="grid grid-cols-2 gap-6">
+                 {/* Ma Note — colonne gauche */}
+                 <div className="space-y-4">
+                   <div className="flex items-center gap-2 flex-wrap">
+                     <div className="flex items-center gap-2">
+                       <Label className="italic text-2xl font-headline">Ma Note</Label>
+                       <InfoBadge text="Ta note personnelle sur ce livre, de 1 à 5 étoiles. C'est différent de «Mon Rang» : la note dit combien tu as aimé, la Palme dit si ce livre fait partie de tes tout meilleurs souvenirs de lecture." />
+                     </div>
+                     <Dialog open={ratingGridOpen} onOpenChange={setRatingGridOpen}>
+                       <DialogTrigger asChild>
+                         <Button variant="outline" className="rounded-2xl h-9 px-4 italic font-headline border-primary/20 text-sm">
+                           <ClipboardList className="mr-2 h-4 w-4" /> Évaluer
                          </Button>
-                       </DialogFooter>
-                     </DialogContent>
-                   </Dialog>
+                       </DialogTrigger>
+                       <DialogContent className="max-w-lg glass-card border-none bg-white/95 backdrop-blur-3xl shadow-2xl">
+                         <DialogHeader>
+                           <DialogTitle className="font-headline text-3xl italic">Grille d'évaluation</DialogTitle>
+                         </DialogHeader>
+                         <div className="space-y-5 py-2">
+                           {EVALUATION_CRITERIA.map((c) => (
+                             <div key={c.key} className="flex items-center justify-between gap-4">
+                               <Label className="italic text-sm">{c.label}</Label>
+                               <div className="flex gap-1 shrink-0">
+                                 {[1,2,3,4,5].map(s => (
+                                   <Star
+                                     key={s}
+                                     onClick={() => setEditedData({
+                                       ...editedData,
+                                       detailedRatings: { ...((editedData as any).detailedRatings || {}), [c.key]: s }
+                                     } as any)}
+                                     className={cn(
+                                       "h-5 w-5 cursor-pointer transition-all hover:scale-110",
+                                       s <= (((editedData as any).detailedRatings || {})[c.key] || 0) ? "text-amber-400 fill-amber-400" : "text-muted-foreground/15"
+                                     )}
+                                   />
+                                 ))}
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                         <DialogFooter>
+                           <Button
+                             onClick={async () => { await handleSave(); setRatingGridOpen(false); }}
+                             disabled={isSaving}
+                             className="w-full rounded-2xl bg-primary h-12 font-headline italic"
+                           >
+                             {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-2" /> : <Save className="mr-2 h-5 w-5" />} Enregistrer
+                           </Button>
+                         </DialogFooter>
+                       </DialogContent>
+                     </Dialog>
+                   </div>
+                   <StarRating
+                     rating={editedData.rating || 0}
+                     size={40}
+                     interactive
+                     onChange={(v) => setEditedData({ ...editedData, rating: v })}
+                     gap="gap-2"
+                     colorClass="text-amber-400 fill-amber-400 drop-shadow-md"
+                     emptyClass="text-muted-foreground/10"
+                   />
                  </div>
-                 <StarRating
-                   rating={editedData.rating || 0}
-                   size={48}
-                   interactive
-                   onChange={(v) => setEditedData({ ...editedData, rating: v })}
-                   gap="gap-4"
-                   colorClass="text-amber-400 fill-amber-400 drop-shadow-md"
-                   emptyClass="text-muted-foreground/10"
-                 />
-               </div>
 
-               <div className="space-y-6">
-                 <div className="flex items-center gap-1.5"><Label className="italic text-3xl font-headline">Niveau Spicy</Label><InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip></div>
-                 <div className="flex gap-4">
-                   {[1,2,3,4,5].map(s => (
-                    <Flame 
-                      key={s} 
-                      onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)} 
-                      className={cn(
-                        "h-12 w-12 cursor-pointer transition-all hover:scale-110", 
-                        s <= ((editedData as any).spicyLevel || 0) ? "text-orange-500 fill-orange-500 drop-shadow-md" : "text-muted-foreground/10"
-                      )} 
-                    />
-                   ))}
+                 {/* Séparateur vertical */}
+                 <div className="border-l border-primary/10 pl-6 space-y-4">
+                   <div className="flex items-center gap-1.5">
+                     <Label className="italic text-2xl font-headline">Niveau Spicy</Label>
+                     <InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip>
+                   </div>
+                   <div className="flex gap-3">
+                     {[1,2,3,4,5].map(s => (
+                       <Flame
+                         key={s}
+                         onClick={() => setEditedData({ ...editedData, spicyLevel: (editedData as any).spicyLevel === s ? 0 : s } as any)}
+                         className={cn(
+                           "h-10 w-10 cursor-pointer transition-all hover:scale-110",
+                           s <= ((editedData as any).spicyLevel || 0) ? "text-orange-500 fill-orange-500 drop-shadow-md" : "text-muted-foreground/10"
+                         )}
+                       />
+                     ))}
+                   </div>
                  </div>
                </div>
 
