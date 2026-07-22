@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
     // le paramètre de requête Google Books et les champs déposés dans
     // actualitesPending diffèrent.
     async function detectFrom(query: string, extraFields: Record<string, any>) {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=10&langRestrict=fr`;
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=10`;
       const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
