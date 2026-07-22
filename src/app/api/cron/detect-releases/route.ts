@@ -16,7 +16,7 @@ import { FieldValue } from "firebase-admin/firestore";
  * date de publication Google Books, pour ne remonter que de vraies
  * nouveautés et non tout le fonds de catalogue d'un auteur ou éditeur.
  */
-const RECENT_WINDOW_DAYS = 180;
+const RECENT_WINDOW_DAYS = 365;
 
 function normalize(s: string) {
   return (s || "").toLowerCase().trim().replace(/\s+/g, " ");
@@ -90,9 +90,14 @@ export async function GET(req: NextRequest) {
     async function detectFrom(query: string, extraFields: Record<string, any>) {
       const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=10`;
       const res = await fetch(url);
-      if (!res.ok) return;
+      if (!res.ok) { console.log(`[cron] HTTP ${res.status} pour query: ${query}`); return; }
       const data = await res.json();
       const items = data.items || [];
+      console.log(`[cron] query="${query}" → ${items.length} résultat(s)`);
+      if (items.length > 0) {
+        const sample = items[0]?.volumeInfo;
+        console.log(`[cron] premier résultat: "${sample?.title}" (${sample?.publishedDate})`);
+      }
 
       for (const item of items) {
         const info = item.volumeInfo || {};
@@ -100,8 +105,13 @@ export async function GET(req: NextRequest) {
         if (!title || knownTitles.has(normalize(title))) continue;
 
         const publishedDate = info.publishedDate || "";
-        const publishedMillis = publishedDate ? new Date(publishedDate).getTime() : NaN;
-        if (isNaN(publishedMillis) || publishedMillis < cutoff) continue;
+        // Accepter les dates année seule (ex: "2025") ou complètes
+        const dateToCheck = publishedDate.length === 4 ? `${publishedDate}-12-31` : publishedDate;
+        const publishedMillis = dateToCheck ? new Date(dateToCheck).getTime() : NaN;
+        if (isNaN(publishedMillis) || publishedMillis < cutoff) {
+          console.log(`[cron] exclu par date: "${title}" → ${publishedDate}`);
+          continue;
+        }
 
         const docRef = db.collection("actualitesPending").doc();
         await docRef.set({
