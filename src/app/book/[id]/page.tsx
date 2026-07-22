@@ -849,6 +849,26 @@ export default function BookDetailPage() {
              </div>
            </div>
 
+           {/* ── Âge requis ── */}
+           <div className="space-y-3 pt-4 border-t border-primary/5">
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">
+               Âge requis <span className="font-normal opacity-50">(optionnel)</span>
+             </Label>
+             <select
+               value={(editedData as any).ageRating || ""}
+               onChange={(e) => setEditedData({ ...editedData, ageRating: e.target.value } as any)}
+               className="h-11 w-full rounded-xl bg-white/40 border-none shadow-inner italic px-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20"
+             >
+               <option value="">— Non classifié —</option>
+               <option value="Tout public">Tout public</option>
+               <option value="Dès 12 ans">Dès 12 ans</option>
+               <option value="Dès 14 ans">Dès 14 ans</option>
+               <option value="Dès 16 ans">Dès 16 ans</option>
+               <option value="Dès 18 ans (New Adult)">Dès 18 ans (New Adult)</option>
+               <option value="Adulte — Contenu explicite">Adulte — Contenu explicite</option>
+             </select>
+           </div>
+
            <div className="space-y-4 pt-4 border-t border-primary/5">
              <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label>
              <div className="flex flex-wrap gap-2">

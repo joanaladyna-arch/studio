@@ -43,7 +43,8 @@ import {
   Check,
   EyeOff,
   Eye,
-  ListOrdered
+  ListOrdered,
+  X
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -53,7 +54,7 @@ import { Button } from "@/components/ui/button";
 import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
-import { collection, doc, getDoc, updateDoc, query, where, getDocs, writeBatch } from "firebase/firestore";
+import { collection, doc, getDoc, updateDoc, query, where, getDocs, writeBatch, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -137,10 +138,17 @@ export interface UserBook {
 export type Book = UserBook;
 
 export const GENRES_LIST = [
-  "Romance contemporaine", "Dark romance", "Fantasy", "Romantasy", "New romance", 
-  "Young adult", "New adult", "Thriller", "Suspense", "Policier", "Mystère", 
-  "Science-fiction", "Dystopie", "Historique", "Drame", "Développement personnel", 
-  "Témoignage", "Biographie", "Manga", "BD", "Poésie", "Cowboy romance"
+  "Romance contemporaine", "Dark romance", "Fantasy", "Romantasy", "New romance",
+  "Young adult", "New adult", "Contemporain", "Feel-good", "Rom-com", "Chick-lit",
+  "Thriller", "Thriller psychologique", "Suspense", "Policier", "Mystère",
+  "Horreur", "Fantastique", "Paranormal romance", "Urban fantasy",
+  "Science-fiction", "Dystopie", "Historique", "Steampunk",
+  "MM Romance", "FF Romance", "Romance LGBTQ+", "Reverse harem",
+  "Érotique", "Contemporaine française",
+  "Drame", "Développement personnel", "Témoignage", "Biographie", "Essai",
+  "Manga", "Manhwa", "Webtoon", "BD", "Roman graphique", "Poésie",
+  "Cowboy romance", "Novella / Nouvelle", "Wattpad / Auto-édition",
+  "Cosy mystery", "Cosy fantasy"
 ];
 
 export const TROPES_LIST = [
@@ -170,7 +178,16 @@ export const THEMES_LIST = [
   "Richesse et pouvoir économique", "Différence culturelle", "Féminisme",
   "Nostalgie", "Destin", "Corruption", "Abus de pouvoir", "Harcèlement",
   "Narcotrafic", "Prison et incarcération", "Période historique", "Huis clos",
-  "Course contre le temps"
+  "Course contre le temps",
+  "Violence conjugale", "Agression / Abus", "BDSM", "Dépression",
+  "Traumatisme", "Deuil amoureux", "Grossesse surprise", "Secrets de famille",
+  "Harcèlement scolaire", "Harcèlement moral", "Violence psychologique",
+  "Célébrité / Stardom", "Monde des affaires", "Réseaux sociaux / Influence",
+  "Dark academia", "Milieu sportif professionnel", "Jeux vidéo / E-sport",
+  "Monde de la musique", "Monde de la mode", "LGBTQ+",
+  "Discrimination / Racisme", "Immigration / Diaspora",
+  "Trigger content", "Dépendance émotionnelle", "Co-dépendance",
+  "Revenge porn", "Stalking", "Monde magique / Magie"
 ];
 
 export const FORMATS: Record<BookFormat, { label: string, icon: any, color: string, badgeClass: string }> = {
@@ -717,6 +734,15 @@ export default function LibraryPage() {
                             <ChevronDown className="h-4 w-4" />
                           </button>
                         </div>
+                      )}
+                      {!selectMode && (
+                        <button
+                          onClick={(e) => quickDeleteBook(book.id, (book as any).title || "ce livre", e)}
+                          className="absolute bottom-10 right-1 z-10 h-6 w-6 rounded-full bg-white/90 shadow-sm flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-red-50 transition-all md:opacity-0 opacity-100 md:group-hover:opacity-100"
+                          title="Retirer de la bibliothèque"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       )}
                       {selectMode ? (
                         <div onClick={() => toggleSelect(book.id)} className="group block cursor-pointer">
