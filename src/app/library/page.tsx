@@ -676,7 +676,7 @@ export default function LibraryPage() {
                   {block.books.map((book) => {
                     const excluded = (book as any).countTowardGoals === false;
                     return (
-                    <div key={book.id} className="relative">
+                    <div key={book.id} className="relative group/card">
                       {selectMode && (
                         <div
                           className={cn(
@@ -738,7 +738,7 @@ export default function LibraryPage() {
                       {!selectMode && (
                         <button
                           onClick={(e) => quickDeleteBook(book.id, (book as any).title || "ce livre", e)}
-                          className="absolute bottom-10 right-1 z-10 h-6 w-6 rounded-full bg-white/90 shadow-sm flex items-center justify-center text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive hover:bg-red-50 transition-all md:opacity-0 opacity-100 md:group-hover:opacity-100"
+                          className="absolute bottom-8 right-1.5 z-20 h-6 w-6 rounded-full bg-white shadow-sm flex items-center justify-center text-zinc-400 opacity-100 md:opacity-0 md:group-hover/card:opacity-100 hover:text-red-500 hover:bg-red-50 transition-all"
                           title="Retirer de la bibliothèque"
                         >
                           <X className="h-3 w-3" />
@@ -749,7 +749,7 @@ export default function LibraryPage() {
                           <BookCard book={book} />
                         </div>
                       ) : (
-                        <Link href={`/book/${book.id}`} className="group block">
+                        <Link href={`/book/${book.id}`} className="group block transition-transform duration-200 hover:scale-[1.03]">
                           <BookCard book={book} />
                         </Link>
                       )}
@@ -908,7 +908,7 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
           {books.map((book) => {
             const excluded = (book as any).countTowardGoals === false;
             return (
-            <div key={book.id} className="relative">
+            <div key={book.id} className="relative group/card">
               {selectMode && (
                 <div
                   className={cn(
@@ -940,7 +940,7 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
                   <BookCard book={book} />
                 </div>
               ) : (
-                <Link href={`/book/${book.id}`} className="group block">
+                <Link href={`/book/${book.id}`} className="group block transition-transform duration-200 hover:scale-[1.03]">
                   <BookCard book={book} />
                 </Link>
               )}

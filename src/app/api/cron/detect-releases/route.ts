@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
     // le paramètre de requête Google Books et les champs déposés dans
     // actualitesPending diffèrent.
     async function detectFrom(query: string, extraFields: Record<string, any>) {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=10`;
+      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=10&printType=books`;
       const res = await fetch(url);
       if (!res.ok) { console.log(`[cron] HTTP ${res.status} pour query: ${query}`); return; }
       const data = await res.json();
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       console.log(`[cron] query="${query}" → ${items.length} résultat(s)`);
       if (items.length > 0) {
         const sample = items[0]?.volumeInfo;
-        console.log(`[cron] premier résultat: "${sample?.title}" (${sample?.publishedDate})`);
+        console.log(`[cron] premier: "${sample?.title}" (${sample?.publishedDate})`);
       }
 
       for (const item of items) {
@@ -121,7 +121,14 @@ export async function GET(req: NextRequest) {
 
     for (const { slug, name } of authorNames) {
       try {
+        // Essai 1 : recherche exacte par auteur
         await detectFrom(`inauthor:"${name}"`, {
+          content: `Nouvelle sortie détectée automatiquement chez ${name} : à vérifier avant publication.`,
+          authorName: name,
+          authorSlug: slug,
+        });
+        // Essai 2 : recherche par nom seul (fallback si inauthor: ne trouve rien)
+        await detectFrom(`"${name}"`, {
           content: `Nouvelle sortie détectée automatiquement chez ${name} : à vérifier avant publication.`,
           authorName: name,
           authorSlug: slug,

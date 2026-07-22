@@ -336,9 +336,12 @@ export default function AddBookPage() {
   };
 
   const handleIsbnScanned = (isbn: string) => {
-    setQueryStr(isbn);
+    const cleanIsbn = isbn.replace(/\D/g, "");
+    setQueryStr(cleanIsbn);
     setSearchMode("general");
-    runSearch(isbn);
+    // Délai court pour laisser le dialog se fermer avant de lancer la recherche
+    // évite le conflit de re-render qui faisait disparaître les résultats
+    setTimeout(() => runSearch(cleanIsbn), 350);
   };
 
   const handleAddClick = (book: any) => {
