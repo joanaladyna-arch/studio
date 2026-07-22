@@ -80,6 +80,37 @@ const EVALUATION_CRITERIA: { key: keyof NonNullable<UserBook["detailedRatings"]>
   { key: "developpement", label: "Développement de la relation" },
 ];
 
+
+// ─── Composant InfoTip ────────────────────────────────────────────────────
+// Remplace les textes gris d'explication par un petit (i) cliquable
+function InfoTip({ children }: { children: React.ReactNode }) {
+  const [show, setShow] = useState(false);
+  return (
+    <span className="relative inline-flex items-center ml-1.5" style={{ verticalAlign: "middle" }}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setShow(v => !v); }}
+        className="h-4 w-4 rounded-full bg-primary/10 text-primary/50 hover:bg-primary/20 hover:text-primary flex items-center justify-center text-[9px] font-bold transition-colors shrink-0"
+        aria-label="Plus d'informations"
+      >
+        i
+      </button>
+      {show && (
+        <span
+          className="absolute left-5 top-0 z-30 w-60 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl p-3 text-[11px] text-muted-foreground italic leading-relaxed border border-primary/10"
+          style={{ minWidth: "220px" }}
+        >
+          {children}
+          <button
+            onClick={() => setShow(false)}
+            className="absolute top-1.5 right-2 text-muted-foreground/40 hover:text-primary text-sm leading-none"
+          >×</button>
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function BookDetailPage() {
   const params = useParams();
   const bookId = params.id as string;
@@ -786,7 +817,7 @@ export default function BookDetailPage() {
                  );
                })}
              </div>
-             <p className="text-[10px] text-muted-foreground italic">Cliquez à nouveau sur un rang pour le retirer.</p>
+             <InfoTip>Cliquez à nouveau sur le même rang pour le retirer.</InfoTip>
            </div>
 
            {/* ── Niveau Spicy ── */}
@@ -821,14 +852,12 @@ export default function BookDetailPage() {
                  ))}
                </div>
              </div>
-             <p className="text-[10px] text-muted-foreground italic">0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la dernière flamme pour revenir à 0.</p>
+             <InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip>
            </div>
 
            {/* ── Format ── */}
            <div className="space-y-3 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">
-               Format <span className="font-normal opacity-50">(optionnel)</span>
-             </Label>
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center">Format<InfoTip>Format physique de ta version du livre.</InfoTip></Label>
              <div className="flex flex-wrap gap-2">
                {["Broché", "Relié", "Poche", "Ebook", "Audio"].map(fmt => (
                  <Button
@@ -851,9 +880,7 @@ export default function BookDetailPage() {
 
            {/* ── Âge requis ── */}
            <div className="space-y-3 pt-4 border-t border-primary/5">
-             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">
-               Âge requis <span className="font-normal opacity-50">(optionnel)</span>
-             </Label>
+             <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center">Âge requis<InfoTip>Optionnel. Aide à identifier le public cible du livre.</InfoTip></Label>
              <select
                value={(editedData as any).ageRating || ""}
                onChange={(e) => setEditedData({ ...editedData, ageRating: e.target.value } as any)}
@@ -898,7 +925,7 @@ export default function BookDetailPage() {
                  <Sun className="h-3.5 w-3.5" /> Relecture d'été
                </Button>
              </div>
-             <p className="text-[10px] text-muted-foreground italic">Pour "Relecture d'été", les livres Palme Diamant/Royale y apparaissent déjà par défaut — utilisez ce bouton pour en ajouter un autre ou pour en retirer un.</p>
+             <InfoTip>Les livres Palme Diamant/Royale y apparaissent déjà par défaut. Ce bouton permet d'en ajouter un autre ou d'en retirer un.</InfoTip>
            </div>
 
            <div className="space-y-4 pt-4 border-t border-primary/5">
@@ -1029,7 +1056,7 @@ export default function BookDetailPage() {
                      placeholder="ex : Tome 1"
                      className="h-11 rounded-xl bg-white/40 border-none italic"
                    />
-                   <p className="text-[10px] text-muted-foreground italic">Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</p>
+                   <InfoTip>Utile pour distinguer les tomes d'une même série dans votre bibliothèque.</InfoTip>
                  </div>
                  <div className="space-y-3">
                    <Label className="italic text-xl font-headline">Saga (facultatif)</Label>
@@ -1039,7 +1066,7 @@ export default function BookDetailPage() {
                      placeholder="ex : Legacy of God"
                      className="h-11 rounded-xl bg-white/40 border-none italic"
                    />
-                   <p className="text-[10px] text-muted-foreground italic">Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</p>
+                   <InfoTip>Pour regrouper des titres qui n'ont rien en commun entre eux — tape le même nom sur chaque tome.</InfoTip>
                  </div>
                </div>
 
@@ -1113,7 +1140,7 @@ export default function BookDetailPage() {
                      {(editedData as any).referenceLink}
                    </a>
                  )}
-                 <p className="text-[10px] text-muted-foreground italic">Page d'achat, fiche Goodreads, interview de l'auteur... tout lien utile à garder sous la main.</p>
+                 <InfoTip>Page d'achat, fiche Goodreads, interview de l'auteur… tout lien utile à garder sous la main.</InfoTip>
                </div>
                <TagDropdown
                  label="Genres"
@@ -1236,7 +1263,7 @@ export default function BookDetailPage() {
                        </div>
                      </div>
                    </div>
-                   <p className="text-[10px] italic opacity-40">La date de fin sert au classement par mois dans votre bibliothèque.</p>
+                   <InfoTip>La date de fin sert au classement par mois dans votre bibliothèque.</InfoTip>
                  </div>
                )}
 
@@ -1281,7 +1308,7 @@ export default function BookDetailPage() {
                      </>
                    )}
                  </div>
-                 <p className="text-[10px] italic opacity-40 mt-2">Alimente les pages parcourues et le rythme de lecture dans ton Bilan.</p>
+                 <InfoTip>Alimente les pages parcourues et le rythme de lecture dans ton Bilan.</InfoTip>
                </div>
 
                {/* Éditeur — modifiable ici, prioritaire sur la fiche
@@ -1410,7 +1437,7 @@ export default function BookDetailPage() {
                     />
                    ))}
                  </div>
-                 <p className="text-[10px] text-muted-foreground italic">0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la dernière flamme pour revenir à 0.</p>
+                 <InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip>
                </div>
 
                <div className="space-y-6">
@@ -1436,9 +1463,7 @@ export default function BookDetailPage() {
                  />
                  <span className="space-y-1">
                    <span className="block font-headline italic text-lg">Service de presse</span>
-                   <span className="block text-xs text-muted-foreground leading-relaxed">
-                     Un petit triangle "SP" apparaît sur la couverture dans la bibliothèque — juste un repère visuel, ça ne change rien d'autre à la fiche.
-                   </span>
+                   
                  </span>
                </label>
 
