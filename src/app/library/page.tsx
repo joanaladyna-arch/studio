@@ -44,7 +44,7 @@ import {
   EyeOff,
   Eye,
   ListOrdered,
-  X
+  Trash2
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
@@ -434,14 +434,16 @@ export default function LibraryPage() {
   // rangement n'a pas été sauvegardé alors qu'il l'était bel et bien.
   // Ne se déclenche qu'une fois, pour ne jamais forcer un retour au
   // mode manuel si la lectrice a choisi un autre tri en cours de session.
+  // Détecte si l'utilisatrice a déjà un ordre manuel (palOrder) et l'applique
+  // Re-vérifie à chaque mise à jour des livres pour ne pas rater une init tardive
   const [sortModeChecked, setSortModeChecked] = useState(false);
   useEffect(() => {
-    if (sortModeChecked || userBooks.length === 0) return;
-    if (userBooks.some((b: any) => b.status === "pal" && b.palOrder !== undefined)) {
+    if (userBooks.length === 0) return;
+    if (!sortModeChecked && userBooks.some((b: any) => b.status === "pal" && typeof (b as any).palOrder === "number")) {
       setSortMode("manual");
+      setSortModeChecked(true);
     }
-    setSortModeChecked(true);
-  }, [userBooks, sortModeChecked]);
+  }, [userBooks]);
 
   // Une liste triée + filtrée par recherche, par statut — calculée une
   // fois pour chaque bloc plutôt que pour un seul onglet actif, puisque
@@ -735,15 +737,6 @@ export default function LibraryPage() {
                           </button>
                         </div>
                       )}
-                      {!selectMode && (
-                        <button
-                          onClick={(e) => quickDeleteBook(book.id, (book as any).title || "ce livre", e)}
-                          className="absolute top-1 right-1 z-20 h-8 w-8 rounded-full bg-white/95 shadow-md flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 active:text-red-500 active:scale-95 transition-all touch-manipulation"
-                          title="Retirer de la bibliothèque"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
                       {selectMode ? (
                         <div onClick={() => toggleSelect(book.id)} className="group block cursor-pointer">
                           <BookCard book={book} />
@@ -810,6 +803,16 @@ export default function LibraryPage() {
           >
             <Eye className="h-3.5 w-3.5 mr-1.5" />
             Remettre dans les objectifs
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={bulkDeleting}
+            onClick={bulkDeleteBooks}
+            className="rounded-xl text-xs italic font-headline bg-red-500 hover:bg-red-600"
+          >
+            {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Trash2 className="h-3.5 w-3.5 mr-1.5" />}
+            Supprimer
           </Button>
           <button onClick={exitSelectMode} className="text-xs underline opacity-70 px-2">Annuler</button>
         </div>
@@ -933,15 +936,6 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
                   className="absolute top-2 left-2 right-2 z-10 h-9 rounded-xl bg-primary/95 text-white shadow-lg flex items-center justify-center gap-2 text-xs font-headline italic hover:bg-primary transition-colors"
                 >
                   {isLoadingEditBook ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Pencil className="h-3.5 w-3.5" /> Modifier la fiche</>}
-                </button>
-              )}
-              {!selectMode && (
-                <button
-                  onClick={(e) => quickDeleteBook(book.id, (book as any).title || "ce livre", e)}
-                  className="absolute top-1 right-1 z-20 h-8 w-8 rounded-full bg-white/95 shadow-md flex items-center justify-center text-zinc-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 active:text-red-500 active:scale-95 transition-all touch-manipulation"
-                  title="Retirer de la bibliothèque"
-                >
-                  <X className="h-3 w-3" />
                 </button>
               )}
               {selectMode ? (
