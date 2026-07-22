@@ -273,6 +273,7 @@ export default function LibraryPage() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
