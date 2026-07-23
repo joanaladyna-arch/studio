@@ -76,7 +76,27 @@ export default function Home() {
   const { data: allBooks = [], loading: readingLoading } = useCollection(allBooksQuery);
   // "Lecture Actuelle" est déjà incluse dans allBooks — pas besoin d'un
   // second écouteur Firestore juste pour ce sous-ensemble.
-  const currentRead = useMemo(() => allBooks.find((b: any) => b.status === 'progress'), [allBooks]);
+  const currentReads = useMemo(() => allBooks.filter((b: any) => b.status === 'progress'), [allBooks]);
+  const currentRead = currentReads[0]; // garde la compatibilité
+
+  // ── Carousel "Lecture en cours" ──
+  const [carouselIdx, setCarouselIdx] = useState(0);
+  const [carouselFade, setCarouselFade] = useState(true);
+
+  useEffect(() => {
+    if (currentReads.length <= 1) return;
+    const timer = setInterval(() => {
+      setCarouselFade(false);
+      setTimeout(() => {
+        setCarouselIdx((i) => (i + 1) % currentReads.length);
+        setCarouselFade(true);
+      }, 300);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [currentReads.length]);
+
+  const activeBook = currentReads[carouselIdx] || currentRead;
+
 
   // Cloche "actualité" : compte les actualités publiées après la dernière
   // visite de la page /actualites (lastSeenActualityAt), toutes confondues
@@ -347,41 +367,63 @@ export default function Home() {
           </div>
           {readingLoading ? (
             <div className="h-60 flex items-center justify-center"><Loader2 className="animate-spin text-primary/20 h-10 w-10" /></div>
-          ) : currentRead ? (
-            <Card className="glass-card overflow-hidden border-none group transition-all duration-1000 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)]">
-              <div className="grid sm:grid-cols-[280px_1fr] gap-0">
-                <div className="relative aspect-[3/2] sm:aspect-[2/3] overflow-hidden">
-                  <BookCover
-                    src={currentRead.cover}
-                    alt={currentRead.title}
-                    className="object-cover group-hover:scale-110 transition-transform duration-1000"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent mix-blend-overlay" />
-                </div>
-                <CardContent className="p-5 md:p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
-                  <div className="space-y-4 md:space-y-8">
-                    <div>
-                      <h3 className="text-xl md:text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
-                        {cleanBookTitle(currentRead.title)}{currentRead.volume ? ` — ${currentRead.volume}` : ""}
-                      </h3>
-                      <p className="text-xs md:text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1.5 md:mt-3">{cleanAuthorName(currentRead.author)}</p>
-                    </div>
-                    <div className="space-y-2 md:space-y-5">
-                      <div className="flex justify-between text-xs font-bold uppercase tracking-widest opacity-60 italic">
-                        <span>Progression</span>
-                        <span>{currentRead.progress || 0}%</span>
+          ) : currentReads.length > 0 ? (
+            <div className="space-y-3">
+              <Card
+                className="glass-card overflow-hidden border-none group transition-all duration-1000 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)]">
+                <div
+                  className={cn("grid sm:grid-cols-[280px_1fr] gap-0 transition-opacity duration-300", carouselFade ? "opacity-100" : "opacity-0")}
+                >
+                  <div className="relative aspect-[3/2] sm:aspect-[2/3] overflow-hidden">
+                    <BookCover
+                      src={activeBook?.cover}
+                      alt={activeBook?.title || ""}
+                      className="object-cover group-hover:scale-110 transition-transform duration-1000"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent mix-blend-overlay" />
+                    {currentReads.length > 1 && (
+                      <div className="absolute top-3 right-3 bg-black/40 text-white text-[10px] font-bold rounded-full px-2.5 py-1">
+                        {carouselIdx + 1}/{currentReads.length}
                       </div>
-                      <Progress value={currentRead.progress || 0} className="h-2 md:h-3 bg-primary/5" />
-                    </div>
+                    )}
                   </div>
-                  <Button asChild className="mt-6 md:mt-10 rounded-xl md:rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 h-11 md:h-16 text-sm md:text-xl font-headline italic transition-transform active:scale-95">
-                    <Link href={`/book/${currentRead.id}`}>
-                      <PenTool className="mr-2 md:mr-3 h-4 w-4 md:h-6 md:w-6" /> Reprendre le voyage
-                    </Link>
-                  </Button>
-                </CardContent>
-              </div>
-            </Card>
+                  <CardContent className="p-5 md:p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
+                    <div className="space-y-4 md:space-y-8">
+                      <div>
+                        <h3 className="text-xl md:text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
+                          {cleanBookTitle(activeBook?.title || "")}{activeBook?.volume ? ` — ${activeBook.volume}` : ""}
+                        </h3>
+                        <p className="text-xs md:text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1.5 md:mt-3">{cleanAuthorName(activeBook?.author || "")}</p>
+                      </div>
+                      <div className="space-y-2 md:space-y-5">
+                        <div className="flex justify-between text-xs font-bold uppercase tracking-widest opacity-60 italic">
+                          <span>Progression</span>
+                          <span>{activeBook?.progress || 0}%</span>
+                        </div>
+                        <Progress value={activeBook?.progress || 0} className="h-2 md:h-3 bg-primary/5" />
+                      </div>
+                    </div>
+                    <Button asChild className="mt-6 md:mt-10 rounded-xl md:rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 h-11 md:h-16 text-sm md:text-xl font-headline italic transition-transform active:scale-95">
+                      <Link href={`/book/${activeBook?.id}`}>
+                        <PenTool className="mr-2 md:mr-3 h-4 w-4 md:h-6 md:w-6" /> Reprendre le voyage
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </div>
+              </Card>
+              {currentReads.length > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  {currentReads.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setCarouselFade(false); setTimeout(() => { setCarouselIdx(i); setCarouselFade(true); }, 200); }}
+                      className={cn("h-2 rounded-full transition-all duration-300", i === carouselIdx ? "bg-primary w-6" : "bg-primary/20 w-2")}
+                      aria-label={`Livre ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <Card className="glass-card p-10 md:p-24 text-center border-dashed border-primary/20 bg-white/20 group">
               <BookOpen className="h-12 w-12 md:h-20 md:w-20 mx-auto text-primary/20 mb-4 md:mb-6 group-hover:scale-110 group-hover:text-primary/40 transition-all duration-700" />

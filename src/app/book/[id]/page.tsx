@@ -739,8 +739,8 @@ export default function BookDetailPage() {
       </header>
 
       {/* ── Couverture + Titre + Métadonnées ── */}
-      <div className="flex flex-col sm:flex-row gap-8 items-start">
-        <div className="space-y-4 w-full sm:w-[200px] shrink-0 mx-auto sm:mx-0">
+      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start">
+        <div className="space-y-4 w-[140px] sm:w-[200px] shrink-0 mx-auto sm:mx-0">
           <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-xl border border-white/60 bg-secondary/5 group">
             <BookCover src={editedData.cover || masterBook?.cover} alt={masterBook?.title || "Livre"} className="object-contain" />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -755,7 +755,7 @@ export default function BookDetailPage() {
           </Button>
         </div>
         <div className="flex-1 min-w-0 space-y-4">
-          <h1 className="text-5xl sm:text-6xl font-headline italic leading-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-headline italic leading-tight">
             {cleanBookTitle(masterBook?.title || userBook.title)}
             {((editedData as any).volume || masterBook?.volume) && (
               <span className="text-3xl text-primary/50 ml-3">— {(editedData as any).volume || masterBook?.volume}</span>
@@ -853,7 +853,7 @@ export default function BookDetailPage() {
 
         {/* ══ L'ŒUVRE ══ */}
         <TabsContent value="overview" className="animate-in fade-in slide-in-from-bottom-2">
-          <div className="grid md:grid-cols-[1fr_320px] gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-8">
 
             {/* ── Colonne gauche ── */}
             <div className="space-y-8">
@@ -993,8 +993,8 @@ export default function BookDetailPage() {
               )}
             </div>
 
-            {/* ── Colonne droite ── */}
-            <div className="space-y-6">
+            {/* ── Colonne droite (affichée en 1er sur mobile) ── */}
+            <div className="space-y-6 order-first md:order-last">
 
               {/* Mon Rang */}
               <div className="glass-card bg-white/60 border-none p-6 rounded-[2rem] shadow-sm space-y-4">
@@ -1221,7 +1221,7 @@ export default function BookDetailPage() {
           </div>
 
           {/* Ma Note + Niveau Spicy côte à côte */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -1250,7 +1250,7 @@ export default function BookDetailPage() {
             <Label className="italic text-3xl font-headline">Mon Avis & Réflexions</Label>
             <Textarea value={editedData.review || ""} onChange={(e) => setEditedData({ ...editedData, review: e.target.value })}
               placeholder="Qu'est-ce que cette lecture a gravé en vous ?"
-              className="min-h-[250px] rounded-[2rem] bg-white/40 border-none p-10 italic text-xl shadow-inner resize-none focus-visible:ring-1 focus-visible:ring-primary/20" />
+              className="min-h-[160px] sm:min-h-[250px] rounded-2xl sm:rounded-[2rem] bg-white/40 border-none p-6 sm:p-10 italic text-lg sm:text-xl shadow-inner resize-none focus-visible:ring-1 focus-visible:ring-primary/20" />
             {profile && !profile.communityVisible && (
               <p className="text-[10px] text-muted-foreground italic">Active "Visible dans la communauté" dans ton profil pour que ton avis apparaisse ici pour les autres lectrices.</p>
             )}
@@ -1323,7 +1323,7 @@ export default function BookDetailPage() {
                     { name: "Fnac", url: `https://recherche.fnac.com/SearchResult/ResultList.aspx?SCat=2!1&Search=${q}` },
                     { name: "Amazon", url: `https://www.amazon.fr/s?k=${q}&i=stripbooks` },
                     { name: "Cultura", url: `https://www.cultura.com/recherche/produits?q=${q}` },
-                    { name: "Gilbert", url: `https://www.gilbert.fr/recherche?q=${q}` },
+                    { name: "Gibert", url: `https://www.gibert.com/recherche?q=${q}` },
                   ].map(({ name, url }) => (
                     <a key={name} href={url} target="_blank" rel="noopener noreferrer"
                       className="flex items-center justify-center gap-2 h-11 rounded-2xl border border-primary/15 bg-white/60 text-sm font-headline italic text-primary/70 hover:bg-white/90 hover:text-primary transition-all shadow-sm">
@@ -1378,7 +1378,7 @@ export default function BookDetailPage() {
           )}
 
           {/* Boutons de sauvegarde */}
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-4 pt-4">
             <Button onClick={handleSave} disabled={isSaving} className="flex-1 h-14 rounded-2xl bg-primary font-headline italic text-lg shadow-md">
               {isSaving ? <Loader2 className="animate-spin h-5 w-5 mr-3" /> : <Save className="mr-3 h-5 w-5" />} Enregistrer mon journal
             </Button>
