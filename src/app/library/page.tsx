@@ -493,8 +493,12 @@ export default function LibraryPage() {
     const groups: Record<string, { label: string; books: typeof readBlockBooks }> = {};
     readBlockBooks.forEach((b) => {
       const excluded = (b as any).countTowardGoals === false;
+      // Priorité : date de fin saisie → date de début → dateRead historique
+      // On ne prend JAMAIS dateAdded comme repli : cette date représente
+      // le jour d'ajout à Lectoria, pas la date de lecture réelle.
+      // Les livres sans aucune date de lecture atterrissent dans "Lu également".
       const genuineDate = (b as any).readEndDate || (b as any).readStartDate || b.dateRead;
-      const raw = genuineDate || (excluded ? null : b.dateAdded);
+      const raw = genuineDate || null;
       const date = raw ? (raw.toDate ? raw.toDate() : new Date(raw)) : null;
       const validDate = date && !isNaN(date.getTime()) ? date : null;
       const key = validDate ? `${validDate.getFullYear()}-${String(validDate.getMonth() + 1).padStart(2, "0")}` : "unknown";
