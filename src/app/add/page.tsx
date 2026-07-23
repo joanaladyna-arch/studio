@@ -100,11 +100,12 @@ export default function AddBookPage() {
     // sur l'opérateur "isbn:" pour une correspondance exacte plutôt
     // qu'une recherche floue, et la Master DB sur le champ isbn.
     const cleanedDigits = searchVal.replace(/[-\s]/g, "");
-    const isIsbnQuery = /^\d{10}(\d{3})?$/.test(cleanedDigits);
+    // ISBN-10 (10 chiffres), ISBN-13 / EAN-13 livres (13 chiffres, commence par 978 ou 979)
+    const isIsbnQuery = /^\d{10}$/.test(cleanedDigits) || /^97[89]\d{10}$/.test(cleanedDigits);
     const googleQuery = isIsbnQuery
       ? `isbn:${cleanedDigits}`
       : searchMode === "publisher"
-        ? `inpublisher:${searchVal}`
+        ? `inpublisher:"${searchVal}"`
         : searchVal;
 
     try {
@@ -253,7 +254,7 @@ export default function AddBookPage() {
           const olQuery = isIsbnQuery
             ? `isbn:${cleanedDigits}`
             : searchMode === "publisher"
-              ? `publisher:${searchVal}`
+              ? `publisher:"${searchVal}"`
               : searchVal;
           const olUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(olQuery)}&limit=5`;
           const res = await fetchWithTimeout(olUrl, {}, 8000);

@@ -62,6 +62,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 import { useStorage } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { useTaxonomy } from "@/hooks/use-taxonomy";
+import { usePublishers } from "@/hooks/use-publishers";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import AvisExportModal from "@/components/export/AvisExportModal";
@@ -121,6 +122,7 @@ export default function BookDetailPage() {
   const { toast } = useToast();
   const { adminMode } = useAdminMode();
   const taxonomy = useTaxonomy();
+  const publishers = usePublishers();
   const [showMasterEditor, setShowMasterEditor] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [showDates, setShowDates] = useState(false);
@@ -1114,8 +1116,20 @@ export default function BookDetailPage() {
                 <Landmark className="h-5 w-5 text-primary/40 shrink-0" />
                 <div className="flex-1 space-y-1">
                   <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Maison d'édition</Label>
-                  <Input value={(editedData as any).publisher ?? ""} onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value } as any)}
-                    placeholder={masterBook?.publisher || "Ex : Hugo Poche"} className="h-10 border-none bg-white/40 px-3 italic rounded-xl" />
+                  <div className="relative">
+                    <Input
+                      list="publishers-list"
+                      value={(editedData as any).publisher ?? ""}
+                      onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value } as any)}
+                      placeholder={masterBook?.publisher || "Ex : Hugo Poche"}
+                      className="h-10 border-none bg-white/40 px-3 italic rounded-xl"
+                    />
+                    <datalist id="publishers-list">
+                      {publishers.map((p) => (
+                        <option key={p} value={p} />
+                      ))}
+                    </datalist>
+                  </div>
                 </div>
                 {(() => {
                   const publisherName = ((editedData as any).publisher || masterBook?.publisher || "").trim();
