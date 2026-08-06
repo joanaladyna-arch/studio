@@ -71,6 +71,8 @@ export function AdminActualitesQueue() {
           cover:       item.cover        || "",
           isRelease:   Boolean(item.isRelease),
           releaseDate: item.releaseDate  || "",
+          isTrending:  Boolean(item.isTrending),
+          genres:      Array.isArray(item.genres) ? item.genres : [],
           publishedAt: serverTimestamp(),
           updatedAt:   serverTimestamp(),
         });
@@ -241,6 +243,8 @@ export function AdminActualitesQueue() {
                     <TableCell className="hidden md:table-cell" onClick={() => setExpanded(isExp ? null : item.id)}>
                       {item.isRelease ? (
                         <span className="text-[10px] bg-rose/10 text-rose px-2 py-1 rounded-full font-bold whitespace-nowrap">📅 Sortie</span>
+                      ) : item.isTrending ? (
+                        <span className="text-[10px] bg-amber-500/10 text-amber-700 px-2 py-1 rounded-full font-bold whitespace-nowrap">🔥 Tendance</span>
                       ) : (
                         <span className="text-[10px] bg-primary/10 text-primary px-2 py-1 rounded-full font-bold whitespace-nowrap">📰 Actu</span>
                       )}
@@ -296,6 +300,13 @@ export function AdminActualitesQueue() {
                           )}
                           {item.authorName && (
                             <p className="text-[10px] font-bold uppercase tracking-widest text-primary/50">{item.authorName}</p>
+                          )}
+                          {Array.isArray(item.genres) && item.genres.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {item.genres.map((g: string) => (
+                                <span key={g} className="text-[9px] bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-full font-bold">{g}</span>
+                              ))}
+                            </div>
                           )}
                           <p className="text-sm italic leading-relaxed whitespace-pre-line text-muted-foreground">
                             {item.content || '(aucun contenu)'}

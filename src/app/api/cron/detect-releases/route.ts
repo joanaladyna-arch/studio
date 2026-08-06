@@ -287,6 +287,89 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Détection "Découvertes du moment" — livres tendance sur Hardcover,
+    // indépendamment des auteurs/éditeurs suivis (contrairement à toutes
+    // les autres sources de ce cron). Volontairement NON filtrée par
+    // genre : les lectrices de Lectoria ne lisent pas toutes/que de la
+    // romance ou de la dark romance, et un filtre romance-only ferait
+    // tomber ce flux à zéro résultat la plupart des jours (la romance
+    // n'est pas toujours en tête des tendances Hardcover, dominées par un
+    // lectorat anglophone généraliste — SF/fantasy/litRPG selon les
+    // semaines). On garde donc les tendances telles quelles, avec les
+    // tags de genre affichés à titre indicatif seulement.
+    async function detectTrendingFromHardcover() {
+      const token = process.env.HARDCOVER_API_TOKEN;
+      if (!token) return;
+      const authorization = token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+      const headers = { "Content-Type": "application/json", Authorization: authorization };
+
+      const trendingRes = await fetch("https://api.hardcover.app/v1/graphql", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          query: `query { books_trending(duration: week, limit: 12) { ids error } }`,
+        }),
+      });
+      if (!trendingRes.ok) { console.log(`[cron] Hardcover trending HTTP ${trendingRes.status}`); return; }
+      const trendingData = await trendingRes.json();
+      const ids: number[] = trendingData?.data?.books_trending?.ids || [];
+      if (ids.length === 0) return;
+
+      const booksRes = await fetch("https://api.hardcover.app/v1/graphql", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          query: `query($ids: [Int!]) {
+            books(where: {id: {_in: $ids}}) {
+              id
+              title
+              cached_image
+              contributions { author { name } }
+              cached_tags
+            }
+          }`,
+          variables: { ids },
+        }),
+      });
+      if (!booksRes.ok) { console.log(`[cron] Hardcover trending books HTTP ${booksRes.status}`); return; }
+      const booksData = await booksRes.json();
+      const books: any[] = booksData?.data?.books || [];
+      // La requête books ci-dessus ne garantit aucun ordre : on remet
+      // les résultats dans l'ordre de popularité renvoyé par books_trending.
+      const byId = new Map(books.map((b) => [b.id, b]));
+      const ordered = ids.map((id) => byId.get(id)).filter(Boolean) as any[];
+
+      console.log(`[cron] Hardcover trending → ${ordered.length} livre(s)`);
+
+      for (const b of ordered) {
+        const title = (b?.title || "").toString().trim();
+        if (!title || knownTitles.has(normalize(title))) continue;
+
+        const authorName = (b?.contributions || [])
+          .map((c: any) => c?.author?.name)
+          .filter(Boolean)
+          .join(", ");
+        const genres: string[] = (b?.cached_tags?.Genre || [])
+          .map((g: any) => g?.tag)
+          .filter(Boolean)
+          .slice(0, 4);
+
+        const docRef = db.collection("actualitesPending").doc();
+        await docRef.set({
+          title,
+          cover: b?.cached_image?.url || "",
+          content: `Tendance du moment${authorName ? ` chez ${authorName}` : ""} : ce livre fait beaucoup parler de lui en ce moment. À vérifier avant publication.`,
+          authorName,
+          genres,
+          isTrending: true,
+          detectedAt: FieldValue.serverTimestamp(),
+          source: "auto-hardcover-trending",
+        });
+        knownTitles.add(normalize(title));
+        detected++;
+      }
+    }
+
     for (const { slug, name } of authorNames) {
       try {
         // Essai 1 : recherche exacte par auteur
@@ -337,6 +420,12 @@ export async function GET(req: NextRequest) {
     } catch (err) {
       console.error("Detection error for BnF RSS:", err);
       // Une source qui échoue ne doit pas empêcher les autres de remonter leurs résultats.
+    }
+
+    try {
+      await detectTrendingFromHardcover();
+    } catch (err) {
+      console.error("Detection error for Hardcover trending:", err);
     }
 
     return NextResponse.json({

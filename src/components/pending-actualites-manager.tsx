@@ -51,6 +51,8 @@ export function PendingActualitesManager({ onCountChange }: { onCountChange?: (c
         cover: item.cover || "",
         isRelease: Boolean(item.isRelease),
         releaseDate: item.releaseDate || "",
+        isTrending: Boolean(item.isTrending),
+        genres: Array.isArray(item.genres) ? item.genres : [],
         publishedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });

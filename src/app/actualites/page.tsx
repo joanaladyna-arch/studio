@@ -56,11 +56,12 @@ export default function ActualitesPage() {
   // Une actualité sans date de publication connue (cas très rare) est
   // traitée comme récente par défaut, plutôt que de disparaître
   // silencieusement dans les archives.
-  const { recentItems, archivedItems, weekReleases } = useMemo(() => {
+  const { recentItems, archivedItems, weekReleases, trendingItems } = useMemo(() => {
     const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000;
     const recent: any[] = [];
     const archived: any[] = [];
     const releases: any[] = [];
+    const trending: any[] = [];
 
     // "Cette semaine" = fenêtre glissante de 3 jours avant à 7 jours
     // après aujourd'hui, pour couvrir aussi bien une sortie qui vient
@@ -77,12 +78,21 @@ export default function ActualitesPage() {
           return; // épinglée dans le bandeau, pas dupliquée dans le flux
         }
       }
+      // Comme les sorties de la semaine, les tendances du moment sont
+      // épinglées dans leur propre bandeau — pas de doublon dans le flux
+      // chronologique en dessous, ni dans les archives (une tendance qui
+      // date n'a plus grand intérêt à y rester indéfiniment).
+      if (item.isTrending) {
+        trending.push(item);
+        return;
+      }
       const publishedMillis = item.publishedAt?.toMillis?.();
       if (publishedMillis !== undefined && publishedMillis < cutoff) archived.push(item);
       else recent.push(item);
     });
     releases.sort((a, b) => (a.releaseDate || "").localeCompare(b.releaseDate || ""));
-    return { recentItems: recent, archivedItems: archived, weekReleases: releases };
+    trending.sort((a, b) => (b.publishedAt?.toMillis?.() || 0) - (a.publishedAt?.toMillis?.() || 0));
+    return { recentItems: recent, archivedItems: archived, weekReleases: releases, trendingItems: trending };
   }, [items]);
 
   return (
@@ -132,6 +142,37 @@ export default function ActualitesPage() {
                 </Link>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {trendingItems.length > 0 && (
+        <div className="-mx-4 sm:mx-0 rounded-none sm:rounded-[2rem] bg-amber-950 px-4 sm:px-8 py-6 sm:py-8 overflow-hidden">
+          <div className="flex items-center gap-2 mb-5">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400">Découvertes du moment</p>
+          </div>
+          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+            {trendingItems.map((item) => (
+              <div key={item.id} className="shrink-0 w-28">
+                <div className="relative aspect-[2/3] rounded-xl overflow-hidden shadow-xl bg-white/10">
+                  {item.cover ? (
+                    <img src={item.cover} alt={item.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
+                      <Newspaper className="h-6 w-6 text-white/30" />
+                    </div>
+                  )}
+                </div>
+                <p className="font-headline italic text-xs text-amber-50 mt-2 leading-tight line-clamp-2">{item.title}</p>
+                {item.authorName && <p className="text-[9px] text-amber-50/50 mt-0.5 truncate">{item.authorName}</p>}
+                {Array.isArray(item.genres) && item.genres.length > 0 && (
+                  <span className="inline-block mt-1 text-[8px] font-bold uppercase tracking-wide text-amber-200 bg-amber-400/15 rounded-full px-2 py-0.5 truncate max-w-full">
+                    {item.genres[0]}
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
