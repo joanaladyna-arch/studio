@@ -33,7 +33,7 @@ import { PublisherReviewQueue } from "@/components/publisher-review-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
 import { VisionImportManager } from "@/components/vision-import-manager";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb, searchHardcover } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -145,7 +145,7 @@ export default function AdminPage() {
     }
   };
 
-  // ── Compléter ISBN + Éditeur manquants via BnF UNIQUEMENT ─────────────
+  // ── Compléter ISBN + Éditeur manquants via BnF puis Hardcover ─────────
   const fillMissingIsbnPublisher = async () => {
     if (!db) return;
     setIsFillingIsbn(true);
@@ -223,8 +223,16 @@ export default function AdminPage() {
             const r = await searchBnF(`${title} ${lastName}`, "general");
             applyMatch(r);
           }
+
+          // Stratégie 4 : Hardcover, en dernier recours si la BnF n'a rien
+          // donné — surtout utile pour les livres anglophones/traductions
+          // que le dépôt légal français référence moins vite.
+          if (!foundIsbn && !foundPublisher) {
+            const r = await searchHardcover(title);
+            applyMatch(r.map((m: any) => ({ title: m.title, isbn: m.isbn13, publisher: m.publisher })));
+          }
         } catch (err) {
-          console.error("BnF search error:", rawTitle, err);
+          console.error("BnF/Hardcover search error:", rawTitle, err);
         }
 
         if (foundIsbn || foundPublisher || foundDescription) {
@@ -249,7 +257,7 @@ export default function AdminPage() {
       setIsbnResults({ filled, notFound, skipped });
       toast({
         title: "Terminé",
-        description: `${filled} fiche(s) complétée(s), ${notFound} introuvables dans la BnF, ${skipped} déjà complètes.`,
+        description: `${filled} fiche(s) complétée(s), ${notFound} introuvables (BnF + Hardcover), ${skipped} déjà complètes.`,
       });
     } catch (err) {
       console.error("FillMissingIsbn Error:", err);
@@ -744,17 +752,17 @@ export default function AdminPage() {
             {/* ── NOUVEAU : Compléter ISBN + Éditeur via BnF ── */}
             <Button variant="outline" onClick={fillMissingIsbnPublisher} disabled={isFillingIsbn} className="h-14 rounded-2xl italic font-headline text-lg border-amber-200 text-amber-700 hover:bg-amber-50">
               {isFillingIsbn ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Hash className="mr-3 h-5 w-5" />}
-              Compléter ISBN + Éditeur manquants (BnF)
+              Compléter ISBN + Éditeur manquants (BnF + Hardcover)
             </Button>
             {isFillingIsbn && (
               <div className="space-y-1">
                 <Progress value={isbnProgress} className="h-2 bg-amber-100" />
-                <p className="text-[10px] text-center opacity-40 italic">{isbnProgress}% — interrogation de la BnF…</p>
+                <p className="text-[10px] text-center opacity-40 italic">{isbnProgress}% — interrogation de la BnF et Hardcover…</p>
               </div>
             )}
             {isbnResults && (
               <p className="text-[10px] text-center opacity-60 italic">
-                {isbnResults.filled} fiche(s) complétée(s), {isbnResults.notFound} introuvables dans la BnF, {isbnResults.skipped} déjà complètes.
+                {isbnResults.filled} fiche(s) complétée(s), {isbnResults.notFound} introuvables (BnF + Hardcover), {isbnResults.skipped} déjà complètes.
               </p>
             )}
 

@@ -88,6 +88,28 @@ export async function searchIsbndb(isbn: string): Promise<any[]> {
 }
 
 /**
+ * Interroge notre propre route API /api/hardcover-search (voir
+ * src/app/api/hardcover-search/route.ts), qui relaie une recherche par
+ * titre vers Hardcover côté serveur. Utile en complément de searchBnF
+ * pour compléter ISBN/éditeur manquants. Échoue toujours silencieusement
+ * (tableau vide).
+ */
+export async function searchHardcover(title: string): Promise<any[]> {
+  try {
+    const res = await fetchWithTimeout(
+      `/api/hardcover-search?title=${encodeURIComponent(title)}`,
+      {},
+      8000
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.results) ? data.results : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Liste des emails autorisés à accéder à /admin. Centralisé ici pour que
  * la page admin et la navigation (qui doit savoir si elle affiche le lien
  * vers /admin) restent toujours synchronisées.
