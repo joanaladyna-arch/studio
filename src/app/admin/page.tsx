@@ -32,6 +32,7 @@ import { AdminMessagerie } from "@/components/admin-messagerie";
 import { PublisherReviewQueue } from "@/components/publisher-review-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
+import { VisionImportManager } from "@/components/vision-import-manager";
 import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb } from "@/lib/utils";
 
 export default function AdminPage() {
@@ -51,6 +52,7 @@ export default function AdminPage() {
   const [fillResults, setFillResults] = useState<{ filled: number; notFound: number; skipped: number } | null>(null);
   const [isCleaningGenres, setIsCleaningGenres] = useState(false);
   const [cleanResults, setCleanResults] = useState<{ cleaned: number } | null>(null);
+  const [actualitesQueueKey, setActualitesQueueKey] = useState(0);
 
   // ── Compléter ISBN + Éditeur via BnF ──────────────────────────────────
   const [isFillingIsbn, setIsFillingIsbn] = useState(false);
@@ -585,6 +587,13 @@ export default function AdminPage() {
 
       <div className="grid gap-10">
 
+        {/* ── IMPORT PAR CAPTURE D'ÉCRAN ── */}
+        <Card className="glass-card border-none bg-white/60 shadow-lg">
+          <CardContent className="p-10">
+            <VisionImportManager onImported={() => setActualitesQueueKey((k) => k + 1)} />
+          </CardContent>
+        </Card>
+
         {/* ── ACTUALITÉS EN ATTENTE ── */}
         <Card className="glass-card border-none bg-white/60 shadow-xl">
           <CardHeader className="p-10 border-b border-primary/5">
@@ -598,7 +607,7 @@ export default function AdminPage() {
             </div>
           </CardHeader>
           <CardContent className="p-10">
-            <AdminActualitesQueue />
+            <AdminActualitesQueue key={actualitesQueueKey} />
           </CardContent>
         </Card>
 

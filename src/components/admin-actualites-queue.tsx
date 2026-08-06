@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useFirestore } from "@/firebase";
+import { useEffect, useRef, useState } from "react";
+import { useFirestore, useStorage, useUser } from "@/firebase";
 import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Check, X, Sparkles, ChevronDown, ChevronUp, Newspaper } from "lucide-react";
+import { Loader2, Check, X, Sparkles, ChevronDown, ChevronUp, Newspaper, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,11 +24,17 @@ import { cn } from "@/lib/utils";
  */
 export function AdminActualitesQueue() {
   const db = useFirestore();
+  const storage = useStorage();
+  const { user } = useUser();
   const { toast } = useToast();
   const [pending, setPending] = useState<any[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [coverDrafts, setCoverDrafts] = useState<Record<string, string>>({});
+  const [uploadingCoverId, setUploadingCoverId] = useState<string | null>(null);
+  const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const [coverFileTargetId, setCoverFileTargetId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!db) return;
@@ -109,6 +117,50 @@ export function AdminActualitesQueue() {
     }
   };
 
+  // ── Couverture ajoutée manuellement avant validation ──────────────────
+  // Les sources automatiques (capture d'écran notamment) ne fournissent
+  // jamais de couverture — l'administratrice l'ajoute ici, sauvegardée
+  // directement sur le brouillon en attente (pas besoin de republier pour
+  // que le choix soit conservé).
+  const saveCoverUrl = async (id: string, url: string) => {
+    if (!db) return;
+    try {
+      await setDoc(doc(db, "actualitesPending", id), { cover: url }, { merge: true });
+      setPending(prev => (prev || []).map(p => (p.id === id ? { ...p, cover: url } : p)));
+      toast({ title: "Couverture enregistrée" });
+    } catch (err) {
+      console.error("Save Cover Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'enregistrement" });
+    }
+  };
+
+  const openCoverFilePicker = (id: string) => {
+    setCoverFileTargetId(id);
+    coverFileInputRef.current?.click();
+  };
+
+  const handleCoverFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    const targetId = coverFileTargetId;
+    if (!file || !storage || !user || !targetId) return;
+    setUploadingCoverId(targetId);
+    try {
+      const path = `actualites/covers/${Date.now()}-${file.name.replace(/[^\w.-]/g, "_")}`;
+      const sRef = storageRef(storage, path);
+      await uploadBytes(sRef, file);
+      const url = await getDownloadURL(sRef);
+      await saveCoverUrl(targetId, url);
+      setCoverDrafts(prev => ({ ...prev, [targetId]: url }));
+    } catch (err) {
+      console.error("Cover Upload Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'importation", description: "L'image n'a pas pu être envoyée." });
+    } finally {
+      setUploadingCoverId(null);
+      setCoverFileTargetId(null);
+      if (coverFileInputRef.current) coverFileInputRef.current.value = "";
+    }
+  };
+
   // ── États de chargement / vide ─────────────────────────────────────────
   if (pending === null) {
     return <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin opacity-30" /></div>;
@@ -127,6 +179,13 @@ export function AdminActualitesQueue() {
 
   return (
     <div className="space-y-4">
+      <input
+        ref={coverFileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleCoverFileChange}
+        className="hidden"
+      />
 
       {/* ── Barre d'actions ──────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -311,9 +370,45 @@ export function AdminActualitesQueue() {
                           <p className="text-sm italic leading-relaxed whitespace-pre-line text-muted-foreground">
                             {item.content || '(aucun contenu)'}
                           </p>
-                          {item.cover && (
-                            <img src={item.cover} alt="" className="h-24 object-contain rounded-lg mt-2" />
-                          )}
+
+                          {/* ── Couverture : ajoutée/modifiée manuellement avant validation ── */}
+                          <div className="pt-2 space-y-2">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Couverture</p>
+                            <div className="flex items-start gap-3">
+                              {item.cover ? (
+                                <img src={item.cover} alt="" className="h-24 w-16 object-cover rounded-lg shadow-sm shrink-0" />
+                              ) : (
+                                <div className="h-24 w-16 rounded-lg bg-primary/5 flex items-center justify-center shrink-0">
+                                  <Newspaper className="h-5 w-5 text-primary/20" />
+                                </div>
+                              )}
+                              <div className="flex-1 space-y-2 min-w-0">
+                                <Input
+                                  value={coverDrafts[item.id] ?? item.cover ?? ""}
+                                  onChange={(e) => setCoverDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                  onBlur={(e) => {
+                                    const url = e.target.value.trim();
+                                    if (url !== (item.cover || "")) saveCoverUrl(item.id, url);
+                                  }}
+                                  placeholder="URL de l'image"
+                                  className="h-10 text-xs bg-white/60 rounded-lg border-none shadow-inner"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={uploadingCoverId === item.id}
+                                  onClick={() => openCoverFilePicker(item.id)}
+                                  className="h-8 px-3 rounded-lg text-[11px] italic font-headline border-primary/20"
+                                >
+                                  {uploadingCoverId === item.id
+                                    ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />
+                                    : <Upload className="mr-1.5 h-3 w-3" />}
+                                  Téléverser une image
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>

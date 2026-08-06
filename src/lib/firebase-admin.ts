@@ -1,5 +1,6 @@
 import { initializeApp, getApps, cert, App } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getAuth } from "firebase-admin/auth";
 
 /**
  * Initialisation du SDK Admin Firebase, utilisée uniquement côté serveur
@@ -36,4 +37,8 @@ export function getAdminApp(): App {
 
 export function getAdminDb() {
   return getFirestore(getAdminApp());
+}
+
+export function getAdminAuth() {
+  return getAuth(getAdminApp());
 }
