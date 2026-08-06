@@ -66,6 +66,28 @@ export async function searchBnF(
 }
 
 /**
+ * Interroge notre propre route API /api/isbndb-search (voir
+ * src/app/api/isbndb-search/route.ts), qui relaie une recherche par ISBN
+ * vers ISBNdb côté serveur (clé API secrète, jamais exposée au client).
+ * Contrairement à searchBnF, ne fonctionne qu'avec un ISBN exact, pas une
+ * recherche par titre. Échoue toujours silencieusement (tableau vide).
+ */
+export async function searchIsbndb(isbn: string): Promise<any[]> {
+  try {
+    const res = await fetchWithTimeout(
+      `/api/isbndb-search?isbn=${encodeURIComponent(isbn)}`,
+      {},
+      8000
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.results) ? data.results : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Liste des emails autorisés à accéder à /admin. Centralisé ici pour que
  * la page admin et la navigation (qui doit savoir si elle affiche le lien
  * vers /admin) restent toujours synchronisées.

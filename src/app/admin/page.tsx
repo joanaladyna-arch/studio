@@ -20,7 +20,8 @@ import {
   FileJson,
   Save,
   Sparkles,
-  Hash
+  Hash,
+  Library
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Progress } from "@/components/ui/progress";
@@ -31,7 +32,7 @@ import { AdminMessagerie } from "@/components/admin-messagerie";
 import { PublisherReviewQueue } from "@/components/publisher-review-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -55,6 +56,11 @@ export default function AdminPage() {
   const [isFillingIsbn, setIsFillingIsbn] = useState(false);
   const [isbnProgress, setIsbnProgress] = useState(0);
   const [isbnResults, setIsbnResults] = useState<{ filled: number; notFound: number; skipped: number } | null>(null);
+
+  // ── Compléter tous les champs manquants via ISBNdb ────────────────────
+  const [isFillingIsbndb, setIsFillingIsbndb] = useState(false);
+  const [isbndbProgress, setIsbndbProgress] = useState(0);
+  const [isbndbResults, setIsbndbResults] = useState<{ filled: number; notFound: number; skipped: number } | null>(null);
 
   const [navOverrides, setNavOverrides] = useState<Record<string, { label?: string; visible?: boolean }>>({});
   const [isLoadingNav, setIsLoadingNav] = useState(false);
@@ -248,6 +254,81 @@ export default function AdminPage() {
       toast({ variant: "destructive", title: "Erreur", description: (err as any)?.message });
     } finally {
       setIsFillingIsbn(false);
+    }
+  };
+
+  // ── Compléter tous les champs manquants via ISBNdb ────────────────────
+  // Contrairement à fillMissingIsbnPublisher (BnF, recherche par titre),
+  // ISBNdb ne fonctionne qu'en recherche par ISBN exact : seules les
+  // fiches ayant déjà un isbn13/isbn10 peuvent donc être candidates ici.
+  // Ne remplit jamais un champ déjà renseigné, quelle que soit la valeur
+  // renvoyée par ISBNdb — uniquement les trous.
+  const fillMissingFieldsFromIsbndb = async () => {
+    if (!db) return;
+    setIsFillingIsbndb(true);
+    setIsbndbProgress(0);
+    setIsbndbResults(null);
+    let filled = 0; let notFound = 0; let skipped = 0;
+    try {
+      const snap = await getDocs(collection(db, "masterBooks"));
+      const isEmpty = (v: any) => !v?.toString().trim();
+      const candidates = snap.docs.filter(d => {
+        const data = d.data();
+        const hasIsbn = !isEmpty(data.isbn13) || !isEmpty(data.isbn10);
+        const hasGap = isEmpty(data.cover) || isEmpty(data.publisher) || isEmpty(data.description)
+          || !data.pageCount || isEmpty(data.language) || isEmpty(data.publishedDate);
+        return hasIsbn && hasGap;
+      });
+      skipped = snap.docs.length - candidates.length;
+
+      for (let i = 0; i < candidates.length; i++) {
+        const bookDoc = candidates[i];
+        const data = bookDoc.data();
+        const isbn = cleanIsbnValue(data.isbn13) || cleanIsbnValue(data.isbn10);
+
+        const results = await searchIsbndb(isbn);
+        const match = results[0];
+
+        if (match) {
+          const updates: any = {};
+          if (isEmpty(data.cover) && match.cover) updates.cover = match.cover;
+          if (isEmpty(data.publisher) && match.publisher) updates.publisher = match.publisher;
+          if (isEmpty(data.description) && match.description) updates.description = cleanDescriptionHtml(match.description);
+          if (!data.pageCount && match.pageCount) updates.pageCount = match.pageCount;
+          if (isEmpty(data.language) && match.language) updates.language = match.language;
+          if (isEmpty(data.publishedDate) && match.publishedDate) updates.publishedDate = match.publishedDate;
+          if (isEmpty(data.isbn13) && match.isbn13) updates.isbn13 = match.isbn13;
+          if (isEmpty(data.isbn10) && match.isbn10) updates.isbn10 = match.isbn10;
+
+          if (Object.keys(updates).length > 0) {
+            updates.updatedAt = serverTimestamp();
+            try {
+              await setDoc(doc(db, "masterBooks", bookDoc.id), updates, { merge: true });
+              filled++;
+            } catch (err) {
+              console.error("Write error:", data.title, err);
+              notFound++;
+            }
+          } else {
+            notFound++;
+          }
+        } else {
+          notFound++;
+        }
+
+        setIsbndbProgress(Math.round(((i + 1) / candidates.length) * 100));
+      }
+
+      setIsbndbResults({ filled, notFound, skipped });
+      toast({
+        title: "Terminé",
+        description: `${filled} fiche(s) complétée(s), ${notFound} introuvables dans ISBNdb, ${skipped} sans ISBN ou déjà complètes.`,
+      });
+    } catch (err) {
+      console.error("FillMissingIsbndb Error:", err);
+      toast({ variant: "destructive", title: "Erreur", description: (err as any)?.message });
+    } finally {
+      setIsFillingIsbndb(false);
     }
   };
 
@@ -665,6 +746,23 @@ export default function AdminPage() {
             {isbnResults && (
               <p className="text-[10px] text-center opacity-60 italic">
                 {isbnResults.filled} fiche(s) complétée(s), {isbnResults.notFound} introuvables dans la BnF, {isbnResults.skipped} déjà complètes.
+              </p>
+            )}
+
+            {/* ── NOUVEAU : Compléter tous les champs manquants via ISBNdb ── */}
+            <Button variant="outline" onClick={fillMissingFieldsFromIsbndb} disabled={isFillingIsbndb} className="h-14 rounded-2xl italic font-headline text-lg border-amber-200 text-amber-700 hover:bg-amber-50">
+              {isFillingIsbndb ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Library className="mr-3 h-5 w-5" />}
+              Compléter les champs manquants (ISBNdb)
+            </Button>
+            {isFillingIsbndb && (
+              <div className="space-y-1">
+                <Progress value={isbndbProgress} className="h-2 bg-amber-100" />
+                <p className="text-[10px] text-center opacity-40 italic">{isbndbProgress}% — interrogation d'ISBNdb…</p>
+              </div>
+            )}
+            {isbndbResults && (
+              <p className="text-[10px] text-center opacity-60 italic">
+                {isbndbResults.filled} fiche(s) complétée(s), {isbndbResults.notFound} introuvables dans ISBNdb, {isbndbResults.skipped} sans ISBN ou déjà complètes.
               </p>
             )}
 
