@@ -72,6 +72,7 @@ const SECTIONS = [
     items: [
       "Les nouveautés des auteurs et éditeurs que tu suis, détectées automatiquement puis validées avant publication.",
       "\"Sorties de la semaine\" met en avant les parutions les plus récentes tout en haut de la page.",
+      "✦ Nouveau — \"Découvertes du moment\" : un bandeau doré qui met en avant des livres qui buzzent en ce moment, indépendamment des auteurs et éditeurs que tu suis — pour sortir un peu de ta bulle de lecture.",
     ],
   },
   {
