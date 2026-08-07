@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFirestore } from "@/firebase";
 import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Newspaper, Loader2, Plus, Pencil, Trash2, X, Save, Sparkles } from "lucide-react";
+import { Newspaper, Loader2, Plus, Pencil, Trash2, X, Save, Sparkles, Archive, ArchiveRestore, ChevronDown, ChevronUp } from "lucide-react";
 import { slugify, authorKey } from "@/lib/utils";
 
 /**
@@ -19,6 +19,12 @@ import { slugify, authorKey } from "@/lib/utils";
  * Le rattachement à un auteur se fait par slug insensible à l'ordre du
  * nom (authorKey), pour matcher quelle que soit la façon dont le nom est
  * écrit ("Rina Kent" / "Kent Rina").
+ *
+ * Les entrées actives sont groupées par mois de publication pour rester
+ * lisibles à mesure que la liste grossit. "Archiver" ne supprime rien :
+ * ça sort l'entrée du groupement par mois et la fait basculer, côté page
+ * publique, directement dans la section Archives — sans attendre les 60
+ * jours du archivage automatique par ancienneté.
  */
 export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
   const db = useFirestore();
@@ -27,6 +33,7 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
   const [editing, setEditing] = useState<any | null>(null);
   const [form, setForm] = useState<any>({ title: "", authorName: "", content: "", cover: "", isRelease: false, releaseDate: "" });
   const [isSaving, setIsSaving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     if (!db) return;
@@ -65,7 +72,7 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
         updatedAt: serverTimestamp(),
       };
       await setDoc(doc(db, "actualites", docId), dataToSave, { merge: true });
-      const saved = { id: docId, ...dataToSave };
+      const saved = { id: docId, ...dataToSave, archived: editing.isNew ? false : Boolean(editing.archived) };
       setActualites((prev) => {
         const list = prev || [];
         const exists = list.some((a) => a.id === docId);
@@ -95,6 +102,42 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
     }
   };
 
+  const toggleArchive = async (item: any) => {
+    if (!db) return;
+    const archived = !item.archived;
+    try {
+      await setDoc(doc(db, "actualites", item.id), { archived }, { merge: true });
+      setActualites((prev) => (prev || []).map((a) => (a.id === item.id ? { ...a, archived } : a)));
+      toast({ title: archived ? "Actualité archivée" : "Actualité désarchivée" });
+      onChanged?.();
+    } catch (err) {
+      console.error("Archive Actuality Error:", err);
+      toast({ variant: "destructive", title: "Erreur" });
+    }
+  };
+
+  const activeItems = useMemo(() => (actualites || []).filter((a) => !a.archived), [actualites]);
+  const archivedItems = useMemo(() => (actualites || []).filter((a) => a.archived), [actualites]);
+
+  // Groupement par mois de publication — les entrées sans date connue
+  // (très rare, docs anciens) atterrissent dans un groupe "Date inconnue"
+  // plutôt que de disparaître silencieusement.
+  const monthGroups = useMemo(() => {
+    const map = new Map<string, { label: string; items: any[] }>();
+    for (const item of activeItems) {
+      const d = item.publishedAt?.toDate ? item.publishedAt.toDate() : null;
+      const key = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` : "0000-00";
+      const label = d
+        ? d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }).replace(/^./, (c: string) => c.toUpperCase())
+        : "Date inconnue";
+      if (!map.has(key)) map.set(key, { label, items: [] });
+      map.get(key)!.items.push(item);
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([, v]) => v);
+  }, [activeItems]);
+
   return (
     <div className="space-y-6">
       {!editing && (
@@ -105,20 +148,58 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
               <Plus className="mr-2 h-4 w-4" /> Nouvelle actualité
             </Button>
           </div>
-          <div className="space-y-3">
-            {actualites === null && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin opacity-40" /></div>}
-            {actualites !== null && actualites.length === 0 && <p className="text-sm italic opacity-50 text-center py-6">Aucune actualité publiée.</p>}
-            {actualites !== null && actualites.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/40">
-                <div className="flex-1 min-w-0">
-                  <p className="font-headline italic truncate">{item.title}</p>
-                  <p className="text-xs opacity-50 truncate">{item.authorName || "Actualité littéraire générale"}</p>
+
+          {actualites === null && <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin opacity-40" /></div>}
+          {actualites !== null && actualites.length === 0 && <p className="text-sm italic opacity-50 text-center py-6">Aucune actualité publiée.</p>}
+
+          {actualites !== null && monthGroups.map((group) => (
+            <div key={group.label} className="space-y-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40 pt-2">{group.label} ({group.items.length})</p>
+              {group.items.map((item) => (
+                <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/40">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-headline italic truncate">{item.title}</p>
+                    <p className="text-xs opacity-50 truncate">{item.authorName || "Actualité littéraire générale"}</p>
+                  </div>
+                  <button onClick={() => toggleArchive(item)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-copper hover:scale-110 transition-transform" title="Archiver">
+                    <Archive className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => startEdit(item)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform"><Pencil className="h-4 w-4" /></button>
+                  <button onClick={() => remove(item.id)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-destructive hover:scale-110 transition-transform"><Trash2 className="h-4 w-4" /></button>
                 </div>
-                <button onClick={() => startEdit(item)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform"><Pencil className="h-4 w-4" /></button>
-                <button onClick={() => remove(item.id)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-destructive hover:scale-110 transition-transform"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ))}
+
+          {archivedItems.length > 0 && (
+            <div className="pt-4">
+              <button
+                onClick={() => setShowArchived((v) => !v)}
+                className="flex items-center gap-3 mx-auto text-primary/60 hover:text-primary transition-colors text-sm font-bold uppercase tracking-widest"
+              >
+                <Archive className="h-4 w-4" />
+                Archivées ({archivedItems.length})
+                {showArchived ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+              {showArchived && (
+                <div className="space-y-3 pt-4 opacity-70">
+                  {archivedItems.map((item) => (
+                    <div key={item.id} className="flex items-center gap-4 p-4 rounded-2xl bg-white/40">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-headline italic truncate">{item.title}</p>
+                        <p className="text-xs opacity-50 truncate">{item.authorName || "Actualité littéraire générale"}</p>
+                      </div>
+                      <button onClick={() => toggleArchive(item)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-copper hover:scale-110 transition-transform" title="Désarchiver">
+                        <ArchiveRestore className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => startEdit(item)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => remove(item.id)} className="h-9 w-9 rounded-full bg-white shadow-sm flex items-center justify-center text-destructive hover:scale-110 transition-transform"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 

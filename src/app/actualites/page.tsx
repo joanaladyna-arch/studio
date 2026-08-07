@@ -71,6 +71,10 @@ export default function ActualitesPage() {
     const windowEnd = new Date(now); windowEnd.setDate(now.getDate() + 7); windowEnd.setHours(23, 59, 59, 999);
 
     (items || []).forEach((item) => {
+      // Archivée manuellement depuis l'admin (Gérer les actualités) :
+      // bascule directement en archives, sans attendre les 60 jours ni
+      // rester épinglée dans "Sorties de la semaine"/"Découvertes du moment".
+      if (item.archived) { archived.push(item); return; }
       if (item.isRelease && item.releaseDate) {
         const d = new Date(`${item.releaseDate}T12:00:00`);
         if (!isNaN(d.getTime()) && d >= windowStart && d <= windowEnd) {
