@@ -5,6 +5,7 @@ import { useFirestore } from "@/firebase";
 import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, X, Sparkles, Pencil, Save } from "lucide-react";
 
@@ -30,7 +31,7 @@ export function PendingActualitesManager({ onCountChange }: { onCountChange?: (c
   const [pending, setPending] = useState<any[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<{ title: string; releaseDate: string }>({ title: "", releaseDate: "" });
+  const [editDraft, setEditDraft] = useState<{ title: string; releaseDate: string; content: string }>({ title: "", releaseDate: "", content: "" });
 
   const load = () => {
     if (!db) return;
@@ -96,7 +97,7 @@ export function PendingActualitesManager({ onCountChange }: { onCountChange?: (c
 
   const startEdit = (item: any) => {
     setEditingId(item.id);
-    setEditDraft({ title: item.title || "", releaseDate: item.releaseDate || "" });
+    setEditDraft({ title: item.title || "", releaseDate: item.releaseDate || "", content: item.content || "" });
   };
 
   const cancelEdit = () => setEditingId(null);
@@ -111,13 +112,14 @@ export function PendingActualitesManager({ onCountChange }: { onCountChange?: (c
     setBusyId(id);
     try {
       const releaseDate = editDraft.releaseDate.trim();
+      const content = editDraft.content.trim();
       await setDoc(
         doc(db, "actualitesPending", id),
-        { title, releaseDate, isRelease: Boolean(releaseDate) },
+        { title, releaseDate, content, isRelease: Boolean(releaseDate) },
         { merge: true }
       );
       setPending((prev) =>
-        (prev || []).map((p) => (p.id === id ? { ...p, title, releaseDate, isRelease: Boolean(releaseDate) } : p))
+        (prev || []).map((p) => (p.id === id ? { ...p, title, releaseDate, content, isRelease: Boolean(releaseDate) } : p))
       );
       toast({ title: "Modifications enregistrées" });
       setEditingId(null);
@@ -160,6 +162,12 @@ export function PendingActualitesManager({ onCountChange }: { onCountChange?: (c
                       value={editDraft.releaseDate}
                       onChange={(e) => setEditDraft((p) => ({ ...p, releaseDate: e.target.value }))}
                       className="h-9 text-sm bg-white/60 rounded-lg border-none shadow-inner"
+                    />
+                    <Textarea
+                      value={editDraft.content}
+                      onChange={(e) => setEditDraft((p) => ({ ...p, content: e.target.value }))}
+                      placeholder="Contenu"
+                      className="min-h-20 text-sm italic bg-white/60 rounded-lg border-none shadow-inner"
                     />
                   </>
                 ) : (

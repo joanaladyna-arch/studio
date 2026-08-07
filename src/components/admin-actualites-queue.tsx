@@ -7,6 +7,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,6 +37,7 @@ export function AdminActualitesQueue() {
   const coverFileInputRef = useRef<HTMLInputElement>(null);
   const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
   const [dateDrafts, setDateDrafts] = useState<Record<string, string>>({});
+  const [contentDrafts, setContentDrafts] = useState<Record<string, string>>({});
   const [coverFileTargetId, setCoverFileTargetId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -159,6 +161,18 @@ export function AdminActualitesQueue() {
       toast({ title: "Date enregistrée" });
     } catch (err) {
       console.error("Save Date Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'enregistrement" });
+    }
+  };
+
+  const saveContent = async (id: string, content: string) => {
+    if (!db) return;
+    try {
+      await setDoc(doc(db, "actualitesPending", id), { content }, { merge: true });
+      setPending(prev => (prev || []).map(p => (p.id === id ? { ...p, content } : p)));
+      toast({ title: "Contenu enregistré" });
+    } catch (err) {
+      console.error("Save Content Error:", err);
       toast({ variant: "destructive", title: "Erreur d'enregistrement" });
     }
   };
@@ -419,9 +433,19 @@ export function AdminActualitesQueue() {
                               ))}
                             </div>
                           )}
-                          <p className="text-sm italic leading-relaxed whitespace-pre-line text-muted-foreground">
-                            {item.content || '(aucun contenu)'}
-                          </p>
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Contenu</p>
+                            <Textarea
+                              value={contentDrafts[item.id] ?? item.content ?? ""}
+                              onChange={(e) => setContentDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                              onBlur={(e) => {
+                                const content = e.target.value.trim();
+                                if (content !== (item.content || "")) saveContent(item.id, content);
+                              }}
+                              placeholder="(aucun contenu)"
+                              className="min-h-24 text-sm italic bg-white/60 rounded-lg border-none shadow-inner leading-relaxed"
+                            />
+                          </div>
 
                           {/* ── Couverture : ajoutée/modifiée manuellement avant validation ── */}
                           <div className="pt-2 space-y-2">
