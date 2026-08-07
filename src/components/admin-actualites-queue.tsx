@@ -34,6 +34,8 @@ export function AdminActualitesQueue() {
   const [coverDrafts, setCoverDrafts] = useState<Record<string, string>>({});
   const [uploadingCoverId, setUploadingCoverId] = useState<string | null>(null);
   const coverFileInputRef = useRef<HTMLInputElement>(null);
+  const [titleDrafts, setTitleDrafts] = useState<Record<string, string>>({});
+  const [dateDrafts, setDateDrafts] = useState<Record<string, string>>({});
   const [coverFileTargetId, setCoverFileTargetId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -130,6 +132,33 @@ export function AdminActualitesQueue() {
       toast({ title: "Couverture enregistrée" });
     } catch (err) {
       console.error("Save Cover Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'enregistrement" });
+    }
+  };
+
+  // ── Titre / date modifiables avant validation ──────────────────────────
+  // Utile quand une source détecte un titre dans une autre langue que la
+  // VF, ou une date approximative — corrigeable ici sans devoir republier.
+  const saveTitle = async (id: string, title: string) => {
+    if (!db || !title.trim()) return;
+    try {
+      await setDoc(doc(db, "actualitesPending", id), { title: title.trim() }, { merge: true });
+      setPending(prev => (prev || []).map(p => (p.id === id ? { ...p, title: title.trim() } : p)));
+      toast({ title: "Titre enregistré" });
+    } catch (err) {
+      console.error("Save Title Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'enregistrement" });
+    }
+  };
+
+  const saveDate = async (id: string, releaseDate: string) => {
+    if (!db) return;
+    try {
+      await setDoc(doc(db, "actualitesPending", id), { releaseDate, isRelease: Boolean(releaseDate) }, { merge: true });
+      setPending(prev => (prev || []).map(p => (p.id === id ? { ...p, releaseDate, isRelease: Boolean(releaseDate) } : p)));
+      toast({ title: "Date enregistrée" });
+    } catch (err) {
+      console.error("Save Date Error:", err);
       toast({ variant: "destructive", title: "Erreur d'enregistrement" });
     }
   };
@@ -352,11 +381,34 @@ export function AdminActualitesQueue() {
                     <TableRow key={`${item.id}-exp`} className="bg-primary/3 hover:bg-primary/3">
                       <TableCell colSpan={7} className="pt-0 pb-4 pl-10 pr-6">
                         <div className="p-5 rounded-2xl bg-white/70 space-y-3 shadow-inner">
-                          {item.isRelease && item.releaseDate && (
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-rose/70">
-                              📅 Sortie prévue le {new Date(`${item.releaseDate}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                            </p>
-                          )}
+                          {/* ── Titre et date : modifiables (ex: titre VO vs VF, date approximative) ── */}
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Titre</p>
+                              <Input
+                                value={titleDrafts[item.id] ?? item.title ?? ""}
+                                onChange={(e) => setTitleDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                onBlur={(e) => {
+                                  const title = e.target.value.trim();
+                                  if (title && title !== (item.title || "")) saveTitle(item.id, title);
+                                }}
+                                className="h-10 text-sm bg-white/60 rounded-lg border-none shadow-inner"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Date de sortie</p>
+                              <Input
+                                type="date"
+                                value={dateDrafts[item.id] ?? item.releaseDate ?? ""}
+                                onChange={(e) => setDateDrafts(prev => ({ ...prev, [item.id]: e.target.value }))}
+                                onBlur={(e) => {
+                                  const releaseDate = e.target.value.trim();
+                                  if (releaseDate !== (item.releaseDate || "")) saveDate(item.id, releaseDate);
+                                }}
+                                className="h-10 text-sm bg-white/60 rounded-lg border-none shadow-inner"
+                              />
+                            </div>
+                          </div>
                           {item.authorName && (
                             <p className="text-[10px] font-bold uppercase tracking-widest text-primary/50">{item.authorName}</p>
                           )}
