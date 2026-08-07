@@ -28,7 +28,7 @@ export function VisionImportManager({ onImported }: { onImported?: () => void })
   const [selectedCount, setSelectedCount] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [results, setResults] = useState<{ added: number; duplicates: number; imagesWithoutBook: number } | null>(null);
+  const [results, setResults] = useState<{ added: number; duplicates: number; imagesWithoutBook: number; errors: string[] } | null>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = Array.from(e.target.files || []);
@@ -37,16 +37,40 @@ export function VisionImportManager({ onImported }: { onImported?: () => void })
     setResults(null);
   };
 
+  // Redimensionne et recompresse systématiquement en JPEG avant l'envoi :
+  // évite de dépasser la limite de taille de l'API vision Anthropic
+  // (captures d'écran haute résolution/Retina) et garantit un format
+  // toujours supporté, quel que soit le format d'origine (PNG, HEIC...).
   const fileToBase64 = (file: File): Promise<{ base64: string; mediaType: string }> => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(",")[1] || "";
-        resolve({ base64, mediaType: file.type || "image/jpeg" });
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX_DIM = 1568;
+        let { width, height } = img;
+        if (width > MAX_DIM || height > MAX_DIM) {
+          const scale = MAX_DIM / Math.max(width, height);
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        URL.revokeObjectURL(url);
+        if (!ctx) {
+          reject(new Error(`Impossible de traiter l'image : ${file.name}`));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ base64: dataUrl.split(",")[1] || "", mediaType: "image/jpeg" });
       };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error(`Format d'image non supporté : ${file.name}`));
+      };
+      img.src = url;
     });
   };
 
@@ -111,8 +135,18 @@ export function VisionImportManager({ onImported }: { onImported?: () => void })
       }
 
       const imagesWithoutBook = images.length - imagesWithBook.size;
-      setResults({ added, duplicates, imagesWithoutBook });
-      toast({ title: "Import terminé", description: `${added} livre(s) ajouté(s) en attente de validation.` });
+      const apiErrors: { imageIndex: number; message: string }[] = data.errors || [];
+      const errorMessages = apiErrors.map((e) => `Image ${e.imageIndex + 1} (${files[e.imageIndex]?.name || "?"}) : ${e.message}`);
+      setResults({ added, duplicates, imagesWithoutBook, errors: errorMessages });
+      if (errorMessages.length > 0) {
+        toast({
+          variant: "destructive",
+          title: "Import terminé avec des erreurs",
+          description: `${added} livre(s) ajouté(s), ${errorMessages.length} image(s) en erreur.`,
+        });
+      } else {
+        toast({ title: "Import terminé", description: `${added} livre(s) ajouté(s) en attente de validation.` });
+      }
       onImported?.();
     } catch (err) {
       console.error("Vision Import Error:", err);
@@ -165,10 +199,19 @@ export function VisionImportManager({ onImported }: { onImported?: () => void })
         </Button>
       </div>
       {results && (
-        <p className="text-xs opacity-60 italic">
-          {results.added} livre(s) ajouté(s), {results.duplicates} doublon(s) ignoré(s), {results.imagesWithoutBook}{" "}
-          image(s) sans annonce détectée.
-        </p>
+        <div className="space-y-1">
+          <p className="text-xs opacity-60 italic">
+            {results.added} livre(s) ajouté(s), {results.duplicates} doublon(s) ignoré(s), {results.imagesWithoutBook}{" "}
+            image(s) sans annonce détectée.
+          </p>
+          {results.errors.length > 0 && (
+            <ul className="text-xs text-destructive space-y-0.5">
+              {results.errors.map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
     </div>
   );
