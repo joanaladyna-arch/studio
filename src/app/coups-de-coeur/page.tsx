@@ -480,10 +480,10 @@ export default function CoupsDeCoeurPage() {
                 </Link>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFromSummerReread(book.id); }}
-                  className="absolute -top-1 -right-1 z-30 h-6 w-6 rounded-full bg-white shadow-md flex items-center justify-center text-primary/50 hover:text-red-500 hover:scale-110 transition-all"
+                  className="absolute -top-2 -right-2 z-30 h-8 w-8 rounded-full bg-white shadow-md flex items-center justify-center text-primary/50 hover:text-red-500 hover:scale-110 transition-all"
                   title="Retirer de Relecture d'été"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             ))}

@@ -573,7 +573,7 @@ export default function ProfilePage() {
                     if (!db || !user) return;
                     await setDoc(doc(db, "users", user.uid), { followedPublishers: arrayRemove(pub) }, { merge: true });
                   }}
-                  className="opacity-40 hover:opacity-100 transition-opacity"
+                  className="h-6 w-6 -m-1 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
                   aria-label={`Ne plus suivre ${pub}`}
                 >
                   <X className="h-3 w-3" />

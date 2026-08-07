@@ -128,7 +128,7 @@ export function TaxonomyEditor() {
           {active.map((item) => (
             <span key={item} className={cn("group inline-flex items-center gap-1.5 rounded-full border text-xs px-3 py-1.5 italic", colorActive)}>
               {item}
-              <button onClick={() => hideEntry(cat, item)} disabled={busy} className="opacity-40 hover:opacity-100 transition-opacity" title="Retirer / masquer">
+              <button onClick={() => hideEntry(cat, item)} disabled={busy} className="h-6 w-6 -m-1 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity" title="Retirer / masquer">
                 <X className="h-3 w-3" />
               </button>
             </span>

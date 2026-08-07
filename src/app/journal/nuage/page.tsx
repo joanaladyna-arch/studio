@@ -157,10 +157,10 @@ export default function NuagePage() {
               {/* X — visible sur mobile, hover sur desktop */}
               <button
                 onClick={() => deleteWord(m.id, m.word)}
-                className="absolute -top-2 -right-3 h-5 w-5 rounded-full bg-white shadow-sm flex items-center justify-center text-muted-foreground opacity-100 md:opacity-0 md:group-hover/word:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
+                className="absolute -top-3 -right-4 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-muted-foreground opacity-100 md:opacity-0 md:group-hover/word:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
                 title="Retirer du nuage"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}

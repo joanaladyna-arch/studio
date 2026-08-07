@@ -302,12 +302,12 @@ function NoteCard({ entry, onDelete }: { entry: any; onDelete: () => void }) {
       {/* Bouton supprimer */}
       <button
         onClick={onDelete}
-        className="absolute top-3 right-3 h-6 w-6 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
+        className="absolute top-2 right-2 h-9 w-9 rounded-full bg-white/80 shadow-sm flex items-center justify-center text-muted-foreground opacity-100 md:opacity-0 md:group-hover:opacity-100 hover:text-destructive hover:bg-red-50 transition-all z-10"
         title="Supprimer cette note"
       >
-        <X className="h-3.5 w-3.5" />
+        <X className="h-4 w-4" />
       </button>
-      <CardContent className="p-4 sm:p-5 flex gap-3 sm:gap-4 pr-10">
+      <CardContent className="p-4 sm:p-5 flex gap-3 sm:gap-4 pr-12">
         <div className={cn(
           "h-10 w-10 rounded-full flex items-center justify-center shrink-0 shadow-sm text-lg",
           entry.humeur ? "" : entry.type === "lecture" ? "bg-primary/10 text-primary" : "bg-blue-50 text-blue-400"

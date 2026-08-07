@@ -257,7 +257,7 @@ export function BookDuplicatesManager() {
             {linkSource ? (
               <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5">
                 <p className="flex-1 text-sm italic truncate">{linkSource.title}</p>
-                <button onClick={() => setLinkSource(null)}><X className="h-4 w-4 opacity-40" /></button>
+                <button onClick={() => setLinkSource(null)} className="h-8 w-8 -m-1 flex items-center justify-center shrink-0"><X className="h-4 w-4 opacity-40" /></button>
               </div>
             ) : (
               <div className="relative">
@@ -278,7 +278,7 @@ export function BookDuplicatesManager() {
             {linkTarget ? (
               <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5">
                 <p className="flex-1 text-sm italic truncate">{linkTarget.title}</p>
-                <button onClick={() => setLinkTarget(null)}><X className="h-4 w-4 opacity-40" /></button>
+                <button onClick={() => setLinkTarget(null)} className="h-8 w-8 -m-1 flex items-center justify-center shrink-0"><X className="h-4 w-4 opacity-40" /></button>
               </div>
             ) : (
               <div className="relative">
