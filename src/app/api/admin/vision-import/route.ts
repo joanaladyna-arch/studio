@@ -96,7 +96,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const decoded = await getAdminAuth().verifyIdToken(idToken);
+    const adminAuth = await getAdminAuth();
+    const decoded = await adminAuth.verifyIdToken(idToken);
     if (!decoded.email || !ADMIN_EMAILS.includes(decoded.email)) {
       return NextResponse.json({ error: "Accès réservé à l'administratrice" }, { status: 403 });
     }

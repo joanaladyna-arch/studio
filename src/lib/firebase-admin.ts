@@ -1,6 +1,5 @@
 import { initializeApp, getApps, cert, App } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
 
 /**
  * Initialisation du SDK Admin Firebase, utilisée uniquement côté serveur
@@ -39,6 +38,18 @@ export function getAdminDb() {
   return getFirestore(getAdminApp());
 }
 
-export function getAdminAuth() {
+/**
+ * Import dynamique (pas de `import { getAuth } from "firebase-admin/auth"`
+ * en haut du fichier) : ce sous-module tire jwks-rsa → jose, un paquet ESM
+ * que require() ne sait pas charger dans l'environnement serverless
+ * Vercel (ERR_REQUIRE_ESM). Un import statique fait planter TOUTES les
+ * routes qui importent quoi que ce soit de ce fichier — y compris le
+ * cron, qui n'utilise même pas l'auth — puisque Node évalue tous les
+ * imports d'un module au chargement, qu'ils soient appelés ou non. En
+ * important dynamiquement uniquement ici, seule la route qui appelle
+ * réellement getAdminAuth() (vision-import) charge ce sous-module.
+ */
+export async function getAdminAuth() {
+  const { getAuth } = await import("firebase-admin/auth");
   return getAuth(getAdminApp());
 }
