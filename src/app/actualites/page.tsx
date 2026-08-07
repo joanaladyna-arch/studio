@@ -56,12 +56,13 @@ export default function ActualitesPage() {
   // Une actualité sans date de publication connue (cas très rare) est
   // traitée comme récente par défaut, plutôt que de disparaître
   // silencieusement dans les archives.
-  const { recentItems, archivedItems, weekReleases, trendingItems } = useMemo(() => {
+  const { recentItems, archivedItems, weekReleases, trendingItems, upcomingItems } = useMemo(() => {
     const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000;
     const recent: any[] = [];
     const archived: any[] = [];
     const releases: any[] = [];
     const trending: any[] = [];
+    const upcoming: any[] = [];
 
     // "Cette semaine" = fenêtre glissante de 3 jours avant à 7 jours
     // après aujourd'hui, pour couvrir aussi bien une sortie qui vient
@@ -77,9 +78,17 @@ export default function ActualitesPage() {
       if (item.archived) { archived.push(item); return; }
       if (item.isRelease && item.releaseDate) {
         const d = new Date(`${item.releaseDate}T12:00:00`);
-        if (!isNaN(d.getTime()) && d >= windowStart && d <= windowEnd) {
-          releases.push(item);
-          return; // épinglée dans le bandeau, pas dupliquée dans le flux
+        if (!isNaN(d.getTime())) {
+          if (d >= windowStart && d <= windowEnd) {
+            releases.push(item);
+            return; // épinglée dans le bandeau, pas dupliquée dans le flux
+          }
+          // Au-delà de la fenêtre "cette semaine" mais toujours à venir :
+          // épinglée dans "À venir" plutôt que noyée dans le flux normal.
+          if (d > windowEnd) {
+            upcoming.push(item);
+            return;
+          }
         }
       }
       // Comme les sorties de la semaine, les tendances du moment sont
@@ -96,7 +105,8 @@ export default function ActualitesPage() {
     });
     releases.sort((a, b) => (a.releaseDate || "").localeCompare(b.releaseDate || ""));
     trending.sort((a, b) => (b.publishedAt?.toMillis?.() || 0) - (a.publishedAt?.toMillis?.() || 0));
-    return { recentItems: recent, archivedItems: archived, weekReleases: releases, trendingItems: trending };
+    upcoming.sort((a, b) => (a.releaseDate || "").localeCompare(b.releaseDate || ""));
+    return { recentItems: recent, archivedItems: archived, weekReleases: releases, trendingItems: trending, upcomingItems: upcoming };
   }, [items]);
 
   return (
@@ -181,6 +191,8 @@ export default function ActualitesPage() {
         </div>
       )}
 
+      {upcomingItems.length > 0 && <UpcomingActualites items={upcomingItems} />}
+
       {items === null ? (
         <div className="py-24 text-center flex flex-col items-center gap-6">
           <Loader2 className="h-10 w-10 animate-spin text-primary/20" />
@@ -223,6 +235,88 @@ export default function ActualitesPage() {
             </div>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "À venir" — sorties connues au-delà de la fenêtre "cette semaine"
+ * (weekReleases). Reprend le mécanisme de fondu-enchaîné du carousel
+ * "Lecture en cours" de l'accueil (opacité 300ms, rotation auto toutes
+ * les 5s si plusieurs entrées, jamais de rotation avec une seule) mais
+ * dans un format compact et une teinte indigo — pour se distinguer du
+ * rose de "Sorties de la semaine" et de l'ambre de "Découvertes du
+ * moment" sans ajouter un troisième bandeau plein-bleed qui alourdirait
+ * la page.
+ */
+function UpcomingActualites({ items }: { items: any[] }) {
+  const [idx, setIdx] = useState(0);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    setIdx(0);
+  }, [items]);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const timer = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setIdx((i) => (i + 1) % items.length);
+        setFade(true);
+      }, 300);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [items.length]);
+
+  const item = items[idx] || items[0];
+  const d = item?.releaseDate ? new Date(`${item.releaseDate}T12:00:00`) : null;
+  const dateLabel = d && !isNaN(d.getTime()) ? d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+  const daysUntil = d && !isNaN(d.getTime()) ? Math.ceil((d.getTime() - Date.now()) / (24 * 60 * 60 * 1000)) : null;
+
+  return (
+    <div className="glass-card rounded-[2rem] border-none bg-gradient-to-br from-indigo-50/80 to-white/60 p-5 sm:p-6 space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-500">À venir</p>
+      </div>
+      <div className={cn("flex items-center gap-4 transition-opacity duration-300", fade ? "opacity-100" : "opacity-0")}>
+        <div className="relative w-14 h-20 shrink-0 rounded-lg overflow-hidden shadow-md bg-indigo-100/50">
+          {item?.cover ? (
+            <img src={item.cover} alt={item.title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <Newspaper className="h-4 w-4 text-indigo-300" />
+            </div>
+          )}
+          {items.length > 1 && (
+            <div className="absolute top-1 right-1 bg-black/40 text-white text-[8px] font-bold rounded-full px-1.5 py-0.5">
+              {idx + 1}/{items.length}
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-headline italic text-base leading-tight truncate">{item?.title}</p>
+          {item?.authorName && <p className="text-[10px] opacity-50 truncate mt-0.5">{item.authorName}</p>}
+          {dateLabel && (
+            <span className="inline-block mt-1.5 text-[9px] font-bold uppercase tracking-wide text-indigo-600 bg-indigo-400/10 rounded-full px-2 py-0.5">
+              {daysUntil !== null && daysUntil <= 30 ? `Dans ${daysUntil} j · ${dateLabel}` : dateLabel}
+            </span>
+          )}
+        </div>
+      </div>
+      {items.length > 1 && (
+        <div className="flex items-center justify-center gap-1.5 pt-1">
+          {items.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => { setFade(false); setTimeout(() => { setIdx(i); setFade(true); }, 200); }}
+              className={cn("h-1.5 rounded-full transition-all duration-300", i === idx ? "bg-indigo-400 w-5" : "bg-indigo-400/20 w-1.5")}
+              aria-label={`Actualité ${i + 1}`}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
