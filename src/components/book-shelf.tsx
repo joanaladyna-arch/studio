@@ -37,13 +37,21 @@ export function BookShelf({
             <Link
               key={book.id}
               href={`/book/${book.id}`}
-              className="relative shrink-0 w-16 aspect-[2/3] rounded-lg overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-5 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
+              className="group relative shrink-0 w-16 aspect-[2/3] rounded-lg overflow-hidden border-2 border-white shadow-lg first:ml-0 -ml-5 hover:z-20 hover:-translate-y-3 transition-transform duration-300 bg-secondary/5"
               style={{
                 transform: `rotate(${(i % 2 === 0 ? -1 : 1) * (2 + (i % 3))}deg)`,
                 zIndex: i,
               }}
             >
-              <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+              {/* Le zoom vit sur un enfant plutôt que sur le Link lui-même :
+                  le Link a déjà une rotation fixe posée en style inline, qui
+                  écraserait tout transform basé sur une classe Tailwind
+                  (même propriété CSS, l'inline gagne toujours). Un enfant a
+                  son propre transform indépendant, qui se compose
+                  visuellement avec la rotation du parent sans conflit. */}
+              <div className="relative w-full h-full transition-transform duration-300 group-hover:scale-110">
+                <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+              </div>
             </Link>
           ))}
         </div>
