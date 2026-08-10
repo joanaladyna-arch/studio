@@ -79,22 +79,35 @@ export function VisionImportManager({ onImported }: { onImported?: () => void })
     setIsProcessing(true);
     setResults(null);
     try {
-      const images = await Promise.all(files.map(fileToBase64));
       const idToken = await user.getIdToken();
 
-      const res = await fetch("/api/admin/vision-import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
-        body: JSON.stringify({ images }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error || `HTTP ${res.status}`);
+      // Une requête par image plutôt qu'un seul lot : le corps d'une
+      // requête serverless (Vercel) est plafonné à 4.5 Mo, et plusieurs
+      // captures cumulées en base64 (gonflées d'environ un tiers par
+      // l'encodage) dépassent vite cette limite → 413, même après
+      // redimensionnement côté client.
+      const extracted: { title: string; author: string; publisher: string; releaseDate: string; content: string; sourceImageIndex: number }[] = [];
+      const apiErrors: { imageIndex: number; message: string }[] = [];
+      for (let i = 0; i < files.length; i++) {
+        try {
+          const image = await fileToBase64(files[i]);
+          const res = await fetch("/api/admin/vision-import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+            body: JSON.stringify({ images: [image] }),
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            apiErrors.push({ imageIndex: i, message: err?.error || `HTTP ${res.status}` });
+            continue;
+          }
+          const data = await res.json();
+          for (const b of data.results || []) extracted.push({ ...b, sourceImageIndex: i });
+          for (const e of data.errors || []) apiErrors.push({ imageIndex: i, message: e.message });
+        } catch (err) {
+          apiErrors.push({ imageIndex: i, message: (err as Error)?.message || "Erreur inconnue" });
+        }
       }
-
-      const data = await res.json();
-      const extracted: { title: string; author: string; publisher: string; releaseDate: string; content: string; sourceImageIndex: number }[] = data.results || [];
 
       // Titres déjà connus (publiés ou en attente), même logique que le
       // cron : jamais proposer deux fois le même livre.
@@ -134,8 +147,7 @@ export function VisionImportManager({ onImported }: { onImported?: () => void })
         added++;
       }
 
-      const imagesWithoutBook = images.length - imagesWithBook.size;
-      const apiErrors: { imageIndex: number; message: string }[] = data.errors || [];
+      const imagesWithoutBook = files.length - imagesWithBook.size;
       const errorMessages = apiErrors.map((e) => `Image ${e.imageIndex + 1} (${files[e.imageIndex]?.name || "?"}) : ${e.message}`);
       setResults({ added, duplicates, imagesWithoutBook, errors: errorMessages });
       if (errorMessages.length > 0) {
