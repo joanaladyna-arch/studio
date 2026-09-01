@@ -753,7 +753,7 @@ export default function ProfilePage() {
                 Les livres que tu as aimés et que tu recommandes à d'autres lectrices.
               </p>
             </div>
-            <div className="relative z-10 flex gap-4 overflow-x-auto no-scrollbar pb-2 px-1">
+            <div className="relative z-10 flex gap-4 overflow-x-auto no-scrollbar pt-3 pb-2 px-1">
               {stats.recommendedBooks.map((book: any) => (
                 <Link key={book.id} href={`/book/${book.id}`} className="shrink-0 w-24 text-center group">
                   <div
@@ -763,7 +763,7 @@ export default function ProfilePage() {
                     <div className="relative w-full h-full rounded-xl overflow-hidden bg-secondary/10">
                       <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
                     </div>
-                    <div className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-copper border-2 border-white shadow-md flex items-center justify-center text-[11px]">
+                    <div className="absolute -top-1 -right-1 h-6 w-6 rounded-full bg-copper border-2 border-white shadow-md flex items-center justify-center text-[11px]">
                       💎
                     </div>
                   </div>

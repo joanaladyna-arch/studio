@@ -154,7 +154,7 @@ export default function PublicProfilePage() {
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 flex items-center justify-center gap-2 mb-5">
             💎 Pépites Incontournables de {p.name || "cette lectrice"}
           </p>
-          <div className="flex gap-4 overflow-x-auto pb-2 px-1 no-scrollbar">
+          <div className="flex gap-4 overflow-x-auto pt-2 pb-2 px-1 no-scrollbar">
             {toArray<any>(p.recommendedBooks).map((b) => (
               <div key={b.id} className="w-20 shrink-0 text-center">
                 <div
@@ -164,7 +164,7 @@ export default function PublicProfilePage() {
                   <div className="relative w-full h-full rounded-lg overflow-hidden bg-secondary/10">
                     <BookCover src={b.cover} alt={b.title || ""} className="object-cover" />
                   </div>
-                  <div className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-copper border-2 border-white shadow-sm flex items-center justify-center text-[9px]">
+                  <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-copper border-2 border-white shadow-sm flex items-center justify-center text-[9px]">
                     💎
                   </div>
                 </div>
