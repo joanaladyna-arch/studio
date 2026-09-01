@@ -148,8 +148,8 @@ export default function PublicProfilePage() {
 
       {toArray<any>(p.recommendedBooks).length > 0 && (
         <div
-          className="rounded-[2rem] p-6 relative overflow-hidden"
-          style={{ background: "linear-gradient(155deg, #F5EDE1 0%, #B08457 120%)" }}
+          className="rounded-[2rem] p-6 relative overflow-hidden border-2 border-copper/50"
+          style={{ background: "linear-gradient(155deg, #F5EDE1 0%, #C7D2BC 120%)" }}
         >
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary/70 flex items-center justify-center gap-2 mb-5">
             💎 Pépites Incontournables de {p.name || "cette lectrice"}

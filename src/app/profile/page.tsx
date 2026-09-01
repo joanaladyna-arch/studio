@@ -45,7 +45,9 @@ import {
   Award,
   Heart,
   Feather,
-  Users
+  Users,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn, toArray, ADMIN_EMAILS, FOUNDER_EMAILS, cleanBookTitle } from '@/lib/utils';
@@ -264,6 +266,24 @@ export default function ProfilePage() {
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Lectoria';
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
 
+  // Remontée depuis les paramètres du dialogue d'édition (où elle
+  // n'était visible qu'après plusieurs clics) directement dans le
+  // header : un toggle en un clic, écrit tout de suite, sans passer par
+  // "Enregistrer" le reste du formulaire de profil.
+  const isCommunityVisible = Boolean(profile?.communityVisible);
+  const toggleCommunityVisible = async () => {
+    if (!db || !user) return;
+    try {
+      await setDoc(doc(db, 'users', user.uid), { communityVisible: !isCommunityVisible }, { merge: true });
+      toast({
+        title: isCommunityVisible ? "Profil bloqué" : "Profil visible",
+        description: isCommunityVisible ? "Invisible pour les autres lectrices." : "Les autres lectrices peuvent te trouver et te suivre.",
+      });
+    } catch (err) {
+      console.error("Toggle Community Visible Error:", err);
+    }
+  };
+
   return (
     <div className="space-y-16 animate-paper pb-20">
       <header className="grid grid-cols-1 md:grid-cols-[1fr_1.3fr] gap-8 md:gap-14 pt-4 md:pt-8">
@@ -314,6 +334,21 @@ export default function ProfilePage() {
               <Sparkles className="h-3.5 w-3.5" /> Lectrice Fondatrice
             </Badge>
           )}
+
+          <button
+            type="button"
+            onClick={toggleCommunityVisible}
+            title={isCommunityVisible ? "Les autres lectrices peuvent te trouver et te suivre — clique pour te rendre invisible." : "Invisible pour les autres lectrices — clique pour devenir visible."}
+            className={cn(
+              "rounded-full border-none px-4 py-1.5 italic font-headline text-xs gap-2 inline-flex items-center transition-colors",
+              isCommunityVisible
+                ? (isAmbientDark ? "bg-[#F5F1E8]/15 text-[#F5F1E8]" : "bg-rose/10 text-rose")
+                : "bg-muted text-muted-foreground/70"
+            )}
+          >
+            {isCommunityVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+            {isCommunityVisible ? "Profil visible" : "Profil bloqué"}
+          </button>
 
           <div className={cn("flex items-center justify-center gap-4 text-[10px] font-bold uppercase tracking-widest", isAmbientDark ? "text-[#F5F1E8]/60" : "text-muted-foreground/70")}>
             {user?.metadata?.creationTime && (
@@ -397,7 +432,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 w-full items-center md:items-start">
+        <div className="flex flex-col gap-2.5 w-full items-center md:items-start">
             <div className="flex gap-3 items-center justify-center md:justify-start flex-wrap">
               <EditProfileDialog profile={profile} />
               <ContactAdminDialog />
@@ -405,21 +440,21 @@ export default function ProfilePage() {
             <div className="flex justify-center md:justify-start">
               <PublisherSubmissionDialog />
             </div>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/passport"><Trophy className="h-5 w-5 mr-3" /> Passeport de lectrice</Link>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                <Link href="/passport"><Trophy className="h-4 w-4 mr-2.5" /> Passeport de lectrice</Link>
             </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/stats"><BarChart3 className="h-5 w-5 mr-3" /> Bilan de lecture</Link>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                <Link href="/stats"><BarChart3 className="h-4 w-4 mr-2.5" /> Bilan de lecture</Link>
             </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/share"><Share2 className="h-5 w-5 mr-3" /> Exporter vers les réseaux</Link>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                <Link href="/share"><Share2 className="h-4 w-4 mr-2.5" /> Exporter vers les réseaux</Link>
             </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/community"><Users className="h-5 w-5 mr-3" /> Communauté de lectrices</Link>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                <Link href="/community"><Users className="h-4 w-4 mr-2.5" /> Communauté de lectrices</Link>
             </Button>
             <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/guide"><HelpCircle className="h-5 w-5 mr-3" /> Comment utiliser Lectoria</Link>
+            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                <Link href="/guide"><HelpCircle className="h-4 w-4 mr-2.5" /> Comment utiliser Lectoria</Link>
             </Button>
             {(profile?.wattpadUrl || profile?.amazonUrl) && (
               <div className="flex gap-3 justify-center md:justify-start px-2">
@@ -445,12 +480,12 @@ export default function ProfilePage() {
               </div>
             )}
             {user?.email && ADMIN_EMAILS.includes(user.email) && (
-              <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-headline italic md:text-lg transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                  <Link href="/admin"><ShieldCheck className="h-5 w-5 mr-3" /> Administration</Link>
+              <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                  <Link href="/admin"><ShieldCheck className="h-4 w-4 mr-2.5" /> Administration</Link>
               </Button>
             )}
-            <Button variant="ghost" onClick={handleLogout} className="rounded-full h-14 px-8 text-destructive hover:bg-rose-50 font-headline italic text-lg transition-colors">
-                <LogOut className="h-5 w-5 mr-3" /> Déconnexion
+            <Button variant="ghost" onClick={handleLogout} className="rounded-full h-14 px-8 text-destructive hover:bg-rose-50 font-body font-normal text-base transition-colors">
+                <LogOut className="h-4 w-4 mr-2.5" /> Déconnexion
             </Button>
         </div>
       </header>
@@ -564,7 +599,7 @@ export default function ProfilePage() {
               <Badge
                 key={pub}
                 variant="outline"
-                className="rounded-full border-copper/25 text-copper bg-copper/5 px-3 py-1.5 italic font-normal gap-2 group"
+                className="rounded-lg border-copper/35 text-copper bg-copper/15 px-2.5 py-1.5 italic font-normal gap-2 group"
               >
                 <Landmark className="h-3 w-3" />
                 {pub}
@@ -742,8 +777,8 @@ export default function ProfilePage() {
       {stats.recommendedBooks.length > 0 && (
         <section className="space-y-6 pt-10">
           <div
-            className="rounded-[2rem] p-6 md:p-8 relative overflow-hidden"
-            style={{ background: "linear-gradient(155deg, #F5EDE1 0%, #B08457 120%)" }}
+            className="rounded-[2rem] p-6 md:p-8 relative overflow-hidden border-2 border-copper/50"
+            style={{ background: "linear-gradient(155deg, #F5EDE1 0%, #C7D2BC 120%)" }}
           >
             <div className="relative z-10 space-y-1 mb-6">
               <h2 className="text-3xl md:text-4xl font-headline italic flex items-center gap-3 text-primary">
@@ -933,26 +968,6 @@ function EditProfileDialog({ profile }: { profile: any }) {
                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Ma page auteur Amazon</Label>
                     <Input value={amazonUrl} onChange={(e) => setAmazonUrl(e.target.value)} placeholder="https://www.amazon.fr/..." className="h-14 rounded-2xl bg-white/40 border-none italic focus-visible:ring-1 focus-visible:ring-primary/20" />
                   </div>
-                </div>
-                <div className="flex items-center justify-between gap-4 p-5 rounded-2xl bg-rose/5 border border-rose/10">
-                  <div className="space-y-0.5">
-                    <span className="block font-headline italic text-lg">
-                      {communityVisible ? "Profil visible" : "Profil bloqué"}
-                    </span>
-                    <span className="block text-[11px] text-muted-foreground">
-                      {communityVisible ? "Les autres lectrices peuvent te trouver et te suivre." : "Invisible pour les autres lectrices."}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setCommunityVisible(!communityVisible)}
-                    className={cn(
-                      "shrink-0 rounded-full px-6 h-11 font-headline italic text-sm transition-colors",
-                      communityVisible ? "bg-rose text-primary" : "bg-white/60 text-muted-foreground border border-rose/20"
-                    )}
-                  >
-                    {communityVisible ? "Visible" : "Bloqué"}
-                  </button>
                 </div>
               </div>
             </div>
