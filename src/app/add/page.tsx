@@ -459,6 +459,8 @@ export default function AddBookPage() {
       // temporaire généré côté client qui ne correspond à aucun document
       // en base et rend la fiche inaccessible immédiatement après l'ajout.
       const isExternalSource = pendingBook.source !== "master";
+      let finalGenres = toArray<string>(pendingBook.genres);
+      let finalTropes = toArray<string>(pendingBook.tropes);
 
       if (isExternalSource) {
         const cleanedIsbn = cleanIsbnValue(pendingBook.isbn);
@@ -480,6 +482,33 @@ export default function AddBookPage() {
         const keepArr = (incoming: any, current: any) =>
           Array.isArray(incoming) && incoming.length ? incoming : (Array.isArray(current) ? current : []);
         const keepNum = (incoming: any, current: any) => (incoming > 0 ? incoming : (current ?? 0));
+        const finalDescription = keepText(pendingBook.description, existing.description);
+
+        // Découverte externe (Google Books/Apple/Open Library) sans
+        // genres NI tropes déjà connus (ni curation admin précédente, ni
+        // fournis par la source) : on demande à Claude de proposer les
+        // deux depuis notre taxonomie fixe à partir du résumé, plutôt que
+        // de laisser la fiche vide jusqu'à une curation manuelle. Best
+        // effort — un échec ici ne doit jamais empêcher l'ajout du livre.
+        const existingGenres = toArray<string>(existing.genres);
+        const existingTropes = toArray<string>(existing.tropes);
+        if (!existingGenres.length && !finalGenres.length && !existingTropes.length && !finalTropes.length && finalDescription) {
+          try {
+            const idToken = await user.getIdToken();
+            const res = await fetch("/api/enrich-book-taxonomy", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+              body: JSON.stringify({ title: pendingBook.title, author: pendingBook.author, description: finalDescription }),
+            });
+            if (res.ok) {
+              const tagged = await res.json();
+              finalGenres = Array.isArray(tagged?.genres) ? tagged.genres : [];
+              finalTropes = Array.isArray(tagged?.tropes) ? tagged.tropes : [];
+            }
+          } catch (err) {
+            console.error("Auto Tag Genres/Tropes Error:", err);
+          }
+        }
 
         await setDoc(masterRef, {
           title: keepText(pendingBook.title, existing.title) || "Titre inconnu",
@@ -488,16 +517,20 @@ export default function AddBookPage() {
           cover: keepText(pendingBook.cover, existing.cover),
           isbn13: keepText(cleanedIsbn, existing.isbn13),
           isbn10: keepText(pendingBook.isbn10, existing.isbn10),
-          description: keepText(pendingBook.description, existing.description),
+          description: finalDescription,
           publisher: keepText(pendingBook.publisher, existing.publisher),
           translator: keepText(pendingBook.translator, existing.translator),
           pageCount: keepNum(pendingBook.pages, existing.pageCount),
           language: keepText(pendingBook.language, existing.language),
           publishedDate: keepText(pendingBook.publishedDate ?? pendingBook.publicationDate, existing.publishedDate),
-          genres: keepArr(toArray<string>(pendingBook.genres), existing.genres),
+          genres: keepArr(finalGenres, existing.genres),
+          tropes: keepArr(finalTropes, existing.tropes),
           updatedAt: serverTimestamp(),
           source: existing.source || "discovered"
         }, { merge: true });
+
+        finalGenres = keepArr(finalGenres, existing.genres);
+        finalTropes = keepArr(finalTropes, existing.tropes);
       }
 
       // 2. Ajout à la bibliothèque personnelle. On copie les genres ici
@@ -505,15 +538,16 @@ export default function AddBookPage() {
       // se basent sur le champ "genres" du livre utilisateur, pas du
       // masterBook, sans quoi ils ne se débloqueraient jamais. On copie
       // aussi résumé/tropes/thèmes/éditeur quand le master les a déjà
-      // (curation admin) : sans ça, le travail de complétion des fiches
-      // ne profiterait jamais aux lectrices qui ajoutent le livre.
+      // (curation admin, ou auto-tag ci-dessus) : sans ça, le travail de
+      // complétion des fiches ne profiterait jamais aux lectrices qui
+      // ajoutent le livre.
       const userBookData = {
         masterBookId,
         title: pendingBook.title || "Titre inconnu",
         author: pendingBook.author || "Auteur inconnu",
         cover: pendingBook.cover || "",
-        genres: toArray<string>(pendingBook.genres),
-        tropes: toArray<string>(pendingBook.tropes),
+        genres: finalGenres,
+        tropes: finalTropes,
         themes: toArray<string>(pendingBook.themes),
         description: pendingBook.description || "",
         volume: pendingBook.volume || "",
