@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useFirestore } from "@/firebase";
-import { collection, getDocs, doc, updateDoc, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, query, orderBy, addDoc, serverTimestamp } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Flag, Clock, CheckCircle2 } from "lucide-react";
@@ -54,6 +54,24 @@ export function MissingBookReportsQueue() {
     try {
       await updateDoc(doc(db, "missingBookReports", id), { status, updatedAt: new Date() });
       setReports((prev) => (prev || []).map((r) => (r.id === id ? { ...r, status } : r)));
+
+      // Prévient la lectrice qui avait signalé le livre — une seule fois
+      // (notifiedAt), même si le statut est ensuite remis "en attente"
+      // puis "traité" à nouveau par erreur.
+      const report = (reports || []).find((r) => r.id === id);
+      if (status === "resolved" && report?.createdBy && !report?.notifiedAt) {
+        await addDoc(collection(db, "notifications"), {
+          type: "book_added",
+          title: "Livre ajouté !",
+          body: `"${report.title}" que tu avais signalé est maintenant disponible sur Lectoria.`,
+          link: "/add",
+          targetUid: report.createdBy,
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+        await updateDoc(doc(db, "missingBookReports", id), { notifiedAt: serverTimestamp() });
+        setReports((prev) => (prev || []).map((r) => (r.id === id ? { ...r, notifiedAt: true } : r)));
+      }
     } catch (err) {
       console.error("Update Report Status Error:", err);
     } finally {

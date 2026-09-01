@@ -35,6 +35,7 @@ import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
 import { VisionImportManager } from "@/components/vision-import-manager";
 import { PublisherDedupManager } from "@/components/publisher-dedup-manager";
+import { AppUpdateBroadcaster } from "@/components/app-update-broadcaster";
 import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb, searchHardcover } from "@/lib/utils";
 
 export default function AdminPage() {
@@ -788,6 +789,10 @@ export default function AdminPage() {
 
             <div className="pt-4 border-t border-primary/5">
               <PublisherDedupManager />
+            </div>
+
+            <div className="pt-4 border-t border-primary/5">
+              <AppUpdateBroadcaster />
             </div>
 
             <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">

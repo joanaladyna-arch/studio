@@ -12,6 +12,7 @@ import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { NotificationBell } from "@/components/notification-bell";
 
 // "id" est la clé stable utilisée pour stocker les personnalisations
 // (nom, visibilité) dans Firestore — séparée du href, qui lui ne change
@@ -145,14 +146,26 @@ export function Navigation() {
             );
           })}
         </div>
-        <button 
-          onClick={handleLogout}
-          className="ml-8 text-muted-foreground hover:text-destructive transition-all p-3 rounded-full hover:bg-red-50 group"
-          title="Déconnexion"
-        >
-          <LogOut className="h-6 w-6 group-hover:rotate-12 transition-transform" />
-        </button>
+        <div className="ml-8 flex items-center gap-2">
+          <NotificationBell />
+          <button
+            onClick={handleLogout}
+            className="text-muted-foreground hover:text-destructive transition-all p-3 rounded-full hover:bg-red-50 group"
+            title="Déconnexion"
+          >
+            <LogOut className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+          </button>
+        </div>
       </nav>
+
+      {/* Cloche flottante sur mobile/tablette : la nav basse n'a pas de
+          barre haute où loger la cloche comme sur desktop. */}
+      <div
+        className="fixed z-50 lg:hidden bg-white/80 backdrop-blur-xl rounded-full shadow-md"
+        style={{ top: "max(env(safe-area-inset-top), 12px)", right: "12px" }}
+      >
+        <NotificationBell />
+      </div>
 
       {/* Barre de navigation mobile — fixée en bas avec support de la
           barre système Android (boutons retour/accueil/multitâche) et de

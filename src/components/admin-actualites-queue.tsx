@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Check, X, Sparkles, ChevronDown, ChevronUp, Newspaper, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { notifyActualityFollowers } from "@/lib/notify-actuality-followers";
 
 /**
  * Tableau admin de validation des actualités détectées automatiquement.
@@ -94,6 +95,14 @@ export function AdminActualitesQueue() {
       setPending(prev => (prev || []).filter(p => !ids.includes(p.id)));
       setSelected(new Set());
       toast({ title: `${ids.length} actualité(s) publiée(s) ✓` });
+      for (const item of items) {
+        notifyActualityFollowers(user, {
+          authorSlug: item.authorSlug,
+          publisherName: item.publisherName,
+          title: item.title,
+          link: "/actualites",
+        });
+      }
     } catch (err) {
       console.error("Approve Error:", err);
       toast({ variant: "destructive", title: "Erreur de publication", description: (err as any)?.message });

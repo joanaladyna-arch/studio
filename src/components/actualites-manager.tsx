@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Newspaper, Loader2, Plus, Pencil, Trash2, X, Save, Sparkles, Archive, ArchiveRestore, ChevronDown, ChevronUp } from "lucide-react";
 import { slugify, authorKey } from "@/lib/utils";
+import { notifyActualityFollowers } from "@/lib/notify-actuality-followers";
 
 /**
  * Gestion complète des actualités d'auteur / littéraires (CRUD), pensée
@@ -28,6 +29,7 @@ import { slugify, authorKey } from "@/lib/utils";
  */
 export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [actualites, setActualites] = useState<any[] | null>(null);
   const [editing, setEditing] = useState<any | null>(null);
@@ -79,6 +81,9 @@ export function ActualitesManager({ onChanged }: { onChanged?: () => void }) {
         return exists ? list.map((a) => (a.id === docId ? saved : a)) : [saved, ...list];
       });
       toast({ title: editing.isNew ? "Actualité publiée" : "Actualité mise à jour" });
+      if (editing.isNew) {
+        notifyActualityFollowers(user, { authorSlug: dataToSave.authorSlug, title: dataToSave.title, link: "/actualites" });
+      }
       cancel();
       onChanged?.();
     } catch (err) {

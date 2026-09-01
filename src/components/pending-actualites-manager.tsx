@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { collection, doc, getDocs, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, X, Sparkles, Pencil, Save } from "lucide-react";
+import { notifyActualityFollowers } from "@/lib/notify-actuality-followers";
 
 /**
  * File d'attente des actualités proposées automatiquement (détection de
@@ -27,6 +28,7 @@ import { Loader2, Check, X, Sparkles, Pencil, Save } from "lucide-react";
  */
 export function PendingActualitesManager({ onCountChange }: { onCountChange?: (count: number) => void }) {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [pending, setPending] = useState<any[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -68,6 +70,7 @@ export function PendingActualitesManager({ onCountChange }: { onCountChange?: (c
       setPending((prev) => (prev || []).filter((p) => p.id !== item.id));
       onCountChange?.((pending || []).filter((p) => p.id !== item.id).length);
       toast({ title: "Actualité publiée" });
+      notifyActualityFollowers(user, { authorSlug: item.authorSlug, title: item.title, link: "/actualites" });
     } catch (err) {
       console.error("Approve Actuality Error:", err);
       toast({ variant: "destructive", title: "Erreur de publication" });
