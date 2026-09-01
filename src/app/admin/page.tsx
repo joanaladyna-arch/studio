@@ -33,6 +33,7 @@ import { PublisherReviewQueue } from "@/components/publisher-review-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
 import { VisionImportManager } from "@/components/vision-import-manager";
+import { PublisherDedupManager } from "@/components/publisher-dedup-manager";
 import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb, searchHardcover } from "@/lib/utils";
 
 export default function AdminPage() {
@@ -782,6 +783,10 @@ export default function AdminPage() {
                 {isbndbResults.filled} fiche(s) complétée(s), {isbndbResults.notFound} introuvables dans ISBNdb, {isbndbResults.skipped} sans ISBN ou déjà complètes.
               </p>
             )}
+
+            <div className="pt-4 border-t border-primary/5">
+              <PublisherDedupManager />
+            </div>
 
             <Button variant="outline" onClick={syncAuthors} disabled={isSyncingAuthors} className="h-14 rounded-2xl italic font-headline text-lg border-primary/10">
               {isSyncingAuthors ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : null} Synchroniser les Auteurs

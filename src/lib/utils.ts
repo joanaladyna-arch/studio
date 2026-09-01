@@ -165,6 +165,74 @@ export function cleanIsbnValue(v: string | null | undefined): string {
 }
 
 /**
+ * Identifiant d'éditeur normalisé pour la déduplication — pas pour
+ * l'affichage. Sans ça, "Black Ink Éditions", "Black ink éditions (La
+ * Jarne)" et "Black Ink Editions" sont vus comme 3 maisons différentes,
+ * alors que ce sont la même. Étapes : minuscule, sans accents, sans la
+ * mention de ville entre parenthèses, sans le mot "Editions/Edition" en
+ * préfixe ou suffixe (variable selon les sources : "Edition Addictives"
+ * vs "Editions Addictives" vs juste "Addictives").
+ *
+ * Ne capture PAS les variantes qui diffèrent par un mot entier au milieu
+ * du nom (ex: "Hugo" vs "Hugo Roman" — deux collections réelles du même
+ * groupe, pas juste une différence de graphie) : voir `levenshteinRatio`
+ * pour ces cas, qui nécessitent une confirmation admin plutôt qu'une
+ * fusion automatique.
+ */
+export function publisherKey(name: string | null | undefined): string {
+  const withoutLocation = (name || "").toString().replace(/\s*\([^)]*\)\s*/g, "").trim();
+  const normalized = withoutLocation
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+  return normalized
+    .replace(/^editions?\s+/, "")
+    .replace(/\s+editions?$/, "")
+    .trim();
+}
+
+/**
+ * Distance de Levenshtein classique (nombre minimal d'opérations
+ * caractère par caractère pour passer de `a` à `b`), utilisée uniquement
+ * pour SUGGÉRER des doublons probables à l'admin (jamais pour fusionner
+ * automatiquement) — deux noms d'éditeur trop proches pour être une
+ * coïncidence mais pas identiques après normalisation stricte.
+ */
+export function levenshteinDistance(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const prev = new Array(n + 1);
+  const curr = new Array(n + 1);
+  for (let j = 0; j <= n; j++) prev[j] = j;
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+    }
+    for (let j = 0; j <= n; j++) prev[j] = curr[j];
+  }
+  return prev[n];
+}
+
+/**
+ * 1 = identiques, 0 = complètement différents. Sert de seuil de
+ * suggestion (pas de fusion auto) : deux noms courts qui diffèrent d'un
+ * seul caractère se ressemblent beaucoup (ratio proche de 1) ; deux noms
+ * qui partagent juste un mot en commun parmi plusieurs ont un ratio plus
+ * bas mais peuvent quand même être signalés séparément par un test de
+ * préfixe/inclusion de mots (voir suggestPublisherMerges).
+ */
+export function levenshteinRatio(a: string, b: string): number {
+  const maxLen = Math.max(a.length, b.length);
+  if (maxLen === 0) return 1;
+  return 1 - levenshteinDistance(a, b) / maxLen;
+}
+
+/**
  * Identifiant d'auteur INSENSIBLE À L'ORDRE des mots du nom : les notices
  * bibliographiques inversent souvent nom et prénom ("Kent Rina" en
  * catalogue, "Rina Kent" en couverture). En triant les mots par ordre
