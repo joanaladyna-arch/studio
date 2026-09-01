@@ -24,7 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 function normalize(s: string): string {
   return (s || "")
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
     .replace(/\s+/g, " ");
