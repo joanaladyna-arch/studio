@@ -220,7 +220,9 @@ export default function AddBookPage() {
       // déjà trouvés par Google Books, Apple Books ou la base Lectoria.
       // Ciblée sur les tout premiers résultats (les plus pertinents) pour
       // ne pas multiplier les appels réseau sur une longue liste.
-      const missingDescription = allResults.filter((r) => !((r.description || "").toString().trim())).slice(0, 8);
+      const missingDescription = allResults.filter((r) =>
+        !((r.description || "").toString().trim()) || !(r.pages > 0)
+      ).slice(0, 8);
       if (missingDescription.length > 0) {
         await Promise.all(
           missingDescription.map(async (r) => {
@@ -229,12 +231,19 @@ export default function AddBookPage() {
               const bnfQuery = r.isbn || `${r.title} ${r.author}`.trim();
               const bnfResults = await searchBnF(bnfQuery, bnfType2);
               const match = bnfResults[0];
-              if (match?.description) {
+              if (match?.description && !((r.description || "").toString().trim())) {
                 r.description = cleanDescriptionHtml(match.description);
               }
+              // Complète aussi le nombre de pages depuis la BnF quand
+              // Google Books/Apple/Open Library n'en fournissaient aucun —
+              // sans ça, le suivi de lecture par numéro de page (2.4) ne
+              // pourrait jamais calculer de pourcentage pour ces fiches.
+              if (match?.pages > 0 && !(r.pages > 0)) {
+                r.pages = match.pages;
+              }
             } catch {
-              // Résumé optionnel : on continue sans bloquer l'affichage
-              // des résultats si la BnF échoue ou expire.
+              // Résumé/pages optionnels : on continue sans bloquer
+              // l'affichage des résultats si la BnF échoue ou expire.
             }
           })
         );

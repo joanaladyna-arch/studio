@@ -39,7 +39,7 @@ import {
   ChevronRight
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Slider } from "@/components/ui/slider";
+import { Progress } from "@/components/ui/progress";
 import Image from "next/image";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
@@ -1042,15 +1042,54 @@ export default function BookDetailPage() {
                     </Button>
                   ))}
                 </div>
-                {editedData.status === "progress" && (
-                  <div className="space-y-3 pt-2">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Progression</Label>
-                      <span className="text-primary font-headline italic text-lg">{(editedData as any).progress ?? 0}%</span>
+                {editedData.status === "progress" && (() => {
+                  const knownPageCount = Number(masterBook?.pageCount || masterBook?.pages || 0);
+                  const currentPage = Number((editedData as any).currentPage ?? 0);
+                  const hasPageCount = knownPageCount > 0;
+                  const computedProgress = hasPageCount ? Math.min(100, Math.round((currentPage / knownPageCount) * 100)) : ((editedData as any).progress ?? 0);
+                  const isOverflow = hasPageCount && currentPage > knownPageCount;
+                  const updatePage = (page: number) => {
+                    setEditedData({
+                      ...editedData,
+                      currentPage: page,
+                      progress: hasPageCount ? Math.min(100, Math.round((page / knownPageCount) * 100)) : (editedData as any).progress,
+                    } as any);
+                  };
+                  return (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Progression</Label>
+                        {hasPageCount && <span className="text-primary font-headline italic text-lg">{computedProgress}%</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          value={(editedData as any).currentPage ?? ""}
+                          onChange={(e) => updatePage(e.target.value === "" ? 0 : Number(e.target.value))}
+                          placeholder="Page actuelle"
+                          className="h-10 border-none bg-white/40 px-3 italic rounded-xl"
+                        />
+                        {hasPageCount && <span className="text-sm opacity-50 italic shrink-0">/ {knownPageCount}</span>}
+                      </div>
+                      {hasPageCount ? (
+                        <>
+                          <Progress value={computedProgress} className="h-2" />
+                          {isOverflow && (
+                            <p className="text-[10px] text-amber-600 italic">
+                              Tu as dépassé le nombre de pages connu ({knownPageCount}) — vérifie l'édition ou le tome, la progression reste affichée à 100%.
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-[10px] opacity-50 italic">
+                          Nombre de pages inconnu pour ce livre — le pourcentage ne peut pas être calculé, seule la page est enregistrée.
+                        </p>
+                      )}
                     </div>
-                    <Slider value={[(editedData as any).progress ?? 0]} min={0} max={100} step={5} onValueChange={(v) => setEditedData({ ...editedData, progress: v[0] } as any)} />
-                  </div>
-                )}
+                  );
+                })()}
                 {/* Listes spéciales */}
                 <div className="space-y-3 pt-3 border-t border-primary/5">
                   <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Listes spéciales</Label><InfoTip>Listes de suivi personnalisées — "À offrir" et "Relecture d'été".</InfoTip></div>

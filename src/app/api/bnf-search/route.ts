@@ -151,6 +151,14 @@ export async function GET(req: NextRequest) {
         const description = extractFirst(block, "dc:description");
         const isbnRaw = identifiers.find((id) => /97[89][\d\-X]{9,16}/i.test(id));
         const isbn = isbnRaw ? (isbnRaw.match(/97[89][\d\-X]{9,16}/i) || [""])[0].replace(/-/g, "") : "";
+        // La description physique (ex: "1 vol. (224 p.)") contient parfois
+        // la pagination — utile pour compléter le nombre de pages d'une
+        // fiche qui n'en a pas encore, en plus du résumé. Absente sur
+        // beaucoup de notices (ebooks notamment) : simple bonus, jamais
+        // une source garantie.
+        const format = extractFirst(block, "dc:format");
+        const pageMatch = format.match(/(\d+)\s*p\.?\b/i);
+        const pages = pageMatch ? parseInt(pageMatch[1], 10) : 0;
 
         return {
           id: `bnf-${isbn || title}-${creators[0] || ""}`.slice(0, 140),
@@ -165,6 +173,7 @@ export async function GET(req: NextRequest) {
           isbn,
           cover: "",
           description,
+          pages,
           source: "bnf",
         };
       })
