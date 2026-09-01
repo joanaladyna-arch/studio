@@ -14,7 +14,8 @@ import {
   Magnet,
   HelpCircle,
   ScanBarcode,
-  History
+  History,
+  Flag
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -30,6 +31,7 @@ import { MasterBookEditor } from "@/components/master-book-editor";
 import { IsbnImporter } from "@/components/isbn-importer";
 import { IsbnScannerDialog } from "@/components/isbn-scanner-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
 import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga, isFrenchLanguage, languageLabel } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
@@ -75,6 +77,10 @@ export default function AddBookPage() {
   const [isAdding, setIsAdding] = useState(false);
   const [lastSearch, setLastSearch] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [showMissingReport, setShowMissingReport] = useState(false);
+  const [reportForm, setReportForm] = useState({ title: "", author: "", comment: "" });
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -91,6 +97,7 @@ export default function AddBookPage() {
     if (!db || isSearching) return; // Évite les recherches concurrentes (double-clic, touche Entrée répétée)
 
     setIsSearching(true);
+    setHasSearched(true);
     setResults([]);
 
     let allResults: any[] = [];
@@ -403,6 +410,41 @@ export default function AddBookPage() {
     setManualForm({ title: "", author: "", referenceLink: "", description: "", cover: "" });
   };
 
+  // Signalement "livre introuvable" — volontairement distinct de "Je ne
+  // trouve pas mon livre" (qui crée la fiche tout de suite soi-même) :
+  // ici on ne crée RIEN, on dépose juste un signalement dans une file
+  // d'attente admin (même modèle que publisherSubmissions), pour que
+  // l'administratrice puisse enrichir la base en priorité sur les
+  // livres réellement demandés plutôt que de découvrir les trous via
+  // les searchLogs anonymes.
+  const submitMissingBookReport = async () => {
+    if (!db) return;
+    if (!reportForm.title.trim()) {
+      toast({ variant: "destructive", title: "Le titre est obligatoire" });
+      return;
+    }
+    setIsSubmittingReport(true);
+    try {
+      await addDoc(collection(db, "missingBookReports"), {
+        title: reportForm.title.trim(),
+        author: reportForm.author.trim(),
+        comment: reportForm.comment.trim(),
+        searchQuery: queryStr.trim(),
+        status: "pending",
+        createdBy: user?.uid || null,
+        createdAt: serverTimestamp(),
+      });
+      toast({ title: "Signalement envoyé", description: "Merci — l'administratrice va regarder ça." });
+      setShowMissingReport(false);
+      setReportForm({ title: "", author: "", comment: "" });
+    } catch (err) {
+      console.error("Missing Book Report Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'envoi" });
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const confirmAdd = async () => {
     if (!db || !user || !pendingBook) return;
     setIsAdding(true);
@@ -648,7 +690,75 @@ export default function AddBookPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={showMissingReport} onOpenChange={setShowMissingReport}>
+        <DialogContent className="glass-card border-none max-w-lg p-10 bg-white/95 backdrop-blur-3xl">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-2xl italic flex items-center gap-3">
+              <Flag className="h-5 w-5 text-rose" /> Signaler un livre manquant
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs italic opacity-50 -mt-2">
+            Rien n'est créé tout de suite — ça part dans une file d'attente pour que l'administratrice l'ajoute à la
+            base commune, avec une fiche complète.
+          </p>
+          <div className="space-y-4 pt-2">
+            <Input
+              placeholder="Titre *"
+              value={reportForm.title}
+              onChange={(e) => setReportForm({ ...reportForm, title: e.target.value })}
+              className="h-12 rounded-xl bg-white/60 italic"
+            />
+            <Input
+              placeholder="Auteur (si tu le connais)"
+              value={reportForm.author}
+              onChange={(e) => setReportForm({ ...reportForm, author: e.target.value })}
+              className="h-12 rounded-xl bg-white/60 italic"
+            />
+            <Textarea
+              placeholder="Un lien où le trouver, une précision... (facultatif)"
+              value={reportForm.comment}
+              onChange={(e) => setReportForm({ ...reportForm, comment: e.target.value })}
+              className="min-h-24 rounded-xl bg-white/60 italic"
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={submitMissingBookReport} disabled={isSubmittingReport} className="w-full h-12 rounded-2xl bg-rose font-headline italic">
+              {isSubmittingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Flag className="mr-2 h-4 w-4" />}
+              Envoyer le signalement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="max-w-4xl mx-auto grid gap-6">
+        {hasSearched && !isSearching && results.length === 0 && (
+          <div className="glass-card rounded-[2rem] border-none bg-white/50 p-10 text-center space-y-4">
+            <p className="italic text-muted-foreground">
+              Aucun résultat pour <span className="font-bold not-italic">"{queryStr}"</span>.
+            </p>
+            <p className="text-xs italic opacity-50">
+              Tu peux l'ajouter toi-même s'il est auto-édité ou sur Wattpad, ou signaler son absence pour qu'on
+              l'ajoute à la base commune.
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setShowManualEntry(true)}
+                className="h-11 rounded-xl italic font-headline border-primary/20"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Ajouter ce livre moi-même
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { setReportForm({ title: queryStr, author: "", comment: "" }); setShowMissingReport(true); }}
+                className="h-11 rounded-xl italic font-headline border-rose/30 text-rose"
+              >
+                <Flag className="mr-2 h-4 w-4" /> Signaler un livre manquant
+              </Button>
+            </div>
+          </div>
+        )}
+
         {results.length > 0 && (
           <div className="flex items-center justify-between flex-wrap gap-3 px-2">
             <p className="text-[11px] italic opacity-50">

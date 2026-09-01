@@ -30,6 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookManager } from "@/components/master-book-manager";
 import { AdminMessagerie } from "@/components/admin-messagerie";
 import { PublisherReviewQueue } from "@/components/publisher-review-queue";
+import { MissingBookReportsQueue } from "@/components/missing-book-reports-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
 import { VisionImportManager } from "@/components/vision-import-manager";
@@ -623,6 +624,7 @@ export default function AdminPage() {
         <MasterBookManager />
         <AdminMessagerie />
         <PublisherReviewQueue />
+        <MissingBookReportsQueue />
         <AdminAnalytics />
 
         {/* EXCEL IMPORT SECTION */}
