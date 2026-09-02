@@ -211,6 +211,19 @@ export default function ProfilePage() {
   const currentRead = useMemo(() => toArray<any>(booksRaw).find((b: any) => b.status === "progress"), [booksRaw]);
   const nextRead = useMemo(() => toArray<any>(booksRaw).find((b: any) => b.status === "pal" && b.isNextRead), [booksRaw]);
 
+  // Certains comptes ont accumulé des doublons dans followedPublishers
+  // (variantes de casse/espaces suivies séparément avant que le suivi ne
+  // soit vérifié via publisherKey) — on affiche une seule entrée par
+  // éditeur normalisé plutôt que d'attendre une purge des données.
+  const dedupedFollowedPublishers = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of toArray<string>(profile?.followedPublishers)) {
+      const key = publisherKey(p);
+      if (key && !seen.has(key)) seen.set(key, p.trim());
+    }
+    return Array.from(seen.values());
+  }, [profile?.followedPublishers]);
+
   const handleLogout = async () => {
     if (!auth) return;
     try {
@@ -262,19 +275,6 @@ export default function ProfilePage() {
       <p className="font-headline italic text-primary/60">Ouverture de votre réserve...</p>
     </div>
   );
-
-  // Certains comptes ont accumulé des doublons dans followedPublishers
-  // (variantes de casse/espaces suivies séparément avant que le suivi ne
-  // soit vérifié via publisherKey) — on affiche une seule entrée par
-  // éditeur normalisé plutôt que d'attendre une purge des données.
-  const dedupedFollowedPublishers = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const p of toArray<string>(profile?.followedPublishers)) {
-      const key = publisherKey(p);
-      if (key && !seen.has(key)) seen.set(key, p.trim());
-    }
-    return Array.from(seen.values());
-  }, [profile?.followedPublishers]);
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Lectoria';
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
