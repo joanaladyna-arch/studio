@@ -48,7 +48,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
         <div
           className="mb-10 drop-shadow-sm"
           style={{
-            width: 96, height: 96,
+            width: 140, height: 140,
             backgroundColor: markColor,
             WebkitMaskImage: "url(/logo-icon.png)", maskImage: "url(/logo-icon.png)",
             WebkitMaskSize: "contain", maskSize: "contain",
