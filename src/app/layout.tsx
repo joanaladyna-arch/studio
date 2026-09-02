@@ -11,6 +11,7 @@ import { AuthGuard } from "@/components/auth-guard";
 import { AdminModeProvider } from "@/components/admin-mode";
 import { AdminModeBar } from "@/components/admin-mode-bar";
 import { ThemeBackgroundLayer } from "@/components/theme-background-layer";
+import { SeasonalPageDecoration } from "@/components/seasonal-page-decoration";
 
 export default function RootLayout({
   children,
@@ -62,6 +63,7 @@ export default function RootLayout({
           ) : (
             <AuthGuard>
               <AdminModeProvider>
+                <SeasonalPageDecoration />
                 <Navigation />
                 <AdminModeBar />
                 <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-36 md:pt-28 md:pb-16 w-full" style={{ paddingBottom: "calc(10rem + env(safe-area-inset-bottom, 0px))" }}>
