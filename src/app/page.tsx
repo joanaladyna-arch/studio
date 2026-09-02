@@ -331,8 +331,8 @@ export default function Home() {
       </section>
 
 
-      <div className="grid lg:grid-cols-[320px_1fr] gap-8 lg:gap-12">
-        <div>
+      <div className="grid lg:grid-cols-[320px_1fr] gap-8 lg:gap-12 items-start">
+        <div className="lg:sticky lg:top-24">
           <BadgeVitrine allBooks={allBooks} />
         </div>
 
