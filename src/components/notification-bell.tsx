@@ -123,12 +123,13 @@ export function NotificationBell() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
-          className="relative p-2.5 rounded-full hover:bg-white/60 transition-colors text-muted-foreground hover:text-primary"
+          className="relative flex items-center gap-1.5 pl-3 pr-3.5 py-2 rounded-full hover:bg-white/60 transition-colors text-muted-foreground hover:text-primary"
           title="Notifications"
         >
-          <Bell className="h-5 w-5" />
+          <Bell className="h-4 w-4" />
+          <span className="text-[11px] font-bold uppercase tracking-widest">News</span>
           {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-0.5 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

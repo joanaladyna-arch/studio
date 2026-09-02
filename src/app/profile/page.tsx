@@ -508,7 +508,7 @@ export default function ProfilePage() {
           des auteurs suivis, directement visible sans clic. Répond au
           constat bêta : le suivi d'auteur notamment était largement
           ignoré faute de visibilité. */}
-      <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+      <div className="grid md:grid-cols-2 gap-6 md:gap-8">
         <Link href="/stats" className="block">
           <Card className="glass-card border-none bg-white/60 p-5 md:p-6 hover:shadow-lg transition-shadow h-full">
             <div className="flex items-center justify-between mb-4">

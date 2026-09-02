@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, HelpCircle, Library, Plus, User, Heart, Newspaper, BookOpen, BarChart3, Users, Share2, Feather, Sparkles, MessageCircle, Cloud } from "lucide-react";
+import { ArrowLeft, HelpCircle, Library, Plus, User, Heart, Newspaper, BookOpen, BarChart3, Users, Share2, Feather, Sparkles, MessageCircle, Cloud, Bell } from "lucide-react";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,8 @@ const SECTIONS = [
       "Cherche par titre, auteur ou éditeur — les résultats viennent de Google Books et Apple Books.",
       "\"Ma précédente recherche\" relance en un clic ta dernière recherche.",
       "Une fois le livre choisi, indique son statut (En cours, PAL, Lu...) et son format (papier, ebook, audio...).",
+      "Le bouton avec l'appareil photo scanne le code-barres d'un livre physique pour l'ajouter instantanément — une torche manuelle s'allume si ton téléphone la supporte, et l'appli bascule automatiquement en saisie manuelle si le scan a du mal.",
+      "✦ Nouveau — Livre introuvable dans les résultats ? Ajoute-le toi-même avec ses informations, ou signale-le à l'administratrice pour qu'elle l'ajoute au catalogue.",
     ],
   },
   {
@@ -35,6 +37,8 @@ const SECTIONS = [
       "\"Service de presse\" : coche cette case pour un livre reçu en service de presse — un ruban SP apparaît sur sa couverture.",
       "\"Pépite Incontournable\" : recommande ce livre à la communauté — il apparaît sur ton profil public.",
       "Le bouton \"Suivre\" à côté de la Maison d'édition permet d'être alertée des nouveautés de cet éditeur.",
+      "✦ Nouveau — \"Lu par X lectrices Lectoria\" : sous le titre, indique combien de lectrices ont terminé ce livre, avec un raccourci direct vers leurs avis.",
+      "✦ Nouveau — En cours de lecture, indique directement la page où tu t'es arrêtée : le pourcentage se calcule tout seul dès que le nombre total de pages est connu.",
       "✦ Nouveau — \"Exporter l'avis\" dans l'onglet Mon Journal : génère une carte stylisée à partager sur Instagram ou TikTok (4 templates, palette de couleurs, texte libre, export PNG ou PDF).",
     ],
   },
@@ -54,8 +58,16 @@ const SECTIONS = [
       "✦ Nouveau — \"Mes notes de lecture\" : retrouve toutes tes notes avec la possibilité de les catégoriser (Citation, Réflexion, Personnage, Intrigue, Émotion) et d'ajouter une humeur (😍 😤 😭 😱). Vue \"Par livre\" pour regrouper par roman. Export PDF de toutes tes notes.",
       "✦ Nouveau — \"Nuage des mots\" : un nuage visuel construit automatiquement depuis toutes tes notes, citations et avis. Ajoute tes propres mots manuellement, supprime ceux qui ne t'intéressent pas. Export PDF.",
       "\"Mon Avis & Réflexions\" : retrouve tous tes avis rédigés depuis les fiches livres.",
-      "\"Carnet de Citations\" : toutes les citations favorites que tu as notées sur chaque fiche livre.",
+      "\"Carnet de Citations\" : toutes les citations favorites que tu as notées sur chaque fiche livre. ✦ Nouveau — un cœur sur la citation du jour (à l'ouverture de l'appli) l'ajoute directement ici, et tu peux proposer une citation à toute la communauté (validée par l'administratrice avant diffusion).",
       "\"Mes Recommandations\" : les livres auxquels tu as attribué une Palme, avec un bouton Partager.",
+    ],
+  },
+  {
+    icon: Bell,
+    title: "Notifications",
+    items: [
+      "✦ Nouveau — La cloche (en haut de l'écran) te prévient dans trois cas : un livre que tu avais signalé comme introuvable vient d'être ajouté, une nouvelle actualité paraît pour un auteur ou un éditeur que tu suis, ou l'application reçoit une mise à jour importante.",
+      "Un point apparaît sur la cloche tant qu'une notification n'a pas été lue — clique dessus pour tout marquer comme lu d'un coup.",
     ],
   },
   {
@@ -99,6 +111,7 @@ const SECTIONS = [
       "\"Personnaliser mon espace\" : choisis l'ambiance de couleur de ton espace (Vert d'Eau, Saumon, Rose Pâle...).",
       "\"Un jour, une citation\" : une citation différente s'affiche à l'ouverture de l'app chaque jour.",
       "Les 7 pastilles L M M J V S D s'allument en cuivre les jours où tu ouvres l'application.",
+      "✦ Nouveau — Le badge \"Profil visible\" / \"Profil bloqué\" à côté de ton nom bascule ta visibilité dans la communauté en un seul clic.",
     ],
   },
 ];
