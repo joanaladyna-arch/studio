@@ -31,6 +31,7 @@ import { MasterBookManager } from "@/components/master-book-manager";
 import { AdminMessagerie } from "@/components/admin-messagerie";
 import { PublisherReviewQueue } from "@/components/publisher-review-queue";
 import { MissingBookReportsQueue } from "@/components/missing-book-reports-queue";
+import { QuoteSubmissionsQueue } from "@/components/quote-submissions-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
 import { VisionImportManager } from "@/components/vision-import-manager";
@@ -626,6 +627,7 @@ export default function AdminPage() {
         <AdminMessagerie />
         <PublisherReviewQueue />
         <MissingBookReportsQueue />
+        <QuoteSubmissionsQueue />
         <AdminAnalytics />
 
         {/* EXCEL IMPORT SECTION */}

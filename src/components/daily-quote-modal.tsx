@@ -2,10 +2,12 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Quote } from "lucide-react";
+import { Quote, Heart } from "lucide-react";
 import { useUser, useFirestore, useCollection } from "@/firebase";
-import { collection, query } from "firebase/firestore";
+import { collection, query, where, doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { getDailyQuote } from "@/lib/daily-quotes";
+import { slugify } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 /**
  * "Un jour, une citation" — s'affiche automatiquement à l'ouverture de
@@ -18,7 +20,9 @@ import { getDailyQuote } from "@/lib/daily-quotes";
 export function DailyQuoteModal() {
   const { user } = useUser();
   const db = useFirestore();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const booksQuery = useMemo(() => {
     if (!db || !user) return null;
@@ -26,7 +30,34 @@ export function DailyQuoteModal() {
   }, [db, user]);
   const { data: booksRaw = [] } = useCollection(booksQuery);
 
-  const dailyQuote = useMemo(() => getDailyQuote(booksRaw || []), [booksRaw]);
+  const communityQuotesQuery = useMemo(() => {
+    if (!db) return null;
+    return query(collection(db, "quoteSubmissions"), where("status", "==", "approved"));
+  }, [db]);
+  const { data: communityQuotesRaw = [] } = useCollection(communityQuotesQuery);
+
+  const dailyQuote = useMemo(
+    () => getDailyQuote(booksRaw || [], (communityQuotesRaw || []).map((q: any) => ({ text: q.text, author: q.author }))),
+    [booksRaw, communityQuotesRaw]
+  );
+
+  useEffect(() => { setSaved(false); }, [dailyQuote?.text]);
+
+  const saveToCarnet = async () => {
+    if (!db || !user || !dailyQuote) return;
+    try {
+      const id = slugify(`${dailyQuote.text}-${dailyQuote.author}`).slice(0, 140) || `citation-${Date.now()}`;
+      await setDoc(doc(db, "users", user.uid, "savedQuotes", id), {
+        text: dailyQuote.text,
+        author: dailyQuote.author,
+        savedAt: serverTimestamp(),
+      }, { merge: true });
+      setSaved(true);
+      toast({ title: "Citation épinglée", description: "Retrouve-la dans ton Carnet de Citations." });
+    } catch (err) {
+      console.error("Save Daily Quote Error:", err);
+    }
+  };
 
   useEffect(() => {
     if (typeof window === "undefined" || !dailyQuote) return;
@@ -57,6 +88,16 @@ export function DailyQuoteModal() {
         <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mt-4">
           {dailyQuote.isOwn ? `📖 Depuis ton Carnet — ${dailyQuote.author}` : `✦ ${dailyQuote.author} — Petite sélection Lectoria`}
         </p>
+        {!dailyQuote.isOwn && (
+          <button
+            onClick={saveToCarnet}
+            disabled={saved}
+            className="mt-4 inline-flex items-center gap-1.5 text-xs italic text-rose/70 hover:text-rose transition-colors disabled:text-rose"
+          >
+            <Heart className={saved ? "h-4 w-4 fill-rose" : "h-4 w-4"} />
+            {saved ? "Épinglée dans ton Carnet" : "Épingler dans mon Carnet"}
+          </button>
+        )}
         <button
           onClick={dismiss}
           className="mt-6 h-11 px-8 rounded-full bg-primary text-primary-foreground font-headline italic text-sm transition-transform active:scale-95"

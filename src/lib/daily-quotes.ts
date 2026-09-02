@@ -31,6 +31,17 @@ export const PUBLIC_DOMAIN_QUOTES: { text: string; author: string }[] = [
   { text: "Les grandes pensées viennent du cœur.", author: "Vauvenargues" },
   { text: "Le temps que tu perds pour ta rose est ce qui fait ta rose si importante.", author: "Antoine de Saint-Exupéry" },
   { text: "Il faut cultiver notre jardin.", author: "Voltaire" },
+  { text: "Rien ne se perd, rien ne se crée, tout se transforme.", author: "Antoine Lavoisier" },
+  { text: "Le bonheur n'est pas une gare où l'on arrive, mais une manière de voyager.", author: "Marcel Proust" },
+  { text: "Il faut être toujours ivre. Tout est là.", author: "Charles Baudelaire" },
+  { text: "Le seul véritable voyage, ce ne serait pas d'aller vers de nouveaux paysages, mais d'avoir d'autres yeux.", author: "Marcel Proust" },
+  { text: "La lecture est une amitié.", author: "Marcel Proust" },
+  { text: "Les livres nous font partir sans qu'on bouge de place.", author: "Victor Hugo" },
+  { text: "Un livre est un ami qui ne trompe jamais.", author: "Victor Hugo" },
+  { text: "Ceux qui vivent, ce sont ceux qui luttent.", author: "Victor Hugo" },
+  { text: "Il n'est pas certain que tout soit incertain.", author: "Blaise Pascal" },
+  { text: "Le cœur a ses raisons que la raison ne connaît point.", author: "Blaise Pascal" },
+  { text: "L'homme n'est qu'un roseau, le plus faible de la nature, mais c'est un roseau pensant.", author: "Blaise Pascal" },
 ];
 
 export type DailyQuote = { text: string; author: string; isOwn: boolean };
@@ -39,11 +50,14 @@ export type DailyQuote = { text: string; author: string; isOwn: boolean };
  * Citation du jour, partagée entre la fenêtre d'ouverture (Accueil) et
  * tout autre usage futur. Alterne entre les citations déjà enregistrées
  * par la lectrice sur ses livres (champ favoriteQuote, même source que
- * Journal > Carnet de Citations) et la petite sélection ci-dessus.
+ * Journal > Carnet de Citations), la petite sélection ci-dessus, et les
+ * citations proposées par la communauté puis validées par
+ * l'administratrice (voir quote-submissions-queue.tsx — `communityQuotes`
+ * vient d'une lecture de `quoteSubmissions` où status == "approved").
  * Index calculé à partir du jour de l'année : stable toute la journée,
  * change automatiquement à minuit, sans tâche planifiée nécessaire.
  */
-export function getDailyQuote(booksRaw: any[]): DailyQuote | null {
+export function getDailyQuote(booksRaw: any[], communityQuotes: { text: string; author: string }[] = []): DailyQuote | null {
   const citationPool: DailyQuote[] = (booksRaw || [])
     .filter((b: any) => (b?.favoriteQuote || "").toString().trim())
     .map((b: any) => ({
@@ -51,7 +65,11 @@ export function getDailyQuote(booksRaw: any[]): DailyQuote | null {
       author: `${b.title || ""}${b.author ? " — " + b.author : ""}`,
       isOwn: true,
     }));
-  const pool: DailyQuote[] = [...citationPool, ...PUBLIC_DOMAIN_QUOTES.map((q) => ({ ...q, isOwn: false }))];
+  const pool: DailyQuote[] = [
+    ...citationPool,
+    ...PUBLIC_DOMAIN_QUOTES.map((q) => ({ ...q, isOwn: false })),
+    ...communityQuotes.map((q) => ({ ...q, isOwn: false })),
+  ];
   if (pool.length === 0) return null;
   const start = new Date(new Date().getFullYear(), 0, 0);
   const dayOfYear = Math.floor((Date.now() - start.getTime()) / 86400000);
