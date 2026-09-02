@@ -50,7 +50,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { cn, toArray, ADMIN_EMAILS, FOUNDER_EMAILS, cleanBookTitle } from '@/lib/utils';
+import { cn, toArray, ADMIN_EMAILS, FOUNDER_EMAILS, cleanBookTitle, publisherKey } from '@/lib/utils';
 import { useUser, useFirestore, useDoc, useCollection, useAuth, useStorage } from '@/firebase';
 import { BookCover } from '@/components/book-cover';
 import { BookShelf } from '@/components/book-shelf';
@@ -262,6 +262,19 @@ export default function ProfilePage() {
       <p className="font-headline italic text-primary/60">Ouverture de votre réserve...</p>
     </div>
   );
+
+  // Certains comptes ont accumulé des doublons dans followedPublishers
+  // (variantes de casse/espaces suivies séparément avant que le suivi ne
+  // soit vérifié via publisherKey) — on affiche une seule entrée par
+  // éditeur normalisé plutôt que d'attendre une purge des données.
+  const dedupedFollowedPublishers = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const p of toArray<string>(profile?.followedPublishers)) {
+      const key = publisherKey(p);
+      if (key && !seen.has(key)) seen.set(key, p.trim());
+    }
+    return Array.from(seen.values());
+  }, [profile?.followedPublishers]);
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Lectoria';
   const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
@@ -573,7 +586,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between px-2">
             <h3 className={cn("font-headline italic text-lg", isAmbientDark && "text-[#F5F1E8]")}>Auteurs suivis ({followedAuthorsInfo.length})</h3>
           </div>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar px-2 pb-1">
+          <div className="flex flex-wrap gap-4 px-2 pb-1">
             {followedAuthorsInfo.map((a) => (
               <Link key={a.slug} href={`/author/${encodeURIComponent(a.name || a.slug)}`} className="shrink-0 w-16 text-center group">
                 <Avatar className="h-12 w-12 mx-auto border-2 border-white shadow-sm group-hover:scale-105 transition-transform">
@@ -587,15 +600,15 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {toArray<string>(profile?.followedPublishers).length > 0 && (
+      {dedupedFollowedPublishers.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between px-2">
             <h3 className={cn("font-headline italic text-lg", isAmbientDark && "text-[#F5F1E8]")}>
-              Éditeurs Préférés ({toArray<string>(profile?.followedPublishers).length})
+              Éditeurs Préférés ({dedupedFollowedPublishers.length})
             </h3>
           </div>
           <div className="flex flex-wrap gap-2 px-2">
-            {toArray<string>(profile?.followedPublishers).map((pub) => (
+            {dedupedFollowedPublishers.map((pub) => (
               <Badge
                 key={pub}
                 variant="outline"
@@ -606,7 +619,13 @@ export default function ProfilePage() {
                 <button
                   onClick={async () => {
                     if (!db || !user) return;
-                    await setDoc(doc(db, "users", user.uid), { followedPublishers: arrayRemove(pub) }, { merge: true });
+                    // Retire toutes les variantes (casse/espaces) qui
+                    // désignent le même éditeur, plutôt qu'une seule
+                    // occurrence exacte — sans ça, un clic sur un éditeur
+                    // en double laisserait les autres doublons derrière.
+                    const key = publisherKey(pub);
+                    const variants = toArray<string>(profile?.followedPublishers).filter((p) => publisherKey(p) === key);
+                    await setDoc(doc(db, "users", user.uid), { followedPublishers: arrayRemove(...variants) }, { merge: true });
                   }}
                   className="h-6 w-6 -m-1 flex items-center justify-center opacity-40 hover:opacity-100 transition-opacity"
                   aria-label={`Ne plus suivre ${pub}`}
