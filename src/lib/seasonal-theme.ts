@@ -36,6 +36,11 @@ export const SEASONAL_THEMES: SeasonalTheme[] = [
     illustration: "/seasonal/ete.svg",
   },
   {
+    id: "rentree", label: "Rentrée",
+    top: "#F2EFE4", bottom: "#7C8B67", accent: "#A8442E", ink: "#2E2A20",
+    illustration: "/seasonal/rentree.png",
+  },
+  {
     id: "automne", label: "Automne",
     top: "#F6EEE2", bottom: "#AA7550", accent: "#7A431F", ink: "#33200F",
     illustration: "/seasonal/automne.svg",
@@ -58,13 +63,13 @@ function themeById(id: string): SeasonalTheme {
 
 /**
  * Détermine la saison du jour à partir du mois/jour courant (indépendant
- * de l'année). Les bornes suivent exactement le calendrier du brief —
- * qui laisse lui-même deux périodes sans thème assigné (21 avril → 20
- * juin, et 22 août → 21 septembre : ni le Printemps ni l'Été/l'Automne
- * ne les couvrent). Plutôt que d'inventer des bornes non demandées pour
- * combler ces trous, `null` signale "pas de saison active" et
- * splash-screen.tsx retombe alors sur le design d'origine (fond marine)
- * pour ces semaines-là.
+ * de l'année). Les bornes suivent exactement le calendrier du brief, plus
+ * la Rentrée (1er → 21 septembre) ajoutée ensuite — qui comble
+ * entièrement le trou 22 août → 21 septembre. Il reste une période sans
+ * thème assigné (21 avril → 20 juin, entre Printemps et Été). Plutôt que
+ * d'inventer des bornes non demandées pour la combler, `null` signale
+ * "pas de saison active" et splash-screen.tsx retombe alors sur le
+ * design d'origine (fond marine) pour ces semaines-là.
  */
 export function getCurrentSeasonalTheme(date: Date = new Date()): SeasonalTheme | null {
   const m = date.getMonth() + 1; // 1-12
@@ -74,6 +79,7 @@ export function getCurrentSeasonalTheme(date: Date = new Date()): SeasonalTheme 
   if (md >= 207 && md <= 215) return themeById("valentin");
   if (md >= 320 && md <= 420) return themeById("printemps");
   if (md >= 621 && md <= 821) return themeById("ete");
+  if (md >= 901 && md <= 921) return themeById("rentree");
   if (md >= 922 && md <= 1130) return themeById("automne");
   if (md >= 1201 && md <= 1226) return themeById("noel");
   // Hiver (hors Noël) : 27 déc → 19 mars, chevauche le nouvel an donc pas
