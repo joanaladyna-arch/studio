@@ -8,7 +8,9 @@ import {
 } from "firebase/firestore";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bell, BookHeart, Sparkles, Rocket } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Bell, BookHeart, Sparkles, Rocket, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -54,6 +56,7 @@ export function NotificationBell() {
   const [personal, setPersonal] = useState<NotifDoc[]>([]);
   const [broadcast, setBroadcast] = useState<NotifDoc[]>([]);
   const [open, setOpen] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState<NotifDoc | null>(null);
 
   useEffect(() => {
     if (!db || !user) return;
@@ -114,12 +117,20 @@ export function NotificationBell() {
   const handleClick = (n: NotifDoc) => {
     markRead(n);
     setOpen(false);
-    if (n.link) router.push(n.link);
+    setSelectedNotif(n);
+  };
+
+  const goToLink = () => {
+    if (!selectedNotif?.link) return;
+    const link = selectedNotif.link;
+    setSelectedNotif(null);
+    router.push(link);
   };
 
   if (!user) return null;
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
@@ -185,5 +196,37 @@ export function NotificationBell() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
+      <Dialog open={!!selectedNotif} onOpenChange={(v) => { if (!v) setSelectedNotif(null); }}>
+        <DialogContent className="glass-card border-none max-w-md bg-white/95 backdrop-blur-3xl p-8">
+          {selectedNotif && (() => {
+            const meta = TYPE_META[selectedNotif.type] || TYPE_META.app_update;
+            const Icon = meta.icon;
+            return (
+              <>
+                <DialogHeader>
+                  <div className={cn("h-12 w-12 rounded-full flex items-center justify-center mb-2", meta.className)}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <DialogTitle className="font-headline text-2xl italic">{selectedNotif.title}</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="max-h-[50vh] pr-3">
+                  <p className="text-sm italic leading-relaxed whitespace-pre-line">{selectedNotif.body}</p>
+                </ScrollArea>
+                {selectedNotif.createdAt?.toDate && (
+                  <p className="text-[10px] opacity-40 uppercase tracking-wide">
+                    {selectedNotif.createdAt.toDate().toLocaleDateString("fr-FR")}
+                  </p>
+                )}
+                {selectedNotif.link && (
+                  <Button onClick={goToLink} className="w-full h-11 rounded-xl italic font-headline bg-primary">
+                    Voir <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
