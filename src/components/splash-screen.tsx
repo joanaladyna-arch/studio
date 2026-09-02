@@ -40,7 +40,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
           src={theme.illustration}
           alt=""
           className="absolute z-0 pointer-events-none"
-          style={{ bottom: "-4vh", right: "-6vw", width: "58vw", maxWidth: 320, opacity: 0.2 }}
+          style={{ bottom: "-1vh", right: "-2vw", width: "58vw", maxWidth: 320, height: "auto", opacity: 0.2 }}
         />
       )}
 
