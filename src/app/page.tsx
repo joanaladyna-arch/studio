@@ -331,7 +331,7 @@ export default function Home() {
       </section>
 
 
-      <div className="grid lg:grid-cols-[320px_1fr] gap-8 lg:gap-12 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 lg:gap-12 items-start">
         <div className="lg:sticky lg:top-24">
           <BadgeVitrine allBooks={allBooks} />
         </div>
@@ -370,7 +370,7 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    <CardContent className="p-5 md:p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
+                    <CardContent className="p-5 md:p-12 flex flex-col justify-between" style={{ background: "linear-gradient(135deg, #EFE6D4, #E4D4B8)" }}>
                       <div className="space-y-4 md:space-y-8">
                         <div>
                           <h3 className="text-xl md:text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
