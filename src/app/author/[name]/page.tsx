@@ -32,7 +32,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch, defaultAvatarUrl } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch, defaultAvatarUrl, syncMasterBookReadCount } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 import { AuthorEditor } from "@/components/author-editor";
 import { MasterBookEditor } from "@/components/master-book-editor";
@@ -367,7 +367,8 @@ export default function AuthorPage() {
       };
 
       await addDoc(booksRef, bookData)
-        .then(() => {
+        .then(async () => {
+          await syncMasterBookReadCount(db, masterBookId, null, selectedStatus);
           toast({ title: "Pépite ajoutée", description: `${pendingBook.title} a rejoint votre réserve.` });
           setPendingBook(null);
         })

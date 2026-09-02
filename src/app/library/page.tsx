@@ -83,6 +83,7 @@ export interface MasterBook {
   themes?: string[];
   volume?: string;
   saga?: string;
+  readCount?: number;
 }
 
 export interface UserBook {

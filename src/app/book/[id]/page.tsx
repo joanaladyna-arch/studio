@@ -55,7 +55,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey, fetchWithTimeout } from "@/lib/utils";
+import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey, fetchWithTimeout, syncMasterBookReadCount } from "@/lib/utils";
 import { TagDropdown } from "@/components/tag-dropdown";
 import { UserBook, MasterBook, STATUSES, RANKS, SELECTABLE_RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
@@ -151,6 +151,16 @@ export default function BookDetailPage() {
   // les modifications en cours — c'était la cause du bug "mes coches
   // disparaissent avant que j'aie pu enregistrer".
   const hasInitialized = useRef(false);
+  // Pour le badge "Lu par X lectrices Lectoria" : bascule vers l'onglet
+  // "Mon Journal" (où vit la section Avis) puis défile jusqu'à elle. Le
+  // Tabs n'étant pas contrôlé, on simule un clic sur son déclencheur
+  // plutôt que de tout restructurer en state contrôlé pour ce seul lien.
+  const journalTabTriggerRef = useRef<HTMLButtonElement>(null);
+  const reviewsSectionRef = useRef<HTMLDivElement>(null);
+  const goToReviews = () => {
+    journalTabTriggerRef.current?.click();
+    setTimeout(() => reviewsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
   const [isUploading, setIsUploading] = useState(false);
   const [newCoverUrl, setNewCoverUrl] = useState("");
   const [ratingGridOpen, setRatingGridOpen] = useState(false);
@@ -549,6 +559,9 @@ export default function BookDetailPage() {
         ...nextReadUpdate,
         updatedAt: serverTimestamp()
       });
+      if (db && masterBook?.id) {
+        await syncMasterBookReadCount(db, masterBook.id, userBook?.status, editedData.status);
+      }
       proposeMasterCompletion({ description: (editedData as any).description });
 
       // Miroir vers la collection publique bookReviews, pour afficher les
@@ -697,6 +710,9 @@ export default function BookDetailPage() {
     if (!userBookRef || !confirm("Retirer ce livre de votre réserve ?")) return;
     try {
       await deleteDoc(userBookRef);
+      if (db && masterBook?.id) {
+        await syncMasterBookReadCount(db, masterBook.id, userBook?.status, null);
+      }
       toast({ title: "Livre retiré" });
       router.push("/library");
     } catch (err) {
@@ -780,6 +796,17 @@ export default function BookDetailPage() {
             <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Éditeur</div><span className="text-foreground">{(userBook as any)?.publisher || masterBook?.publisher || "N/A"}</span></div>
             <div className="space-y-1"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> Langue</div><span className="text-foreground">{masterBook?.language || "N/A"}</span></div>
           </div>
+          {(masterBook?.readCount || 0) > 0 && (
+            <button
+              onClick={goToReviews}
+              className="inline-flex items-center gap-2 text-xs italic text-primary/70 bg-primary/5 hover:bg-primary/10 transition-colors rounded-full px-4 py-2 w-fit"
+            >
+              <Users className="h-4 w-4 text-rose shrink-0" />
+              <span>
+                Lu par <strong className="font-bold">{masterBook?.readCount}</strong> lectrice{(masterBook?.readCount || 0) > 1 ? "s" : ""} Lectoria — rendez-vous dans la communauté pour voir leur avis
+              </span>
+            </button>
+          )}
           <div className="flex flex-wrap gap-4">
             <button onClick={() => { setEditionsOpen(true); findOtherEditions(); }}
               className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors">
@@ -848,7 +875,7 @@ export default function BookDetailPage() {
       <Tabs defaultValue="overview">
         <TabsList className="bg-transparent border-b h-14 justify-start p-0 gap-12 mb-10 rounded-none w-full">
           <TabsTrigger value="overview" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">L'Œuvre</TabsTrigger>
-          <TabsTrigger value="journal" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">Mon Journal</TabsTrigger>
+          <TabsTrigger ref={journalTabTriggerRef} value="journal" className="rounded-none border-b-4 border-transparent font-headline italic text-2xl data-[state=active]:border-primary data-[state=active]:bg-transparent pb-4 px-0">Mon Journal</TabsTrigger>
         </TabsList>
 
         {/* ══ L'ŒUVRE ══ */}
@@ -1390,7 +1417,7 @@ export default function BookDetailPage() {
 
           {/* Avis des lectrices */}
           {otherReaderReviews.length > 0 && (
-            <div className="space-y-6 pt-6 border-t border-primary/5">
+            <div ref={reviewsSectionRef} className="space-y-6 pt-6 border-t border-primary/5">
               <Label className="italic text-2xl font-headline flex items-center gap-3">
                 <Users className="h-5 w-5 text-rose" /> Avis des lectrices ({otherReaderReviews.length})
               </Label>

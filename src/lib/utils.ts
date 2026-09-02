@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { doc, updateDoc, increment, type Firestore } from "firebase/firestore"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -14,6 +15,37 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function toArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+/**
+ * Tient à jour le compteur dénormalisé `readCount` sur masterBooks ("Lu
+ * par X lectrices Lectoria", affiché sur la fiche livre) à chaque
+ * transition de statut d'un exemplaire personnel — ajout, modification
+ * ou suppression. Appelé depuis les 4 écrans qui écrivent un statut sur
+ * un livre (add, author, master-book preview, book/[id]) plutôt qu'un
+ * déclencheur serveur (ce projet n'a pas de Cloud Functions), donc
+ * chaque site d'écriture doit appeler cette fonction lui-même juste
+ * après avoir réussi son écriture principale.
+ *
+ * `increment()` est atomique côté serveur : pas de lecture préalable
+ * nécessaire, donc pas de condition de course entre deux lectrices qui
+ * termineraient le même livre au même moment.
+ */
+export async function syncMasterBookReadCount(
+  db: Firestore,
+  masterBookId: string | null | undefined,
+  previousStatus: string | null | undefined,
+  nextStatus: string | null | undefined
+): Promise<void> {
+  if (!masterBookId) return;
+  const wasRead = previousStatus === "read" || previousStatus === "reread";
+  const isRead = nextStatus === "read" || nextStatus === "reread";
+  if (wasRead === isRead) return;
+  try {
+    await updateDoc(doc(db, "masterBooks", masterBookId), { readCount: increment(isRead ? 1 : -1) });
+  } catch (err) {
+    console.error("Sync ReadCount Error:", err);
+  }
 }
 
 /**

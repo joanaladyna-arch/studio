@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BookCover } from "@/components/book-cover";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, cleanAuthorName, cleanBookTitle, cleanDescriptionHtml, authorKey } from "@/lib/utils";
+import { cn, cleanAuthorName, cleanBookTitle, cleanDescriptionHtml, authorKey, syncMasterBookReadCount } from "@/lib/utils";
 
 /**
  * Fiche livre PUBLIQUE : consultable même quand le livre n'est pas (ou
@@ -103,6 +103,7 @@ export default function MasterBookPreviewPage() {
         dateAdded: serverTimestamp(),
         countTowardGoals: true,
       });
+      await syncMasterBookReadCount(db, book.id, null, selectedStatus);
       toast({ title: "Pépite ajoutée", description: `${book.title} est dans ta bibliothèque.` });
       router.push("/library");
     } catch (err) {

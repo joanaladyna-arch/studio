@@ -33,7 +33,7 @@ import { IsbnScannerDialog } from "@/components/isbn-scanner-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga, isFrenchLanguage, languageLabel } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga, isFrenchLanguage, languageLabel, syncMasterBookReadCount } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 
 export default function AddBookPage() {
@@ -568,7 +568,8 @@ export default function AddBookPage() {
       };
 
       await addDoc(collection(db, "users", user.uid, "books"), userBookData);
-      
+      await syncMasterBookReadCount(db, masterBookId, null, selectedStatus);
+
       toast({ title: "Pépite ajoutée", description: `${pendingBook.title} est dans votre réserve.` });
       setPendingBook(null);
     } catch (err: any) {
