@@ -20,8 +20,7 @@ import {
   TrendingUp,
   Bell,
   Quote,
-  Star,
-  Heart
+  Star
 } from "lucide-react";
 import Image from 'next/image';
 import Link from 'next/link';
@@ -35,6 +34,18 @@ import { collection, doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DailyQuoteModal } from '@/components/daily-quote-modal';
 import { TrackAppOpen } from '@/components/track-app-open';
+import { BadgeVitrine } from '@/components/badge-vitrine';
+import { getCurrentSeasonalTheme } from '@/lib/seasonal-theme';
+
+function getGoalMotivation(name: string, progress: number, remaining: number) {
+  if (progress >= 100) return `Objectif atteint, ${name} ! Quelle année de lecture. 🎉`;
+  if (progress >= 90) return `✦ Allez ${name}, tu y es presque — plus que ${remaining} livre${remaining > 1 ? "s" : ""} et l'objectif de l'année est atteint !`;
+  if (progress >= 75) return `Presque là, ${name} — encore ${remaining} livre${remaining > 1 ? "s" : ""} et l'objectif est bouclé.`;
+  if (progress >= 50) return `À mi-chemin, ${name} — la suite s'annonce belle.`;
+  if (progress >= 25) return `Tu avances bien, ${name}, continue sur ta lancée.`;
+  if (progress > 0) return `Beau départ, ${name} — chaque page compte.`;
+  return `Une nouvelle année de lecture commence, ${name} — à toi de l'écrire.`;
+}
 
 export default function Home() {
   const { user, loading: authLoading } = useUser();
@@ -47,6 +58,7 @@ export default function Home() {
 
   const { data: profile } = useDoc(profileRef);
   const isAmbientDark = useAmbientDark();
+  const seasonTheme = useMemo(() => getCurrentSeasonalTheme(), []);
 
   // Indice affiché une seule fois pour signaler ce à quoi sert la cloche
   // — la moitié des testeuses bêta ne l'avait pas remarquée. Se ferme
@@ -142,6 +154,10 @@ export default function Home() {
     return allBooks.find((b: any) => b.status === 'pal' && b.isNextRead) || null;
   }, [allBooks]);
 
+  const coupsDeCoeurCount = useMemo(() => allBooks.filter((b: any) => b.plumeRank && b.plumeRank !== 'dnf').length, [allBooks]);
+  const envieCount = useMemo(() => allBooks.filter((b: any) => b.status === 'envie').length, [allBooks]);
+  const avisCount = useMemo(() => allBooks.filter((b: any) => (b.review || '').toString().trim()).length, [allBooks]);
+
   const stats = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -220,8 +236,14 @@ export default function Home() {
     <div className="space-y-8 md:space-y-16 animate-paper">
       <DailyQuoteModal />
       <TrackAppOpen />
-      <header className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 pt-4 md:pt-10">
-        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
+      <header
+        className="relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 md:gap-10 p-5 md:p-8 rounded-[2rem] md:mt-6"
+        style={seasonTheme ? { background: `linear-gradient(120deg, ${seasonTheme.top} 0%, ${seasonTheme.bottom} 140%)` } : undefined}
+      >
+        {seasonTheme && (
+          <span aria-hidden className="absolute -top-3 right-8 text-6xl opacity-[0.18] rotate-12 pointer-events-none">{seasonTheme.emoji}</span>
+        )}
+        <div className="relative flex flex-col md:flex-row items-center gap-4 md:gap-8 text-center md:text-left">
           <Link href="/profile" className="relative group">
             <Avatar className="h-20 w-20 sm:h-28 sm:w-28 md:h-32 md:w-32 border-4 border-white shadow-2xl group-hover:scale-110 transition-transform duration-500">
               <AvatarImage src={userPhoto} className="object-cover" />
@@ -232,12 +254,19 @@ export default function Home() {
             </div>
           </Link>
           <div className="space-y-1 lg:space-y-2">
-            <h1 className={cn("text-2xl sm:text-3xl lg:text-5xl font-headline italic tracking-tight leading-tight break-words", isAmbientDark ? "text-[#F5F1E8]" : "text-foreground")}>Bonjour, {userName}</h1>
-            <p className={cn("italic text-sm lg:text-lg", isAmbientDark ? "text-[#F5F1E8]/70" : "text-muted-foreground opacity-80")}>“Chaque page tournée est un souvenir gravé.”</p>
+            <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
+              <h1 className={cn("text-2xl sm:text-3xl lg:text-5xl font-headline italic tracking-tight leading-tight break-words", isAmbientDark && !seasonTheme ? "text-[#F5F1E8]" : "text-foreground")}>Bonjour, {userName}</h1>
+              {seasonTheme && (
+                <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-white/40">
+                  {seasonTheme.emoji} {seasonTheme.label}
+                </span>
+              )}
+            </div>
+            <p className={cn("italic text-sm lg:text-lg", isAmbientDark && !seasonTheme ? "text-[#F5F1E8]/70" : "text-muted-foreground opacity-80")}>“Chaque page tournée est un souvenir gravé.”</p>
           </div>
         </div>
-        
-        <div className="flex gap-2 lg:gap-4 items-center">
+
+        <div className="relative flex gap-2 lg:gap-4 items-center">
           <Link
             href="/actualites"
             onClick={dismissBellHint}
@@ -276,7 +305,10 @@ export default function Home() {
             Détails
           </Link>
         </div>
-        <Card className="glass-card p-4 md:p-6 border-none bg-white/60">
+        <Card
+          className="glass-card p-4 md:p-6 border-none"
+          style={seasonTheme ? { background: `linear-gradient(120deg, ${seasonTheme.top} 0%, ${seasonTheme.bottom} 140%)` } : { background: "rgba(255,255,255,0.6)" }}
+        >
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
             <Trophy className="h-5 w-5 md:h-7 md:w-7 text-copper shrink-0" />
             <div className="flex-1 min-w-[160px] space-y-2">
@@ -292,190 +324,223 @@ export default function Home() {
               <span className="hidden sm:flex items-center gap-1.5"><Headphones className="h-3.5 w-3.5 text-copper/70" /> {stats.audioCount}h</span>
             </div>
           </div>
+          <p className="font-headline italic text-sm text-copper mt-3 pt-3 border-t border-dashed border-copper/25 w-full">
+            {getGoalMotivation(userName, stats.annualProgress, Math.max(0, stats.goals.annual - stats.annualCount))}
+          </p>
         </Card>
       </section>
 
 
-      <section className="space-y-6 md:space-y-8">
-        <div className="flex justify-between items-center px-2">
-          <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
-            <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Votre pile de lectures
-          </h2>
-          {readBooks.length > 0 && (
-            <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
-              <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-1 md:ml-2 group-hover:translate-x-2 transition-transform" /></Link>
-            </Button>
-          )}
+      <div className="grid lg:grid-cols-[320px_1fr] gap-8 lg:gap-12">
+        <div>
+          <BadgeVitrine allBooks={allBooks} />
         </div>
-        {readBooks.length > 0 ? (
-          <BookShelf books={readBooks} />
-        ) : (
-          <p className="text-muted-foreground italic px-2">Vos lectures terminées s'empileront ici, une à une.</p>
-        )}
-      </section>
 
-      {(lastRead || nextRead) && (
-        <div className="grid grid-cols-2 gap-3 md:gap-6">
-          <div className="flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-2xl md:rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
-            <div className="relative h-14 w-10 md:h-20 md:w-14 rounded-lg md:rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
-              {lastRead && <BookCover src={(lastRead as any).cover} alt={(lastRead as any).title || ""} className="object-cover" />}
-            </div>
-            <div className="min-w-0 space-y-0.5 md:space-y-1">
-              <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary/40">Tu viens de terminer</p>
-              {lastRead ? (
-                <Link href={`/book/${(lastRead as any).id}`} className="block">
-                  <p className="font-headline italic text-sm md:text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((lastRead as any).title)}</p>
-                  <p className="text-[10px] md:text-[11px] text-muted-foreground truncate">{cleanAuthorName((lastRead as any).author)}</p>
-                </Link>
-              ) : (
-                <p className="text-xs md:text-sm italic opacity-40">Aucune lecture terminée pour le moment.</p>
+        <div className="space-y-6 md:space-y-8">
+          <section className="space-y-4 md:space-y-8">
+            <div className="flex justify-between items-center">
+              <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
+                <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Lecture Actuelle
+              </h2>
+              {currentRead && (
+                 <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
+                   <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-1 md:ml-2 group-hover:translate-x-2 transition-transform" /></Link>
+                 </Button>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-2xl md:rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
-            <div className="relative h-14 w-10 md:h-20 md:w-14 rounded-lg md:rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
-              {nextRead && <BookCover src={(nextRead as any).cover} alt={(nextRead as any).title || ""} className="object-cover" />}
-            </div>
-            <div className="min-w-0 space-y-0.5 md:space-y-1">
-              <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary/40">À suivre</p>
-              {nextRead ? (
-                <Link href={`/book/${(nextRead as any).id}`} className="block">
-                  <p className="font-headline italic text-sm md:text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((nextRead as any).title)}</p>
-                  <p className="text-[10px] md:text-[11px] text-muted-foreground truncate">{cleanAuthorName((nextRead as any).author)}</p>
-                </Link>
-              ) : (
-                <Link href="/library" className="text-xs md:text-sm italic text-primary/50 hover:text-primary transition-colors">
-                  Épingle un livre de ta PAL →
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid lg:grid-cols-[1.8fr_1fr] gap-8 lg:gap-12">
-        <section className="space-y-4 md:space-y-8">
-          <div className="flex justify-between items-center">
-            <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
-              <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Lecture Actuelle
-            </h2>
-            {currentRead && (
-               <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
-                 <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-1 md:ml-2 group-hover:translate-x-2 transition-transform" /></Link>
-               </Button>
-            )}
-          </div>
-          {readingLoading ? (
-            <div className="h-60 flex items-center justify-center"><Loader2 className="animate-spin text-primary/20 h-10 w-10" /></div>
-          ) : currentReads.length > 0 ? (
-            <div className="space-y-3">
-              <Card
-                className="glass-card overflow-hidden border-none group transition-all duration-1000 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)]">
-                <div
-                  className={cn("grid sm:grid-cols-[280px_1fr] gap-0 transition-opacity duration-300", carouselFade ? "opacity-100" : "opacity-0")}
-                >
-                  <div className="relative aspect-[3/2] sm:aspect-[2/3] overflow-hidden">
-                    <BookCover
-                      src={activeBook?.cover}
-                      alt={activeBook?.title || ""}
-                      className="object-cover group-hover:scale-110 transition-transform duration-1000"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent mix-blend-overlay" />
-                    {currentReads.length > 1 && (
-                      <div className="absolute top-3 right-3 bg-black/40 text-white text-[10px] font-bold rounded-full px-2.5 py-1">
-                        {carouselIdx + 1}/{currentReads.length}
-                      </div>
-                    )}
-                  </div>
-                  <CardContent className="p-5 md:p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
-                    <div className="space-y-4 md:space-y-8">
-                      <div>
-                        <h3 className="text-xl md:text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
-                          {cleanBookTitle(activeBook?.title || "")}{activeBook?.volume ? ` — ${activeBook.volume}` : ""}
-                        </h3>
-                        <p className="text-xs md:text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1.5 md:mt-3">{cleanAuthorName(activeBook?.author || "")}</p>
-                      </div>
-                      <div className="space-y-2 md:space-y-5">
-                        <div className="flex justify-between text-xs font-bold uppercase tracking-widest opacity-60 italic">
-                          <span>Progression</span>
-                          <span>{activeBook?.progress || 0}%</span>
+            {readingLoading ? (
+              <div className="h-60 flex items-center justify-center"><Loader2 className="animate-spin text-primary/20 h-10 w-10" /></div>
+            ) : currentReads.length > 0 ? (
+              <div className="space-y-3">
+                <Card
+                  className="glass-card overflow-hidden border-none group transition-all duration-1000 hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)]">
+                  <div
+                    className={cn("grid sm:grid-cols-[280px_1fr] gap-0 transition-opacity duration-300", carouselFade ? "opacity-100" : "opacity-0")}
+                  >
+                    <div className="relative aspect-[3/2] sm:aspect-[2/3] overflow-hidden">
+                      <BookCover
+                        src={activeBook?.cover}
+                        alt={activeBook?.title || ""}
+                        className="object-cover group-hover:scale-110 transition-transform duration-1000"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent mix-blend-overlay" />
+                      {currentReads.length > 1 && (
+                        <div className="absolute top-3 right-3 bg-black/40 text-white text-[10px] font-bold rounded-full px-2.5 py-1">
+                          {carouselIdx + 1}/{currentReads.length}
                         </div>
-                        <Progress value={activeBook?.progress || 0} className="h-2 md:h-3 bg-primary/5" />
-                      </div>
+                      )}
                     </div>
-                    <Button asChild className="mt-6 md:mt-10 rounded-xl md:rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 h-11 md:h-16 text-sm md:text-xl font-headline italic transition-transform active:scale-95">
-                      <Link href={`/book/${activeBook?.id}`}>
-                        <PenTool className="mr-2 md:mr-3 h-4 w-4 md:h-6 md:w-6" /> Reprendre le voyage
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </div>
+                    <CardContent className="p-5 md:p-12 flex flex-col justify-between bg-gradient-to-br from-white to-white/50">
+                      <div className="space-y-4 md:space-y-8">
+                        <div>
+                          <h3 className="text-xl md:text-4xl font-headline italic leading-tight group-hover:text-primary transition-colors">
+                            {cleanBookTitle(activeBook?.title || "")}{activeBook?.volume ? ` — ${activeBook.volume}` : ""}
+                          </h3>
+                          <p className="text-xs md:text-md text-muted-foreground font-bold uppercase tracking-[0.2em] mt-1.5 md:mt-3">{cleanAuthorName(activeBook?.author || "")}</p>
+                        </div>
+                        <div className="space-y-2 md:space-y-5">
+                          <div className="flex justify-between text-xs font-bold uppercase tracking-widest opacity-60 italic">
+                            <span>Progression</span>
+                            <span>{activeBook?.progress || 0}%</span>
+                          </div>
+                          <Progress value={activeBook?.progress || 0} className="h-2 md:h-3 bg-primary/5" />
+                        </div>
+                      </div>
+                      <Button asChild className="mt-6 md:mt-10 rounded-xl md:rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 h-11 md:h-16 text-sm md:text-xl font-headline italic transition-transform active:scale-95">
+                        <Link href={`/book/${activeBook?.id}`}>
+                          <PenTool className="mr-2 md:mr-3 h-4 w-4 md:h-6 md:w-6" /> Reprendre le voyage
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </div>
+                </Card>
+                {currentReads.length > 1 && (
+                  <div className="flex items-center justify-center gap-2 pt-1">
+                    {currentReads.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setCarouselFade(false); setTimeout(() => { setCarouselIdx(i); setCarouselFade(true); }, 200); }}
+                        className={cn("h-2 rounded-full transition-all duration-300", i === carouselIdx ? "bg-primary w-6" : "bg-primary/20 w-2")}
+                        aria-label={`Livre ${i + 1}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Card className="glass-card p-10 md:p-24 text-center border-dashed border-primary/20 bg-white/20 group">
+                <BookOpen className="h-12 w-12 md:h-20 md:w-20 mx-auto text-primary/20 mb-4 md:mb-6 group-hover:scale-110 group-hover:text-primary/40 transition-all duration-700" />
+                <p className="text-primary/60 italic font-headline text-lg md:text-3xl mb-2">Réserve paisible.</p>
+                <p className="text-muted-foreground italic text-sm md:text-xl">Aucune lecture en cours pour le moment.</p>
+                <Button asChild variant="outline" className="mt-6 md:mt-10 rounded-xl md:rounded-2xl border-primary/20 text-primary h-10 md:h-14 px-6 md:px-12 text-sm md:text-lg shadow-sm hover:bg-white">
+                  <Link href="/add">Explorer vos étagères</Link>
+                </Button>
               </Card>
-              {currentReads.length > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-1">
-                  {currentReads.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setCarouselFade(false); setTimeout(() => { setCarouselIdx(i); setCarouselFade(true); }, 200); }}
-                      className={cn("h-2 rounded-full transition-all duration-300", i === carouselIdx ? "bg-primary w-6" : "bg-primary/20 w-2")}
-                      aria-label={`Livre ${i + 1}`}
-                    />
-                  ))}
+            )}
+          </section>
+
+          {(lastRead || nextRead) && (
+            <div className="grid grid-cols-2 gap-3 md:gap-6">
+              <div className="flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-2xl md:rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
+                <div className="relative h-14 w-10 md:h-20 md:w-14 rounded-lg md:rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
+                  {lastRead && <BookCover src={(lastRead as any).cover} alt={(lastRead as any).title || ""} className="object-cover" />}
                 </div>
+                <div className="min-w-0 space-y-0.5 md:space-y-1">
+                  <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary/40">Tu viens de terminer</p>
+                  {lastRead ? (
+                    <Link href={`/book/${(lastRead as any).id}`} className="block">
+                      <p className="font-headline italic text-sm md:text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((lastRead as any).title)}</p>
+                      <p className="text-[10px] md:text-[11px] text-muted-foreground truncate">{cleanAuthorName((lastRead as any).author)}</p>
+                    </Link>
+                  ) : (
+                    <p className="text-xs md:text-sm italic opacity-40">Aucune lecture terminée pour le moment.</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 md:gap-4 p-3 md:p-5 rounded-2xl md:rounded-[2rem] bg-white/40 border border-white/60 shadow-sm">
+                <div className="relative h-14 w-10 md:h-20 md:w-14 rounded-lg md:rounded-xl overflow-hidden shrink-0 bg-secondary/5 shadow-sm">
+                  {nextRead && <BookCover src={(nextRead as any).cover} alt={(nextRead as any).title || ""} className="object-cover" />}
+                </div>
+                <div className="min-w-0 space-y-0.5 md:space-y-1">
+                  <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-primary/40">À suivre</p>
+                  {nextRead ? (
+                    <Link href={`/book/${(nextRead as any).id}`} className="block">
+                      <p className="font-headline italic text-sm md:text-lg leading-tight truncate hover:text-primary transition-colors">{cleanBookTitle((nextRead as any).title)}</p>
+                      <p className="text-[10px] md:text-[11px] text-muted-foreground truncate">{cleanAuthorName((nextRead as any).author)}</p>
+                    </Link>
+                  ) : (
+                    <Link href="/library" className="text-xs md:text-sm italic text-primary/50 hover:text-primary transition-colors">
+                      Épingle un livre de ta PAL →
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <section className="space-y-4 md:space-y-8">
+            <div className="flex justify-between items-center px-2">
+              <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
+                <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Votre pile de lectures
+              </h2>
+              {readBooks.length > 0 && (
+                <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
+                  <Link href="/library" className="flex items-center">Voir tout <ChevronRight className="h-4 w-4 ml-1 md:ml-2 group-hover:translate-x-2 transition-transform" /></Link>
+                </Button>
               )}
             </div>
-          ) : (
-            <Card className="glass-card p-10 md:p-24 text-center border-dashed border-primary/20 bg-white/20 group">
-              <BookOpen className="h-12 w-12 md:h-20 md:w-20 mx-auto text-primary/20 mb-4 md:mb-6 group-hover:scale-110 group-hover:text-primary/40 transition-all duration-700" />
-              <p className="text-primary/60 italic font-headline text-lg md:text-3xl mb-2">Réserve paisible.</p>
-              <p className="text-muted-foreground italic text-sm md:text-xl">Aucune lecture en cours pour le moment.</p>
-              <Button asChild variant="outline" className="mt-6 md:mt-10 rounded-xl md:rounded-2xl border-primary/20 text-primary h-10 md:h-14 px-6 md:px-12 text-sm md:text-lg shadow-sm hover:bg-white">
-                <Link href="/add">Explorer vos étagères</Link>
-              </Button>
-            </Card>
-          )}
-        </section>
+            {readBooks.length > 0 ? (
+              <BookShelf books={readBooks} />
+            ) : (
+              <p className="text-muted-foreground italic px-2">Vos lectures terminées s'empileront ici, une à une.</p>
+            )}
+          </section>
 
-        <section className="space-y-6 lg:space-y-12">
-          <div className="space-y-4 lg:space-y-8">
+          <section className="space-y-4 lg:space-y-8">
             <h2 className={cn("text-xl lg:text-4xl font-headline flex items-center gap-2 lg:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
               <TrendingUp className="h-5 w-5 lg:h-8 lg:w-8 text-primary/40" /> Raccourcis
             </h2>
-            <div className="grid gap-3 lg:gap-6">
-              <Link href="/library" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <BookOpen className="h-5 w-5 lg:h-8 lg:w-8 text-primary" />
+            <div className="grid grid-cols-2 gap-3 lg:gap-6">
+              <Link href="/library" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-copper/10 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="none" stroke="#B08457" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 5.5 C6.5 4.2 9.2 4.2 12 5.5 V19 C9.2 17.7 6.5 17.7 4 19 Z"/>
+                      <path d="M20 5.5 C17.5 4.2 14.8 4.2 12 5.5 V19 C14.8 17.7 17.5 17.7 20 19 Z"/>
+                    </svg>
+                  </div>
+                  <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{allBooks.length} livres</span>
                 </div>
-                <span className="font-headline text-lg lg:text-3xl italic">Bibliothèque</span>
+                <span className="font-headline italic text-base lg:text-xl">Bibliothèque</span>
               </Link>
-              <Link href="/profile/badges" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-copper/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Trophy className="h-5 w-5 lg:h-8 lg:w-8 text-copper" />
+              <Link href="/coups-de-coeur" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-rose/15 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="#D98BA0" stroke="none">
+                      <path d="M12 20 C7 16.5 3 13 3 8.8 C3 6.1 5.1 4 7.7 4 C9.4 4 10.9 4.9 12 6.3 C13.1 4.9 14.6 4 16.3 4 C18.9 4 21 6.1 21 8.8 C21 13 17 16.5 12 20 Z"/>
+                    </svg>
+                  </div>
+                  <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{coupsDeCoeurCount} coups de cœur</span>
                 </div>
-                <span className="font-headline text-lg lg:text-3xl italic">Mes Badges</span>
+                <span className="font-headline italic text-base lg:text-xl">Coups de Cœur</span>
               </Link>
-              <Link href="/coups-de-coeur" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-rose/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Sparkles className="h-5 w-5 lg:h-8 lg:w-8 text-rose" />
+              <Link href="/library?filter=envie" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-copper/10 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="none" stroke="#B08457" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 6.2 C10 3.6 6 4 5 7.2 C4.1 10 6.3 12.4 12 17 C17.7 12.4 19.9 10 19 7.2 C18 4 14 3.6 12 6.2 Z"/>
+                    </svg>
+                  </div>
+                  <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{envieCount} envies</span>
                 </div>
-                <span className="font-headline text-lg lg:text-3xl italic">Coups de Cœur</span>
+                <span className="font-headline italic text-base lg:text-xl">Ma Wishlist</span>
               </Link>
-              <Link href="/library?filter=envie" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-secondary/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Heart className="h-5 w-5 lg:h-8 lg:w-8 text-primary" />
+              <Link href="/journal" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-copper/10 shadow-sm group-hover:scale-110 transition-transform duration-500">
+                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="none" stroke="#B08457" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3 L14.3 8.6 L20.4 9.1 L15.7 13 L17.2 19 L12 15.7 L6.8 19 L8.3 13 L3.6 9.1 L9.7 8.6 Z" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{avisCount} avis</span>
                 </div>
-                <span className="font-headline text-lg lg:text-3xl italic">Ma Wishlist</span>
-              </Link>
-              <Link href="/journal" className="flex items-center gap-4 lg:gap-8 p-4 lg:p-8 rounded-2xl lg:rounded-[3rem] bg-primary/5 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-2xl">
-                <div className="p-2.5 lg:p-5 rounded-xl lg:rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-500">
-                  <Quote className="h-5 w-5 lg:h-8 lg:w-8 text-primary" />
-                </div>
-                <span className="font-headline text-lg lg:text-3xl italic">Mes Recommandations</span>
+                <span className="font-headline italic text-base lg:text-xl">Mes Recommandations</span>
               </Link>
             </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
+
+      {seasonTheme && (
+        <div
+          className="relative overflow-hidden rounded-[2rem] py-8 px-6 flex items-center justify-center text-center min-h-[100px]"
+          style={{ background: `linear-gradient(90deg, ${seasonTheme.bottom}, ${seasonTheme.top})`, color: seasonTheme.ink }}
+        >
+          <p className="relative z-10 font-headline italic text-sm md:text-base max-w-md">
+            {seasonTheme.emoji} Bonne {seasonTheme.label.toLowerCase()} littéraire — de belles pages t'attendent. {seasonTheme.emoji}
+          </p>
+        </div>
+      )}
 
       {lastReviewedBook && (
         <section className="space-y-4 md:space-y-6 pt-4 border-t border-primary/5">

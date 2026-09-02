@@ -17,43 +17,44 @@ export type SeasonalTheme = {
   accent: string;
   ink: string;
   illustration: string;
+  emoji: string;
 };
 
 export const SEASONAL_THEMES: SeasonalTheme[] = [
   {
     id: "valentin", label: "Saint-Valentin",
     top: "#F8ECEC", bottom: "#C99A8A", accent: "#B0555E", ink: "#3A2420",
-    illustration: "/seasonal/valentin.svg",
+    illustration: "/seasonal/valentin.svg", emoji: "💌",
   },
   {
     id: "printemps", label: "Printemps",
     top: "#F1F4E7", bottom: "#A9BA8C", accent: "#5D7A3F", ink: "#28311C",
-    illustration: "/seasonal/printemps.svg",
+    illustration: "/seasonal/printemps.svg", emoji: "🌸",
   },
   {
     id: "ete", label: "Été",
     top: "#FCF4E1", bottom: "#CBA666", accent: "#9C6B2E", ink: "#3A2B10",
-    illustration: "/seasonal/ete.svg",
+    illustration: "/seasonal/ete.svg", emoji: "🌞",
   },
   {
     id: "rentree", label: "Rentrée",
     top: "#F2EFE4", bottom: "#7C8B67", accent: "#A8442E", ink: "#2E2A20",
-    illustration: "/seasonal/rentree.png",
+    illustration: "/seasonal/rentree.png", emoji: "🍂",
   },
   {
     id: "automne", label: "Automne",
     top: "#F6EEE2", bottom: "#AA7550", accent: "#7A431F", ink: "#33200F",
-    illustration: "/seasonal/automne.svg",
+    illustration: "/seasonal/automne.svg", emoji: "🍁",
   },
   {
     id: "noel", label: "Noël",
     top: "#EEF1EA", bottom: "#77896B", accent: "#9C3F3B", ink: "#20281A",
-    illustration: "/seasonal/noel.svg",
+    illustration: "/seasonal/noel.svg", emoji: "🎄",
   },
   {
     id: "hiver", label: "Hiver",
     top: "#EAEFF2", bottom: "#8C9AA2", accent: "#4E6470", ink: "#212B30",
-    illustration: "/seasonal/hiver.svg",
+    illustration: "/seasonal/hiver.svg", emoji: "❄️",
   },
 ];
 
