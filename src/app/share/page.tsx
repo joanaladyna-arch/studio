@@ -13,7 +13,7 @@ import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import Link from "next/link";
 import { RANKS, EMOTIONS, Book, BookCard } from "@/app/library/page";
-import { cn, toArray } from "@/lib/utils";
+import { cn, toArray, getBookQuotes } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, query, where, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -514,10 +514,10 @@ export default function SharePage() {
                           Lire l'avis complet sur Lectoria →
                         </p>
                       </div>
-                    ) : selectedBook.favoriteQuote ? (
+                    ) : getBookQuotes(selectedBook)[0] ? (
                       <div className="pt-3 border-t w-full" style={{ borderColor: theme.badge }}>
                         <p className="text-xs italic leading-snug opacity-70 px-4">
-                          "{selectedBook.favoriteQuote}"
+                          "{getBookQuotes(selectedBook)[0]}"
                         </p>
                       </div>
                     ) : (selectedBook as any).description ? (

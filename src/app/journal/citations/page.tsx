@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, Quote, Share2, Trash2 } from "lucide-react";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection, doc, deleteDoc } from "firebase/firestore";
-import { cleanBookTitle, cleanAuthorName } from "@/lib/utils";
+import { cleanBookTitle, cleanAuthorName, getBookQuotes } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { QuoteSubmissionDialog } from "@/components/quote-submission-dialog";
 
@@ -46,16 +46,17 @@ export default function AllCitationsPage() {
 
   const quotedBooks = useMemo(() => {
     return books
-      .filter((b: any) => (b.favoriteQuote || "").toString().trim())
-      .sort((a: any, b: any) => (b.dateAdded?.toMillis?.() || 0) - (a.dateAdded?.toMillis?.() || 0));
+      .filter((b: any) => getBookQuotes(b).length > 0)
+      .sort((a: any, b: any) => (b.dateAdded?.toMillis?.() || 0) - (a.dateAdded?.toMillis?.() || 0))
+      .flatMap((book: any) => getBookQuotes(book).map((quote, i) => ({ book, quote, key: `${book.id}-${i}` })));
   }, [books]);
 
   const sortedSavedQuotes = useMemo(() => {
     return [...(savedQuotes || [])].sort((a: any, b: any) => (b.savedAt?.toMillis?.() || 0) - (a.savedAt?.toMillis?.() || 0));
   }, [savedQuotes]);
 
-  const shareQuote = (book: any) => {
-    const text = `"${book.favoriteQuote}"\n— ${cleanBookTitle(book.title)}, ${cleanAuthorName(book.author)}`;
+  const shareQuote = (book: any, quote: string) => {
+    const text = `"${quote}"\n— ${cleanBookTitle(book.title)}, ${cleanAuthorName(book.author)}`;
     shareText(book.title, text, () => toast({ title: "Copié", description: "La citation a été copiée dans le presse-papier." }));
   };
 
@@ -92,17 +93,17 @@ export default function AllCitationsPage() {
         <p className="text-muted-foreground italic text-center py-20">Chargement...</p>
       ) : totalCount > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {quotedBooks.map((book: any) => (
-            <Card key={book.id} className="glass-card border-none shadow-sm bg-white/60">
+          {quotedBooks.map(({ book, quote, key }) => (
+            <Card key={key} className="glass-card border-none shadow-sm bg-white/60">
               <CardContent className="p-6 space-y-3">
                 <Link href={`/book/${book.id}`}>
-                  <p className="text-sm italic leading-relaxed hover:text-primary transition-colors">"{book.favoriteQuote}"</p>
+                  <p className="text-sm italic leading-relaxed hover:text-primary transition-colors">"{quote}"</p>
                 </Link>
                 <div className="flex items-center justify-between">
                   <Link href={`/book/${book.id}`} className="text-[10px] font-bold uppercase tracking-widest opacity-50 line-clamp-1 hover:opacity-100 transition-opacity">
                     {cleanBookTitle(book.title)} — {cleanAuthorName(book.author)}
                   </Link>
-                  <button onClick={() => shareQuote(book)} className="shrink-0 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform" title="Partager la citation">
+                  <button onClick={() => shareQuote(book, quote)} className="shrink-0 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform" title="Partager la citation">
                     <Share2 className="h-3.5 w-3.5" />
                   </button>
                 </div>

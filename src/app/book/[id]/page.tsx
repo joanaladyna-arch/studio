@@ -36,7 +36,8 @@ import {
   FileText,
   Paperclip,
   Download,
-  ChevronRight
+  ChevronRight,
+  Plus
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
@@ -550,6 +551,12 @@ export default function BookDetailPage() {
       if (editedData.status !== "pal" && (userBook as any)?.isNextRead) {
         nextReadUpdate.isNextRead = false;
       }
+      // Retire les citations ajoutées via "+ Ajouter une citation" mais
+      // jamais remplies, plutôt que de les enregistrer vides.
+      const quotesUpdate: any = {};
+      if ((editedData as any).favoriteQuotes !== undefined) {
+        quotesUpdate.favoriteQuotes = toArray<string>((editedData as any).favoriteQuotes).filter((q) => q.trim());
+      }
       await updateDoc(userBookRef, {
         // Firestore refuse toute valeur `undefined` depuis les versions
         // récentes du SDK — on les filtre systématiquement avant l'envoi
@@ -557,6 +564,7 @@ export default function BookDetailPage() {
         ...Object.fromEntries(Object.entries(editedData).filter(([, v]) => v !== undefined)),
         ...dateReadUpdate,
         ...nextReadUpdate,
+        ...quotesUpdate,
         updatedAt: serverTimestamp()
       });
       if (db && masterBook?.id) {
@@ -1407,6 +1415,41 @@ export default function BookDetailPage() {
               <Label className="italic text-xl font-headline">Citation préférée</Label>
               <Textarea value={editedData.favoriteQuote || ""} onChange={(e) => setEditedData({ ...editedData, favoriteQuote: e.target.value })}
                 placeholder="Une phrase qui vous a marquée..." className="min-h-[120px] rounded-2xl bg-white/40 border-none p-6 italic resize-none focus-visible:ring-1 focus-visible:ring-primary/20" />
+
+              {toArray<string>((editedData as any).favoriteQuotes).map((quote, i) => (
+                <div key={i} className="relative">
+                  <Textarea
+                    value={quote}
+                    onChange={(e) => {
+                      const updated = [...toArray<string>((editedData as any).favoriteQuotes)];
+                      updated[i] = e.target.value;
+                      setEditedData({ ...editedData, favoriteQuotes: updated } as any);
+                    }}
+                    placeholder="Encore une phrase qui vous a marquée..."
+                    className="min-h-[120px] rounded-2xl bg-white/40 border-none p-6 pr-12 italic resize-none focus-visible:ring-1 focus-visible:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = toArray<string>((editedData as any).favoriteQuotes).filter((_, idx) => idx !== i);
+                      setEditedData({ ...editedData, favoriteQuotes: updated } as any);
+                    }}
+                    className="absolute top-3 right-3 h-7 w-7 rounded-full bg-white/70 hover:bg-white flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label="Supprimer cette citation"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditedData({ ...editedData, favoriteQuotes: [...toArray<string>((editedData as any).favoriteQuotes), ""] } as any)}
+                className="w-full rounded-2xl border-dashed border-primary/20 text-primary/70 italic font-headline"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Ajouter une citation
+              </Button>
             </div>
             <div className="space-y-3">
               <Label className="italic text-xl font-headline">Votre personnage pépite</Label>

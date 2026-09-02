@@ -14,7 +14,7 @@ import {
   Quote, PlusCircle, Share2, Heart, FileDown, Cloud, LayoutList, BookMarked
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { cn, cleanBookTitle, cleanAuthorName } from "@/lib/utils";
+import { cn, cleanBookTitle, cleanAuthorName, getBookQuotes } from "@/lib/utils";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { TaxonomyEditor } from "@/components/taxonomy-editor";
@@ -118,8 +118,13 @@ export default function JournalPage() {
   );
 
   const quotedBooks = useMemo(() =>
-    books.filter((b: any) => (b.favoriteQuote || "").toString().trim()),
+    books.filter((b: any) => getBookQuotes(b).length > 0),
     [books]
+  );
+
+  const allQuotes = useMemo(() =>
+    quotedBooks.flatMap((book: any) => getBookQuotes(book).map((quote, i) => ({ book, quote, key: `${book.id}-${i}` }))),
+    [quotedBooks]
   );
 
   // Notes groupées par livre
@@ -137,7 +142,7 @@ export default function JournalPage() {
   const wordFrequencies = useMemo(() => {
     const texts = [
       ...pastEntries.map((e: any) => e.content || ""),
-      ...quotedBooks.map((b: any) => b.favoriteQuote || ""),
+      ...allQuotes.map((q) => q.quote),
       ...(books as any[]).filter(b => (b as any).review).map((b: any) => b.review || ""),
     ].join(" ");
 
@@ -155,7 +160,7 @@ export default function JournalPage() {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 60)
       .map(([word, count], i) => ({ word, count, color: CLOUD_COLORS[i % CLOUD_COLORS.length] }));
-  }, [pastEntries, quotedBooks, books]);
+  }, [pastEntries, allQuotes, books]);
 
   const maxCount = wordFrequencies[0]?.count || 1;
   const getSize = (count: number) => {
@@ -261,8 +266,8 @@ export default function JournalPage() {
     const text = `${cleanBookTitle(book.title)}, par ${cleanAuthorName(book.author)} — une pépite de ma bibliothèque Lectoria.`;
     shareText(book.title, text, () => toast({ title: "Copié", description: "Le texte de partage a été copié dans le presse-papier." }));
   };
-  const shareQuote = (book: any) => {
-    const text = `"${book.favoriteQuote}"\n— ${cleanBookTitle(book.title)}, ${cleanAuthorName(book.author)}`;
+  const shareQuote = (book: any, quote: string) => {
+    const text = `"${quote}"\n— ${cleanBookTitle(book.title)}, ${cleanAuthorName(book.author)}`;
     shareText(book.title, text, () => toast({ title: "Copié", description: "La citation a été copiée dans le presse-papier." }));
   };
 
@@ -322,25 +327,25 @@ export default function JournalPage() {
           <h2 className="text-base md:text-2xl font-headline italic flex items-center gap-2 md:gap-3">
             <Quote className="h-4 w-4 md:h-6 md:w-6 text-primary/40" /> Carnet de Citations
           </h2>
-          {quotedBooks.length > 0 && (
+          {allQuotes.length > 0 && (
             <Button asChild variant="ghost" className="rounded-xl text-primary font-headline italic">
               <Link href="/journal/citations">Voir tout <Plus className="ml-2 h-4 w-4" /></Link>
             </Button>
           )}
         </div>
-        {quotedBooks.length > 0 ? (
+        {allQuotes.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2">
-            {quotedBooks.slice(0, 4).map((book: any) => (
-              <Card key={book.id} className="glass-card border-none shadow-sm bg-white/60">
+            {allQuotes.slice(0, 4).map(({ book, quote, key }) => (
+              <Card key={key} className="glass-card border-none shadow-sm bg-white/60">
                 <CardContent className="p-6 space-y-3">
                   <Link href={`/book/${book.id}`}>
-                    <p className="text-sm italic leading-relaxed hover:text-primary transition-colors">"{book.favoriteQuote}"</p>
+                    <p className="text-sm italic leading-relaxed hover:text-primary transition-colors">"{quote}"</p>
                   </Link>
                   <div className="flex items-center justify-between">
                     <Link href={`/book/${book.id}`} className="text-[10px] font-bold uppercase tracking-widest opacity-50 line-clamp-1 hover:opacity-100 transition-opacity">
                       {cleanBookTitle(book.title)} — {cleanAuthorName(book.author)}
                     </Link>
-                    <button onClick={() => shareQuote(book)} className="shrink-0 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform" title="Partager la citation">
+                    <button onClick={() => shareQuote(book, quote)} className="shrink-0 h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-primary hover:scale-110 transition-transform" title="Partager la citation">
                       <Share2 className="h-3.5 w-3.5" />
                     </button>
                   </div>

@@ -17,6 +17,16 @@ export function toArray<T = any>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
+// Un livre peut avoir plusieurs citations : la première (favoriteQuote,
+// champ historique) plus celles ajoutées ensuite via "+ Ajouter une
+// citation" (favoriteQuotes). Centralise l'aplatissement des deux pour
+// que carnet de citations, partage et citation du jour restent en phase.
+export function getBookQuotes(book: any): string[] {
+  return [book?.favoriteQuote, ...toArray<string>(book?.favoriteQuotes)]
+    .map((q) => (q || "").toString().trim())
+    .filter(Boolean);
+}
+
 /**
  * Tient à jour le compteur dénormalisé `readCount` sur masterBooks ("Lu
  * par X lectrices Lectoria", affiché sur la fiche livre) à chaque

@@ -129,6 +129,7 @@ export interface UserBook {
   dePlume?: boolean;
   emotions?: string[];
   favoriteQuote?: string;
+  favoriteQuotes?: string[];
   favoriteCharacter?: string;
   readStartDate?: string;
   readEndDate?: string;

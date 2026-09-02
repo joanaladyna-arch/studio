@@ -1,3 +1,5 @@
+import { getBookQuotes } from "@/lib/utils";
+
 /**
  * Petite sélection de citations d'auteurs et penseurs du domaine public
  * (tous décédés depuis largement plus de 70 ans) — utilisée pour
@@ -59,12 +61,11 @@ export type DailyQuote = { text: string; author: string; isOwn: boolean };
  */
 export function getDailyQuote(booksRaw: any[], communityQuotes: { text: string; author: string }[] = []): DailyQuote | null {
   const citationPool: DailyQuote[] = (booksRaw || [])
-    .filter((b: any) => (b?.favoriteQuote || "").toString().trim())
-    .map((b: any) => ({
-      text: b.favoriteQuote,
+    .flatMap((b: any) => getBookQuotes(b).map((text) => ({
+      text,
       author: `${b.title || ""}${b.author ? " — " + b.author : ""}`,
       isOwn: true,
-    }));
+    })));
   const pool: DailyQuote[] = [
     ...citationPool,
     ...PUBLIC_DOMAIN_QUOTES.map((q) => ({ ...q, isOwn: false })),
