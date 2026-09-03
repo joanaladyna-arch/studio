@@ -74,10 +74,14 @@ export function NotificationBell() {
   }, [db, user]);
 
   const all = useMemo(() => {
-    return [...personal, ...broadcast].sort(
-      (a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)
-    );
-  }, [personal, broadcast]);
+    // Une fois lue (individuellement ou via "Tout marquer lu"), une
+    // notification disparaît de la liste plutôt que de s'y accumuler —
+    // demandé explicitement, la cloche ne sert que ce qui reste à voir.
+    if (!user) return [];
+    return [...personal, ...broadcast]
+      .filter((n) => (n.broadcast ? !(n.readBy || []).includes(user.uid) : !n.read))
+      .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  }, [personal, broadcast, user]);
 
   const unreadCount = useMemo(() => {
     if (!user) return 0;
@@ -171,21 +175,17 @@ export function NotificationBell() {
               {all.map((n) => {
                 const meta = TYPE_META[n.type] || TYPE_META.app_update;
                 const Icon = meta.icon;
-                const isUnread = n.broadcast ? !(n.readBy || []).includes(user.uid) : !n.read;
                 return (
                   <button
                     key={n.id}
                     onClick={() => handleClick(n)}
-                    className={cn(
-                      "w-full flex items-start gap-3 p-3 rounded-xl text-left transition-colors hover:bg-primary/5",
-                      isUnread && "bg-primary/[0.03]"
-                    )}
+                    className="w-full flex items-start gap-3 p-3 rounded-xl text-left transition-colors hover:bg-primary/5 bg-primary/[0.03]"
                   >
                     <div className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", meta.className)}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1 space-y-0.5">
-                      <p className={cn("text-sm italic leading-snug", isUnread ? "font-semibold text-primary" : "text-primary/70")}>
+                      <p className="text-sm italic leading-snug font-semibold text-primary">
                         {n.title}
                       </p>
                       {n.body && <p className="text-xs opacity-60 leading-snug line-clamp-2">{n.body}</p>}
@@ -195,7 +195,7 @@ export function NotificationBell() {
                         </p>
                       )}
                     </div>
-                    {isUnread && <span className="h-2 w-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />}
+                    <span className="h-2 w-2 rounded-full bg-rose-500 mt-1.5 shrink-0" />
                   </button>
                 );
               })}
