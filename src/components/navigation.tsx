@@ -115,14 +115,14 @@ export function Navigation() {
 
   return (
     <>
-      <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-8 px-10 shadow-sm">
-        <div className="flex items-center gap-3 mr-10 cursor-pointer group" onClick={() => router.push("/")}>
-          <div className="relative h-10 w-10 rounded-full overflow-hidden group-hover:scale-110 transition-transform">
+      <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-4 px-4 shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-2 mr-4 shrink-0 cursor-pointer group" onClick={() => router.push("/")}>
+          <div className="relative h-10 w-10 shrink-0 rounded-full overflow-hidden group-hover:scale-110 transition-transform">
              <Image src="/brand/logo-lectoria-v3.png" alt="" fill className="object-cover" unoptimized />
           </div>
-          <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase">LECTORIA</span>
+          <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase whitespace-nowrap">LECTORIA</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 shrink-0">
           {allNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -131,26 +131,26 @@ export function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "group flex items-center gap-3 transition-all duration-500 py-3 px-6 rounded-2xl",
-                  isActive 
-                    ? "text-primary bg-primary/5 font-medium shadow-[inset_0_0_20px_rgba(0,0,0,0.02)]" 
+                  "group flex items-center gap-2 shrink-0 transition-all duration-500 py-3 px-3 rounded-2xl",
+                  isActive
+                    ? "text-primary bg-primary/5 font-medium shadow-[inset_0_0_20px_rgba(0,0,0,0.02)]"
                     : "text-muted-foreground hover:text-primary hover:bg-white"
                 )}
               >
-                <Icon className={cn("h-5 w-5 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
-                <span className="text-sm font-headline italic">{item.label}</span>
+                <Icon className={cn("h-5 w-5 shrink-0 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
+                <span className="hidden xl:inline text-sm font-headline italic whitespace-nowrap">{item.label}</span>
                 {item.id === "actualites" && hasUnseenActuality && (
-                  <span className="h-2 w-2 rounded-full bg-rose-500" />
+                  <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                 )}
               </Link>
             );
           })}
         </div>
-        <div className="ml-8 flex items-center gap-2">
+        <div className="ml-4 flex items-center gap-2 shrink-0">
           <NotificationBell />
           <button
             onClick={handleLogout}
-            className="text-muted-foreground hover:text-destructive transition-all p-3 rounded-full hover:bg-red-50 group"
+            className="text-muted-foreground hover:text-destructive transition-all p-3 rounded-full hover:bg-red-50 group shrink-0"
             title="Déconnexion"
           >
             <LogOut className="h-6 w-6 group-hover:rotate-12 transition-transform" />
