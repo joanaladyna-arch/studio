@@ -117,7 +117,11 @@ export function NotificationBell() {
   const handleClick = (n: NotifDoc) => {
     markRead(n);
     setOpen(false);
-    setSelectedNotif(n);
+    // Laisser le Popover finir sa fermeture avant d'ouvrir la Dialog : les
+    // deux se battent sinon pour le verrou pointer-events sur <body> que
+    // Radix pose pendant qu'un overlay est ouvert, et la page entière
+    // reste bloquée (plus aucun clic possible) une fois l'animation finie.
+    setTimeout(() => setSelectedNotif(n), 150);
   };
 
   const goToLink = () => {
@@ -146,7 +150,11 @@ export function NotificationBell() {
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[340px] p-0 bg-white/95 backdrop-blur-xl border-none shadow-xl rounded-2xl overflow-hidden" align="end">
+      <PopoverContent
+        className="w-[calc(100vw-2rem)] max-w-[340px] p-0 bg-white/95 backdrop-blur-xl border-none shadow-xl rounded-2xl overflow-hidden"
+        align="end"
+        collisionPadding={16}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-primary/5">
           <p className="font-headline italic text-lg">Notifications</p>
           {unreadCount > 0 && (
