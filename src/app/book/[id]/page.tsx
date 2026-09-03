@@ -1254,6 +1254,16 @@ export default function BookDetailPage() {
                           onChange={(e) => setEditedData({ ...editedData, readEndDate: e.target.value } as any)}
                           className="text-sm italic bg-transparent border-none outline-none text-primary/80 w-full" />
                       </div>
+                      {!(editedData as any).readStartDate && !(editedData as any).readEndDate && (editedData as any).dateRead && (
+                        <button
+                          type="button"
+                          onClick={() => setEditedData({ ...editedData, dateRead: null } as any)}
+                          className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                          title="Supprimer cette date ajoutée par défaut"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
