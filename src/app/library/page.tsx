@@ -97,6 +97,7 @@ export interface UserBook {
   dateAdded: any;
   dateRead?: any;
   isNextRead?: boolean;
+  plannedNextMonth?: boolean;
   palOrder?: number;
   toGift?: boolean;
   summerReread?: boolean;
@@ -428,6 +429,7 @@ export default function LibraryPage() {
   const readBlockBooks = useMemo(() => getBooksForStatus("read"), [userBooks, searchQuery, sortMode]);
   const envieBlockBooks = useMemo(() => getBooksForStatus("envie"), [userBooks, searchQuery, sortMode]);
   const dnfBlockBooks = useMemo(() => getBooksForStatus("dnf"), [userBooks, searchQuery, sortMode]);
+  const nextMonthBlockBooks = useMemo(() => palBlockBooks.filter((b: any) => b.plannedNextMonth), [palBlockBooks]);
 
   // Bloc "Lu" : regroupé par mois de lecture. Priorité de date : date de
   // fin de lecture, puis date de début, puis dateRead (champ historique).
@@ -461,6 +463,7 @@ export default function LibraryPage() {
   }, [readBlockBooks]);
 
   const BLOCKS = [
+    { id: "nextmonth", label: "🎯 Lectures du mois prochain", books: nextMonthBlockBooks, highlight: true },
     { id: "progress", label: "En cours", books: progressBlockBooks },
     { id: "pal", label: "PAL", books: palBlockBooks },
     { id: "read", label: "Lu", books: readBlockBooks },
@@ -542,7 +545,7 @@ export default function LibraryPage() {
                 onClick={drawRandomNextRead}
                 className="flex flex-col items-center gap-1 px-3 py-1 rounded-2xl hover:bg-white/40 transition-colors"
               >
-                <span className="text-3xl leading-none" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }}>🎲</span>
+                <span className="text-6xl leading-none" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }}>🎲</span>
                 <span className="text-[11px] italic font-headline text-primary/70">Surprends-moi</span>
               </button>
             </>
@@ -593,10 +596,15 @@ export default function LibraryPage() {
             <a
               key={block.id}
               href={`#block-${block.id}`}
-              className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-headline italic bg-white/50 hover:bg-white text-primary/70 hover:text-primary transition-colors border border-primary/5"
+              className={cn(
+                "shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-headline italic transition-colors border",
+                (block as any).highlight
+                  ? "bg-gradient-to-r from-amber-400 to-rose-400 text-white border-transparent shadow-md hover:shadow-lg"
+                  : "bg-white/50 hover:bg-white text-primary/70 hover:text-primary border-primary/5"
+              )}
             >
               {block.label}
-              <span className="text-[10px] font-bold bg-primary/10 text-primary px-2 py-0.5 rounded-full">{block.books.length}</span>
+              <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", (block as any).highlight ? "bg-white/25 text-white" : "bg-primary/10 text-primary")}>{block.books.length}</span>
             </a>
           ))}
         </div>
@@ -612,8 +620,8 @@ export default function LibraryPage() {
           {BLOCKS.map((block) => (
             <section key={block.id} id={`block-${block.id}`} className="space-y-6 scroll-mt-24">
               <div className="flex items-center gap-4 px-2">
-                <h2 className={cn("font-headline italic text-2xl md:text-3xl", isAmbientDark && "text-[#F5F1E8]")}>{block.label}</h2>
-                <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">{block.books.length}</span>
+                <h2 className={cn("font-headline italic text-2xl md:text-3xl", (block as any).highlight ? "text-amber-500" : isAmbientDark && "text-[#F5F1E8]")}>{block.label}</h2>
+                <span className={cn("text-xs font-bold px-3 py-1 rounded-full", (block as any).highlight ? "bg-amber-400/15 text-amber-600" : "bg-primary/10 text-primary")}>{block.books.length}</span>
               </div>
 
               {block.id === "read" ? (
@@ -709,7 +717,11 @@ export default function LibraryPage() {
                 <div className="py-16 text-center glass-card border-dashed bg-white/20 rounded-[2rem]">
                   <Bookmark className="h-14 w-14 mx-auto text-primary/10" />
                   <p className="text-primary/60 italic font-headline text-lg mt-3">
-                    {searchQuery ? "Aucun résultat dans ce bloc." : `Aucun livre dans "${block.label}" pour le moment.`}
+                    {searchQuery
+                      ? "Aucun résultat dans ce bloc."
+                      : block.id === "nextmonth"
+                      ? 'Aucune lecture prévue pour le mois prochain — étoile un livre de ta PAL avec "Prévoir pour le mois prochain".'
+                      : `Aucun livre dans "${block.label}" pour le moment.`}
                   </p>
                 </div>
               )}

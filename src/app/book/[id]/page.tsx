@@ -553,6 +553,11 @@ export default function BookDetailPage() {
       if (editedData.status !== "pal" && (userBook as any)?.isNextRead) {
         nextReadUpdate.isNextRead = false;
       }
+      // Idem pour "Prévoir pour le mois prochain" : n'a plus de sens une
+      // fois la lecture démarrée ou le livre sorti de la PAL.
+      if (editedData.status !== "pal" && (userBook as any)?.plannedNextMonth) {
+        nextReadUpdate.plannedNextMonth = false;
+      }
       // Retire les citations ajoutées via "+ Ajouter une citation" mais
       // jamais remplies, plutôt que de les enregistrer vides.
       const quotesUpdate: any = {};
@@ -1082,6 +1087,20 @@ export default function BookDetailPage() {
                     </Button>
                   ))}
                 </div>
+                {editedData.status === "pal" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditedData({ ...editedData, plannedNextMonth: !(editedData as any).plannedNextMonth } as any)}
+                    className={cn(
+                      "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
+                      (editedData as any).plannedNextMonth ? "bg-amber-400 text-white border-amber-400 shadow-md" : "bg-white/40"
+                    )}
+                  >
+                    <Star className={cn("h-3.5 w-3.5", (editedData as any).plannedNextMonth && "fill-white")} />
+                    {(editedData as any).plannedNextMonth ? "Prévu pour le mois prochain" : "Prévoir pour le mois prochain"}
+                  </Button>
+                )}
                 {editedData.status === "progress" && (() => {
                   const knownPageCount = Number(masterBook?.pageCount || masterBook?.pages || 0);
                   const currentPage = Number((editedData as any).currentPage ?? 0);
