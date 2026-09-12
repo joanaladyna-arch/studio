@@ -37,6 +37,7 @@ import {
   Paperclip,
   Download,
   ChevronRight,
+  ChevronDown,
   Plus
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -127,6 +128,7 @@ export default function BookDetailPage() {
   const [showMasterEditor, setShowMasterEditor] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [showDates, setShowDates] = useState(false);
+  const [showPublisherSuggestions, setShowPublisherSuggestions] = useState(false);
 
   const userBookRef = useMemo(() => {
     if (!db || !user || !bookId) return null;
@@ -929,16 +931,19 @@ export default function BookDetailPage() {
                 <div className="grid sm:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-60 flex items-center">Âge requis<InfoTip>Optionnel. Aide à identifier le public cible du livre.</InfoTip></Label>
-                    <select value={(editedData as any).ageRating || ""} onChange={(e) => setEditedData({ ...editedData, ageRating: e.target.value } as any)}
-                      className="h-11 w-full rounded-xl bg-white/40 border-none shadow-inner italic px-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20">
-                      <option value="">— Non classifié —</option>
-                      <option value="Tout public">Tout public</option>
-                      <option value="Dès 12 ans">Dès 12 ans</option>
-                      <option value="Dès 14 ans">Dès 14 ans</option>
-                      <option value="Dès 16 ans">Dès 16 ans</option>
-                      <option value="Dès 18 ans (New Adult)">Dès 18 ans (New Adult)</option>
-                      <option value="Adulte — Contenu explicite">Adulte — Contenu explicite</option>
-                    </select>
+                    <div className="relative">
+                      <select value={(editedData as any).ageRating || ""} onChange={(e) => setEditedData({ ...editedData, ageRating: e.target.value } as any)}
+                        className="h-11 w-full appearance-none rounded-xl bg-white/40 border-none shadow-inner italic pl-4 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-primary/20">
+                        <option value="">— Non classifié —</option>
+                        <option value="Tout public">Tout public</option>
+                        <option value="Dès 12 ans">Dès 12 ans</option>
+                        <option value="Dès 14 ans">Dès 14 ans</option>
+                        <option value="Dès 16 ans">Dès 16 ans</option>
+                        <option value="Dès 18 ans (New Adult)">Dès 18 ans (New Adult)</option>
+                        <option value="Adulte — Contenu explicite">Adulte — Contenu explicite</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-copper pointer-events-none" />
+                    </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center gap-1.5"><Label className="text-[10px] uppercase font-bold tracking-widest opacity-60">Niveau Spicy</Label><InfoTip>0 = pas de spicy, 5 = très très spicy. Cliquez à nouveau sur la même flamme pour revenir à 0.</InfoTip></div>
@@ -1192,17 +1197,35 @@ export default function BookDetailPage() {
                   <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Maison d'édition</Label>
                   <div className="relative">
                     <Input
-                      list="publishers-list"
                       value={(editedData as any).publisher ?? ""}
                       onChange={(e) => setEditedData({ ...editedData, publisher: e.target.value } as any)}
+                      onFocus={() => setShowPublisherSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowPublisherSuggestions(false), 150)}
                       placeholder={masterBook?.publisher || "Ex : Hugo Poche"}
-                      className="h-10 border-none bg-white/40 px-3 italic rounded-xl"
+                      className="h-10 border-none bg-white/40 pl-3 pr-10 italic rounded-xl"
+                      autoComplete="off"
                     />
-                    <datalist id="publishers-list">
-                      {publishers.map((p) => (
-                        <option key={p} value={p} />
-                      ))}
-                    </datalist>
+                    <ChevronDown className={cn("absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-copper pointer-events-none transition-transform", showPublisherSuggestions && "rotate-180")} />
+                    {showPublisherSuggestions && (() => {
+                      const query = ((editedData as any).publisher || "").trim().toLowerCase();
+                      const matches = (query ? publishers.filter((p) => p.toLowerCase().includes(query)) : publishers).slice(0, 50);
+                      if (matches.length === 0) return null;
+                      return (
+                        <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl bg-white shadow-xl shadow-copper/20 border-2 border-copper/30 py-1">
+                          {matches.map((p) => (
+                            <button
+                              type="button"
+                              key={p}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => { setEditedData({ ...editedData, publisher: p } as any); setShowPublisherSuggestions(false); }}
+                              className="w-full text-left px-4 py-2 text-sm italic hover:bg-copper/10 hover:text-copper transition-colors"
+                            >
+                              {p}
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 {(() => {

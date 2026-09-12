@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, Pencil, X, Save, Upload, User as UserIcon, GitMerge, Sparkles } from "lucide-react";
+import { Loader2, Search, Pencil, X, Save, Upload, User as UserIcon, GitMerge, Sparkles, ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { cn, slugify, authorKey } from "@/lib/utils";
 
@@ -382,16 +382,19 @@ export function AuthorEditor({
         <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60 flex items-center gap-2"><GitMerge className="h-3.5 w-3.5" /> Fusionner ce doublon dans une autre fiche</Label>
         <p className="text-xs italic opacity-50">Les livres de "{editing.name}" seront réattribués à l'auteur choisi. La fiche "{editing.name}" sera supprimée.</p>
         <div className="flex gap-2">
-          <select
-            value={mergeTarget}
-            onChange={(e) => setMergeTarget(e.target.value)}
-            className="flex-1 h-11 rounded-xl bg-white/40 border-none shadow-inner italic px-4 text-sm"
-          >
-            <option value="">Choisir l'auteur à conserver...</option>
-            {mergeCandidates.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
+          <div className="relative flex-1">
+            <select
+              value={mergeTarget}
+              onChange={(e) => setMergeTarget(e.target.value)}
+              className="w-full h-11 appearance-none rounded-xl bg-white/40 border-none shadow-inner italic pl-4 pr-10 text-sm"
+            >
+              <option value="">Choisir l'auteur à conserver...</option>
+              {mergeCandidates.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-copper pointer-events-none" />
+          </div>
           <Button onClick={handleMerge} disabled={isMerging || !mergeTarget} variant="outline" className="h-11 px-5 rounded-xl border-primary/20 shrink-0">
             {isMerging ? <Loader2 className="h-4 w-4 animate-spin" /> : <GitMerge className="h-4 w-4" />}
           </Button>
