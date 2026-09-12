@@ -3,19 +3,26 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useFirestore, useStorage, useUser } from "@/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Pencil, X, Save, Sparkles, Upload } from "lucide-react";
+import { Loader2, Pencil, X, Save, Sparkles, Upload, ChevronDown } from "lucide-react";
 import { BookCover } from "@/components/book-cover";
 import { GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { useTaxonomy } from "@/hooks/use-taxonomy";
+import { usePublishers } from "@/hooks/use-publishers";
 import { cn, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
 import { TagDropdown } from "@/components/tag-dropdown";
+
+const TAXONOMY_FIELD_MAP = {
+  genres: "addedGenres",
+  tropes: "addedTropes",
+  themes: "addedThemes",
+} as const;
 
 /**
  * Éditeur complet d'une fiche MasterBook (base partagée Lectoria) — couvre
@@ -46,7 +53,9 @@ export function MasterBookEditor({
   const { user } = useUser();
   const { toast } = useToast();
   const taxonomy = useTaxonomy();
+  const publishers = usePublishers();
   const [form, setForm] = useState<any>({});
+  const [showPublisherSuggestions, setShowPublisherSuggestions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -102,6 +111,25 @@ export function MasterBookEditor({
       const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
       return { ...prev, [field]: next };
     });
+  };
+
+  // Ajoute une nouvelle entrée directement depuis la fiche (mode admin),
+  // disponible immédiatement partout dans l'app — même mécanisme que
+  // l'éditeur global de taxonomie (Journal > Gérer genres, tropes &
+  // thèmes) — puis la sélectionne aussitôt pour ce livre.
+  const addTaxonomyEntry = async (field: "genres" | "tropes" | "themes", value: string) => {
+    const trimmed = value.trim();
+    if (!db || !trimmed) return;
+    try {
+      await setDoc(doc(db, "config", "taxonomy"), { [TAXONOMY_FIELD_MAP[field]]: arrayUnion(trimmed), updatedAt: serverTimestamp() }, { merge: true });
+      setForm((prev: any) => {
+        const current: string[] = Array.isArray(prev[field]) ? prev[field] : [];
+        return current.includes(trimmed) ? prev : { ...prev, [field]: [...current, trimmed] };
+      });
+    } catch (err) {
+      console.error("Add Taxonomy Entry Error:", err);
+      toast({ variant: "destructive", title: "Erreur lors de l'ajout" });
+    }
   };
 
   const isNew = !book?.id;
@@ -202,9 +230,37 @@ export function MasterBookEditor({
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Traducteur</Label>
             <Input value={form.translator || ""} onChange={(e) => setForm((p: any) => ({ ...p, translator: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 relative">
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Éditeur</Label>
-            <Input value={form.publisher || ""} onChange={(e) => setForm((p: any) => ({ ...p, publisher: e.target.value }))} className="h-12 italic bg-white/40 rounded-xl border-none shadow-inner" />
+            <Input
+              value={form.publisher || ""}
+              onChange={(e) => setForm((p: any) => ({ ...p, publisher: e.target.value }))}
+              onFocus={() => setShowPublisherSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowPublisherSuggestions(false), 150)}
+              className="h-12 italic bg-white/40 pl-3 pr-10 rounded-xl border-none shadow-inner"
+              autoComplete="off"
+            />
+            <ChevronDown className={cn("absolute right-3 top-[38px] h-5 w-5 text-copper pointer-events-none transition-transform", showPublisherSuggestions && "rotate-180")} />
+            {showPublisherSuggestions && (() => {
+              const query = (form.publisher || "").trim().toLowerCase();
+              const matches = (query ? publishers.filter((p) => p.toLowerCase().includes(query)) : publishers).slice(0, 50);
+              if (matches.length === 0) return null;
+              return (
+                <div className="absolute z-20 top-full left-0 right-0 mt-1 max-h-60 overflow-y-auto rounded-xl bg-white shadow-xl shadow-copper/20 border-2 border-copper/30 py-1">
+                  {matches.map((p) => (
+                    <button
+                      type="button"
+                      key={p}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { setForm((prev: any) => ({ ...prev, publisher: p })); setShowPublisherSuggestions(false); }}
+                      className="w-full text-left px-4 py-2 text-sm italic hover:bg-copper/10 hover:text-copper transition-colors"
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           <div className="space-y-2">
             <Label className="text-[10px] font-bold uppercase tracking-widest opacity-60">Tome</Label>
@@ -256,6 +312,7 @@ export function MasterBookEditor({
         options={taxonomy.genres}
         selected={form.genres || []}
         onToggle={(v) => toggleTag("genres", v)}
+        onAddNew={(v) => addTaxonomyEntry("genres", v)}
         accent="primary"
       />
 
@@ -264,6 +321,7 @@ export function MasterBookEditor({
         options={taxonomy.tropes}
         selected={form.tropes || []}
         onToggle={(v) => toggleTag("tropes", v)}
+        onAddNew={(v) => addTaxonomyEntry("tropes", v)}
         accent="secondary"
       />
 
@@ -272,6 +330,7 @@ export function MasterBookEditor({
         options={taxonomy.themes}
         selected={form.themes || []}
         onToggle={(v) => toggleTag("themes", v)}
+        onAddNew={(v) => addTaxonomyEntry("themes", v)}
         accent="primary"
       />
 

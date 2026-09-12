@@ -14,6 +14,10 @@ import { collection, onSnapshot } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
 import { publisherKey } from "@/lib/utils";
 
+// Toujours proposée, même si aucun livre de la base ne l'utilise encore —
+// utile pour les lectrices qui ajoutent un livre auto-édité.
+const ALWAYS_SUGGESTED = ["Auto-Édition"];
+
 export function usePublishers(): string[] {
   const db = useFirestore();
   const [publishers, setPublishers] = useState<string[]>([]);
@@ -32,6 +36,10 @@ export function usePublishers(): string[] {
         // pour retomber sur la graphie la plus courante plutôt qu'une
         // variante arbitraire.
         const counts = new Map<string, Map<string, number>>();
+        ALWAYS_SUGGESTED.forEach((pub) => {
+          const key = publisherKey(pub);
+          if (key) counts.set(key, new Map([[pub, 0]]));
+        });
         snap.forEach((doc) => {
           const pub = (doc.data()?.publisher || "").trim();
           const cleaned = pub.replace(/\s*\([^)]*\)\s*/g, "").trim();

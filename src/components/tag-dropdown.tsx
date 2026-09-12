@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,6 +21,7 @@ export function TagDropdown({
   options,
   selected,
   onToggle,
+  onAddNew,
   accent = "primary",
   helperText,
 }: {
@@ -26,10 +29,20 @@ export function TagDropdown({
   options: string[];
   selected: string[];
   onToggle: (value: string) => void;
+  /** Mode admin uniquement : permet d'ajouter une entrée absente de `options`, disponible partout dans l'app ensuite. */
+  onAddNew?: (value: string) => void;
   accent?: "primary" | "secondary";
   helperText?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [newValue, setNewValue] = useState("");
+
+  const submitNew = () => {
+    const trimmed = newValue.trim();
+    if (!trimmed || !onAddNew) return;
+    onAddNew(trimmed);
+    setNewValue("");
+  };
 
   return (
     <div className="space-y-4">
@@ -43,10 +56,24 @@ export function TagDropdown({
             <span>
               {selected.length > 0 ? `${selected.length} sélectionné${selected.length > 1 ? "s" : ""}` : `Choisir parmi ${options.length} options`}
             </span>
-            <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+            <ChevronDown className={cn("h-5 w-5 text-copper transition-transform", open && "rotate-180")} />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[320px] p-0 bg-white/95 backdrop-blur-xl border-none shadow-xl rounded-2xl overflow-hidden" align="start">
+        <PopoverContent className="w-[320px] p-0 bg-white/95 backdrop-blur-xl border-2 border-copper/30 shadow-xl shadow-copper/20 rounded-2xl overflow-hidden" align="start">
+          {onAddNew && (
+            <div className="flex gap-2 p-3 border-b border-primary/10">
+              <Input
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitNew(); } }}
+                placeholder="Ajouter une nouvelle entrée..."
+                className="h-9 italic text-sm bg-white/60 rounded-lg border-none shadow-inner"
+              />
+              <Button type="button" onClick={submitNew} disabled={!newValue.trim()} className="h-9 px-3 rounded-lg bg-primary shrink-0">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           <div className="max-h-80 overflow-y-auto">
             <div className="p-3 space-y-1">
               {options.map((opt) => {
@@ -54,7 +81,7 @@ export function TagDropdown({
                 return (
                   <label
                     key={opt}
-                    className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-primary/5 cursor-pointer italic text-sm transition-colors"
+                    className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-copper/10 cursor-pointer italic text-sm transition-colors"
                   >
                     <Checkbox checked={isActive} onCheckedChange={() => onToggle(opt)} />
                     {opt}
