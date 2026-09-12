@@ -462,10 +462,17 @@ export default function LibraryPage() {
     return Object.entries(groups).sort(([a], [b]) => (a === "unknown" ? 1 : b === "unknown" ? -1 : b.localeCompare(a)));
   }, [readBlockBooks]);
 
+  // Un livre étoilé "mois prochain" ne s'affiche plus dans le bloc PAL —
+  // il ne doit apparaître qu'à un seul endroit à la fois. `palBlockBooks`
+  // lui-même reste inchangé (réordonnancement manuel, tirage au sort,
+  // unicité de l'épingle "Prochaine lecture" en dépendent tous ailleurs) :
+  // seul l'affichage du bloc PAL utilise ce sous-ensemble filtré.
+  const palDisplayBooks = useMemo(() => palBlockBooks.filter((b: any) => !b.plannedNextMonth), [palBlockBooks]);
+
   const BLOCKS = [
     { id: "nextmonth", label: "🎯 Lectures du mois prochain", books: nextMonthBlockBooks, highlight: true },
     { id: "progress", label: "En cours", books: progressBlockBooks },
-    { id: "pal", label: "PAL", books: palBlockBooks },
+    { id: "pal", label: "PAL", books: palDisplayBooks },
     { id: "read", label: "Lu", books: readBlockBooks },
     { id: "envie", label: "Wishlist", books: envieBlockBooks },
     { id: "dnf", label: "DNF", books: dnfBlockBooks },
@@ -638,7 +645,7 @@ export default function LibraryPage() {
                   </div>
                 )
               ) : block.id === "nextmonth" && block.books.length > 0 ? (
-                <div className="flex flex-wrap justify-center gap-x-10 gap-y-14 py-4">
+                <div className="flex flex-wrap justify-center gap-x-8 gap-y-12 py-4">
                   {block.books.map((book, i) => {
                     const rotations = [-7, 5, -4, 6, -6, 4, -5, 7];
                     const rotation = rotations[i % rotations.length];
@@ -655,7 +662,7 @@ export default function LibraryPage() {
                           className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 h-5 w-5 rounded-full shadow-md"
                           style={{ background: "radial-gradient(circle at 35% 30%, #ff8a8a, #c81e3a 70%)" }}
                         />
-                        <div className="w-36 sm:w-44 bg-white p-2.5 pb-4 rounded-sm shadow-xl">
+                        <div className="w-28 sm:w-36 bg-white p-2 pb-3 rounded-sm shadow-xl">
                           <div className="relative aspect-[2/3] bg-secondary/5 overflow-hidden">
                             <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
                           </div>
