@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, Plus } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,6 +36,7 @@ export function TagDropdown({
 }) {
   const [open, setOpen] = useState(false);
   const [newValue, setNewValue] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const submitNew = () => {
     const trimmed = newValue.trim();
@@ -44,12 +45,22 @@ export function TagDropdown({
     setNewValue("");
   };
 
+  // Quand ce menu s'ouvre depuis une fiche livre (mode administrateur),
+  // il vit à l'intérieur d'un Dialog — le piège de focus du Dialog
+  // considère alors tout ce qui est monté dans le portail par défaut
+  // (document.body) comme "en dehors" de lui et lui reprend le focus
+  // dès le premier clic, empêchant de cocher la moindre case. En
+  // montant ce menu DANS le Dialog englobant (s'il existe), il reste
+  // reconnu comme faisant partie du Dialog et le clic fonctionne.
+  const dialogContainer = open ? (triggerRef.current?.closest('[role="dialog"]') as HTMLElement | null) : null;
+
   return (
     <div className="space-y-4">
       <Label className="italic text-2xl font-headline">{label}</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
+            ref={triggerRef}
             type="button"
             className="w-full flex items-center justify-between rounded-2xl bg-white/40 border border-primary/10 px-5 py-3 italic text-sm text-primary/70 hover:bg-white/60 transition-colors"
           >
@@ -59,7 +70,7 @@ export function TagDropdown({
             <ChevronDown className={cn("h-5 w-5 text-copper transition-transform", open && "rotate-180")} />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[320px] p-0 bg-white/95 backdrop-blur-xl border-2 border-copper/30 shadow-xl shadow-copper/20 rounded-2xl overflow-hidden" align="start">
+        <PopoverContent container={dialogContainer} className="w-[320px] p-0 bg-white/95 backdrop-blur-xl border-2 border-copper/30 shadow-xl shadow-copper/20 rounded-2xl overflow-hidden" align="start">
           {onAddNew && (
             <div className="flex gap-2 p-3 border-b border-primary/10">
               <Input

@@ -344,11 +344,28 @@ export default function BookDetailPage() {
     }
   }, [db, masterBook, recommendations]);
 
-  // Les recommandations se chargent en lazy-load quand la lectrice
-  // arrive sur la section "Ils ont aussi lu", pas automatiquement à
-  // l'ouverture de la fiche — les 2-3 scans complets de masterBooks
-  // qu'elles nécessitent rendaient la page lente à ouvrir.
-  // Le déclenchement est maintenant à la main dans la section UI.
+  // Les recommandations se chargent en lazy-load quand la section
+  // "Ils ont aussi lu" approche du viewport, pas à l'ouverture de la
+  // fiche — les 2-3 requêtes masterBooks qu'elles nécessitent
+  // rendaient la page lente à ouvrir. Déclenchement automatique via
+  // IntersectionObserver, sans clic de la lectrice.
+  const recommendationsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!masterBook || recommendations !== null) return;
+    const el = recommendationsRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchRecommendations();
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [masterBook, recommendations, fetchRecommendations]);
 
   // n'en a pas encore (cas des livres ajoutés avant qu'on enrichisse les
   // données à l'ajout) — ne s'exécute qu'une fois, dès que masterBook
@@ -1008,11 +1025,11 @@ export default function BookDetailPage() {
 
               {/* Recommandations */}
               {masterBook && (
-                <div className="pt-6 border-t border-primary/5">
+                <div ref={recommendationsRef} className="pt-6 border-t border-primary/5">
                   {recommendations === null ? (
-                    <button onClick={fetchRecommendations} className="text-xs italic text-primary/50 hover:text-primary transition-colors underline underline-offset-4">
-                      Voir les livres dans le même genre →
-                    </button>
+                    <div className="flex items-center gap-2 text-xs italic text-primary/40">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Recherche de livres similaires...
+                    </div>
                   ) : recommendations.length > 0 ? (
                     <div className="space-y-6">
                       <div className="space-y-1">
