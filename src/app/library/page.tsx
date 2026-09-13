@@ -993,7 +993,7 @@ export default function LibraryPage() {
                 <div className="p-6 pb-4 border-b border-primary/10 shrink-0">
                   <DialogTitle className="font-headline italic text-2xl font-normal">{label}</DialogTitle>
                 </div>
-                <ScrollArea className="flex-1 min-h-0">
+                <div className="flex-1 min-h-0 overflow-y-auto">
                   <div className="p-6 pt-4 space-y-6">
                     {books.map((book: any) => {
                       const quotes = (Array.isArray(book.favoriteQuotes) ? book.favoriteQuotes.filter(Boolean) : book.favoriteQuote ? [book.favoriteQuote] : []) as string[];
@@ -1007,7 +1007,7 @@ export default function LibraryPage() {
                               <Badge className="text-[7px] font-bold uppercase bg-emerald-400">Lu</Badge>
                             </div>
                             {FormatIcon && (
-                              <div className="absolute bottom-1 left-1 h-5 w-5 rounded-full bg-white/85 shadow-sm flex items-center justify-center" title={FORMATS[book.format as BookFormat].label}>
+                              <div className="absolute bottom-1 left-1 h-5 w-5 rounded-full bg-white shadow-sm flex items-center justify-center" title={FORMATS[book.format as BookFormat].label}>
                                 <FormatIcon className={cn("h-2.5 w-2.5", FORMATS[book.format as BookFormat].color)} />
                               </div>
                             )}
@@ -1038,7 +1038,7 @@ export default function LibraryPage() {
                       );
                     })}
                   </div>
-                </ScrollArea>
+                </div>
               </>
             );
           })()}

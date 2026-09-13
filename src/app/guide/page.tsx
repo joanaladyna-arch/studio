@@ -11,10 +11,13 @@ const SECTIONS = [
     icon: Library,
     title: "Bibliothèque",
     items: [
-      "Tous tes livres sont rangés par blocs : En cours, PAL (à lire), Lu, Wishlist et DNF (abandonnés) — tous visibles en même temps, l'un en dessous de l'autre.",
+      "✦ Nouveau — Tes livres sont désormais rangés par onglets, juste sous \"Ma Bibliothèque\" : Mois prochain, En cours, PAL, Lu, Wishlist et DNF — un seul onglet s'affiche à la fois, plus besoin de tout faire défiler.",
+      "\"Surprends-moi\" (le petit dé, à côté du bouton \"Ajouter\") tire un livre au hasard dans ta PAL quand tu ne sais pas quoi lire ensuite.",
       "Le bouton \"Sélectionner\" permet de cocher plusieurs livres à la fois, par exemple pour les retirer de tes objectifs de lecture.",
-      "\"Surprends-moi\" (le petit dé) tire un livre au hasard dans ta PAL quand tu ne sais pas quoi lire ensuite.",
-      "Le bouton avec l'appareil photo scanne le code-barres d'un livre physique pour l'ajouter instantanément.",
+      "✦ Nouveau — Onglet \"En cours\" : reprend la carte \"Lecture Actuelle\" de l'accueil, avec couverture, barre de progression et bouton \"Reprendre le voyage\".",
+      "✦ Nouveau — Onglet \"Wishlist\" : tes envies de lecture sont accrochées sur une petite corde à linge, comme des photos.",
+      "✦ Nouveau — Onglet \"Lu\" : le mois en cours reste affiché en liste ouverte comme avant ; les mois précédents sont rangés dans des boîtes d'archive — clique sur une boîte pour retrouver, pour chaque livre, sa note, sa citation retenue et ton avis, avec un lien \"Lire +\" vers la fiche complète.",
+      "Onglet PAL : un aperçu du futur bloc Plume+ \"Ordre de ta PAL\" (rangement personnalisé ou automatique, sauvegardé) est visible mais pas encore activable — bientôt disponible.",
     ],
   },
   {
