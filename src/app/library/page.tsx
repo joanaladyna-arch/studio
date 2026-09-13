@@ -6,7 +6,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useAmbientDark } from "@/hooks/use-ambient-dark";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { MasterBookManager } from "@/components/master-book-manager";
@@ -44,14 +44,17 @@ import {
   EyeOff,
   Eye,
   ListOrdered,
-  Trash2
+  Trash2,
+  PenTool
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import { StarRating } from "@/components/star-rating";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { cn, cleanBookTitle, cleanAuthorName, ADMIN_EMAILS, sortBySaga, sortByAuthor, syncMasterBookReadCount } from "@/lib/utils";
 import { useCollection, useUser, useFirestore } from "@/firebase";
 import { useAdminMode } from "@/components/admin-mode";
 import { collection, doc, getDoc, updateDoc, query, where, getDocs, writeBatch, deleteDoc } from "firebase/firestore";
@@ -217,6 +220,10 @@ export default function LibraryPage() {
   const [sortMode, setSortMode] = useState<"saga" | "author" | "manual">("saga");
   const [isReordering, setIsReordering] = useState<string | null>(null);
 
+  // Mois archivé ouvert dans la modale de détail de l'onglet "Lu" (clé de
+  // readByMonth, ex: "2026-08") — null = modale fermée.
+  const [openMonthKey, setOpenMonthKey] = useState<string | null>(null);
+
   // Sélection multiple — pour retirer en masse des livres des objectifs
   // (annuel/mensuel) sans toucher au reste de leur fiche. Pensé pour les
   // lectrices qui importent tout leur historique de lecture pour avoir
@@ -262,6 +269,54 @@ export default function LibraryPage() {
       setBulkSaving(false);
     }
   };
+
+  // Retire un livre de la réserve personnelle directement depuis sa carte
+  // (croix rapide), sans passer par sa fiche complète — même geste que
+  // "Retirer ce livre de votre réserve" sur la fiche livre.
+  const quickDeleteBook = async (bookId: string, title: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!db || !user || !confirm(`Retirer "${title}" de votre réserve ?`)) return;
+    try {
+      const book = userBooks.find((b) => b.id === bookId);
+      await deleteDoc(doc(db, "users", user.uid, "books", bookId));
+      if (book?.masterBookId) {
+        await syncMasterBookReadCount(db, book.masterBookId, book.status, null);
+      }
+      toast({ title: "Livre retiré" });
+    } catch (err) {
+      console.error("Quick Delete Book Error:", err);
+      toast({ variant: "destructive", title: "Erreur lors de la suppression" });
+    }
+  };
+
+  // Supprime en masse les livres sélectionnés (mode sélection) — même
+  // logique que le retrait individuel, en un seul lot par lecture de
+  // cohérence (readCount synchronisé pour chaque livre concerné).
+  const bulkDeleteBooks = async () => {
+    if (!db || !user || selectedIds.size === 0) return;
+    if (!confirm(`Supprimer définitivement ${selectedIds.size} livre${selectedIds.size > 1 ? "s" : ""} de votre réserve ?`)) return;
+    setBulkDeleting(true);
+    try {
+      const toDelete = userBooks.filter((b) => selectedIds.has(b.id));
+      const batch = writeBatch(db);
+      toDelete.forEach((b) => batch.delete(doc(db, "users", user.uid, "books", b.id)));
+      await batch.commit();
+      await Promise.all(
+        toDelete
+          .filter((b) => b.masterBookId)
+          .map((b) => syncMasterBookReadCount(db, b.masterBookId, b.status, null))
+      );
+      toast({ title: "Livres supprimés", description: `${toDelete.length} livre${toDelete.length > 1 ? "s" : ""} retiré${toDelete.length > 1 ? "s" : ""}.` });
+      exitSelectMode();
+    } catch (err) {
+      console.error("Bulk Delete Books Error:", err);
+      toast({ variant: "destructive", title: "Erreur lors de la suppression" });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   const [drawnBook, setDrawnBook] = useState<any | null>(null);
   const [isPinningDraw, setIsPinningDraw] = useState(false);
   const isAdmin = adminMode;
@@ -470,26 +525,26 @@ export default function LibraryPage() {
   const palDisplayBooks = useMemo(() => palBlockBooks.filter((b: any) => !b.plannedNextMonth), [palBlockBooks]);
 
   const BLOCKS = [
-    { id: "nextmonth", label: "🎯 Lectures du mois prochain", books: nextMonthBlockBooks, highlight: true },
-    { id: "progress", label: "En cours", books: progressBlockBooks },
-    { id: "pal", label: "PAL", books: palDisplayBooks },
-    { id: "read", label: "Lu", books: readBlockBooks },
-    { id: "envie", label: "Wishlist", books: envieBlockBooks },
-    { id: "dnf", label: "DNF", books: dnfBlockBooks },
+    { id: "nextmonth", label: "🎯 Lectures du mois prochain", tabLabel: "🎯 Mois prochain", books: nextMonthBlockBooks, highlight: true },
+    { id: "progress", label: "En cours", tabLabel: "En cours", books: progressBlockBooks },
+    { id: "pal", label: "PAL", tabLabel: "PAL", books: palDisplayBooks },
+    { id: "read", label: "Lu", tabLabel: "Lu", books: readBlockBooks },
+    { id: "envie", label: "Wishlist", tabLabel: "Wishlist", books: envieBlockBooks },
+    { id: "dnf", label: "DNF", tabLabel: "DNF", books: dnfBlockBooks },
   ];
 
-  // Un lien externe (ex: le raccourci Wishlist de l'Accueil, ?filter=envie)
-  // fait défiler jusqu'au bloc correspondant au chargement, plutôt que de
-  // basculer un onglet qui n'existe plus dans cette version par blocs.
+  // Onglet actif — remplace l'ancien système où tous les blocs
+  // s'affichaient en défilement continu. Un lien externe (ex: le
+  // raccourci Wishlist de l'Accueil, ?filter=envie) bascule directement
+  // sur l'onglet correspondant au chargement.
+  const [activeTab, setActiveTab] = useState<string>("pal");
   useEffect(() => {
     const filterParam = searchParams?.get("filter");
     if (!filterParam || loading) return;
-    const el = document.getElementById(`block-${filterParam}`);
-    if (el) {
-      const t = setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 300);
-      return () => clearTimeout(t);
-    }
+    if (BLOCKS.some((b) => b.id === filterParam)) setActiveTab(filterParam);
   }, [searchParams, loading]);
+
+  const activeBlock = BLOCKS.find((b) => b.id === activeTab) || BLOCKS[2];
 
   return (
     <div className="space-y-10 animate-paper pb-32">
@@ -502,17 +557,55 @@ export default function LibraryPage() {
         <div className="flex flex-col md:flex-row gap-4 max-w-4xl mx-auto items-center">
           <div className="relative flex-1 group w-full">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary/40" />
-            <Input 
-              placeholder="Chercher un titre ou auteur..." 
+            <Input
+              placeholder="Chercher un titre ou auteur..."
               className="pl-12 h-14 bg-white/60 border-white rounded-2xl italic text-lg shadow-sm"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          
+
           <Button asChild className="rounded-2xl bg-primary h-14 px-8 shadow-xl font-headline italic text-xl">
             <Link href="/add"><Plus className="mr-2 h-6 w-6" /> Ajouter</Link>
           </Button>
+
+          <button
+            onClick={drawRandomNextRead}
+            className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-2xl hover:bg-white/40 transition-colors shrink-0"
+            title="Tirer un livre au hasard dans la PAL"
+          >
+            <span className="text-3xl leading-none" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }}>🎲</span>
+            <span className="text-[10px] italic font-headline text-primary/70 whitespace-nowrap">Surprends-moi</span>
+          </button>
+        </div>
+
+        {/* Onglets — juste après le titre/la recherche, remplace l'ancien
+            défilement continu où tous les blocs s'affichaient à la suite. */}
+        <div className="flex justify-center flex-wrap gap-1 sm:gap-2 border-b border-primary/10 max-w-4xl mx-auto">
+          {BLOCKS.map((block) => (
+            <button
+              key={block.id}
+              onClick={() => setActiveTab(block.id)}
+              className={cn(
+                "inline-flex items-center gap-2 px-3 sm:px-4 py-3 font-headline italic text-sm sm:text-base border-b-[3px] transition-colors",
+                activeTab === block.id
+                  ? (block as any).highlight ? "border-copper text-copper" : "border-primary text-primary"
+                  : "border-transparent text-primary/50 hover:text-primary/80"
+              )}
+            >
+              {block.tabLabel}
+              <span
+                className={cn(
+                  "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                  activeTab === block.id
+                    ? (block as any).highlight ? "bg-copper text-white" : "bg-primary text-white"
+                    : "bg-primary/10 text-primary/60"
+                )}
+              >
+                {block.books.length}
+              </span>
+            </button>
+          ))}
         </div>
 
         <div className="flex justify-center flex-wrap gap-3">
@@ -536,26 +629,17 @@ export default function LibraryPage() {
             {sortMode === "author" ? <Layers className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
             {sortMode === "author" ? "Revenir au tri par saga" : "Classer par auteur"}
           </button>
-          {(
-            <>
-              <button
-                onClick={() => setSortMode(sortMode === "manual" ? "saga" : "manual")}
-                className={cn(
-                  "inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
-                  sortMode === "manual" ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
-                )}
-              >
-                <ListOrdered className="h-4 w-4" />
-                {sortMode === "manual" ? "Quitter l'ordre personnalisé" : "Ranger moi-même (PAL)"}
-              </button>
-              <button
-                onClick={drawRandomNextRead}
-                className="flex flex-col items-center gap-1 px-3 py-1 rounded-2xl hover:bg-white/40 transition-colors"
-              >
-                <span className="text-6xl leading-none" style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.15))" }}>🎲</span>
-                <span className="text-[11px] italic font-headline text-primary/70">Surprends-moi</span>
-              </button>
-            </>
+          {activeTab === "pal" && (
+            <button
+              onClick={() => setSortMode(sortMode === "manual" ? "saga" : "manual")}
+              className={cn(
+                "inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline transition-colors",
+                sortMode === "manual" ? "bg-primary text-white shadow-md" : "bg-white/50 text-primary/60 hover:bg-white/70"
+              )}
+            >
+              <ListOrdered className="h-4 w-4" />
+              {sortMode === "manual" ? "Quitter l'ordre personnalisé" : "Ranger moi-même (PAL)"}
+            </button>
           )}
         </div>
       </header>
@@ -593,29 +677,53 @@ export default function LibraryPage() {
         </div>
       )}
 
-      {/* Bandeau en tête : navigation rapide vers chaque bloc (ancre de
-          défilement, pas un filtre) — tous les blocs restent visibles
-          en permanence, contrairement à l'ancien système d'onglets qui
-          n'affichait qu'une catégorie à la fois. */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 py-3 bg-background/90 backdrop-blur-lg border-b border-primary/5">
-        <div className="flex justify-start md:justify-center overflow-x-auto no-scrollbar gap-3">
-          {BLOCKS.map((block) => (
-            <a
-              key={block.id}
-              href={`#block-${block.id}`}
-              className={cn(
-                "shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-headline italic transition-colors border",
-                (block as any).highlight
-                  ? "bg-gradient-to-r from-amber-400 to-rose-400 text-white border-transparent shadow-md hover:shadow-lg"
-                  : "bg-white/50 hover:bg-white text-primary/70 hover:text-primary border-primary/5"
-              )}
+      {/* Bloc Plume+ : aperçu non fonctionnel de l'ordre de PAL redessiné,
+          affiché uniquement sur l'onglet PAL. Le tri manuel existant
+          (bouton "Ranger moi-même (PAL)" ci-dessus) reste pleinement
+          fonctionnel — cette carte n'est qu'une préfiguration visuelle. */}
+      {activeTab === "pal" && (
+        <div className="relative max-w-md mx-auto rounded-[1.75rem] border border-amber-200 bg-gradient-to-br from-amber-50 to-rose-50/60 p-5 shadow-sm overflow-hidden select-none">
+          <div
+            className="absolute inset-0 flex items-center justify-center pointer-events-none z-10"
+            style={{ background: "rgba(255,255,255,0.35)" }}
+          >
+            <span
+              className="text-red-500/70 font-headline italic text-2xl sm:text-3xl tracking-wide border-2 border-red-500/50 rounded-xl px-4 py-1"
+              style={{ transform: "rotate(-8deg)" }}
             >
-              {block.label}
-              <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", (block as any).highlight ? "bg-white/25 text-white" : "bg-primary/10 text-primary")}>{block.books.length}</span>
-            </a>
-          ))}
+              Bientôt
+            </span>
+          </div>
+          <div className="opacity-70 pointer-events-none">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-headline italic text-lg">Ordre de ta PAL</h3>
+              <span className="text-[10px] font-bold uppercase tracking-widest bg-primary text-white px-2 py-0.5 rounded-full">Plume+</span>
+            </div>
+            <p className="text-xs text-primary/60 italic mb-3">Choisis comment ta pile à lire s'organise, puis enregistre ton choix — il reste actif à chaque visite.</p>
+            <div className="grid sm:grid-cols-2 gap-2 mb-3">
+              <div className="flex items-center gap-2 rounded-xl border border-primary/10 bg-white/60 px-3 py-2">
+                <ListOrdered className="h-4 w-4 text-primary/50 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold italic">Ordre personnalisé</p>
+                  <p className="text-[10px] text-primary/50">Range chaque livre toi-même.</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl border border-primary/10 bg-white/60 px-3 py-2">
+                <Layers className="h-4 w-4 text-primary/50 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold italic">Ordre automatique</p>
+                  <p className="text-[10px] text-primary/50">Par saga, puis date d'ajout.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <span className="inline-flex items-center gap-1.5 text-xs font-headline italic bg-primary/80 text-white px-3 py-1.5 rounded-full">
+                <Check className="h-3.5 w-3.5" /> Sauvegarder
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {loading ? (
         <div className="py-40 text-center flex flex-col items-center gap-6">
@@ -623,9 +731,11 @@ export default function LibraryPage() {
           <p className="font-headline italic text-primary/40 text-xl">Exploration de la réserve...</p>
         </div>
       ) : (
-        <div className="space-y-16">
-          {BLOCKS.map((block) => (
-            <section key={block.id} id={`block-${block.id}`} className="space-y-6 scroll-mt-24">
+        <div className="space-y-6">
+          {(() => {
+            const block = activeBlock;
+            return (
+            <section key={block.id} className="space-y-6 scroll-mt-24">
               <div className="flex items-center gap-4 px-2">
                 <h2 className={cn("font-headline italic text-2xl md:text-3xl", (block as any).highlight ? "text-amber-500" : isAmbientDark && "text-[#F5F1E8]")}>{block.label}</h2>
                 <span className={cn("text-xs font-bold px-3 py-1 rounded-full", (block as any).highlight ? "bg-amber-400/15 text-amber-600" : "bg-primary/10 text-primary")}>{block.books.length}</span>
@@ -633,10 +743,39 @@ export default function LibraryPage() {
 
               {block.id === "read" ? (
                 readByMonth.length > 0 ? (
-                  <div className="space-y-4">
-                    {readByMonth.map(([key, { label, books }]) => (
-                      <MonthGroup key={key} label={label} books={books} isAdmin={isAdmin} isLoadingEditBook={isLoadingEditBook} openMasterEditor={openMasterEditor} selectMode={selectMode} selectedIds={selectedIds} toggleSelect={toggleSelect} />
-                    ))}
+                  <div className="space-y-6">
+                    {/* Mois le plus récent : liste ouverte inchangée. */}
+                    <MonthGroup
+                      key={readByMonth[0][0]}
+                      label={readByMonth[0][1].label}
+                      books={readByMonth[0][1].books}
+                      isAdmin={isAdmin}
+                      isLoadingEditBook={isLoadingEditBook}
+                      openMasterEditor={openMasterEditor}
+                      selectMode={selectMode}
+                      selectedIds={selectedIds}
+                      toggleSelect={toggleSelect}
+                      quickDeleteBook={quickDeleteBook}
+                    />
+                    {/* Mois précédents : rangés en boîtes d'archive, ouvertes au clic. */}
+                    {readByMonth.length > 1 && (
+                      <div className="space-y-3">
+                        <p className="font-headline italic text-lg text-primary/70 px-2">Mois précédents</p>
+                        <div className="flex flex-wrap gap-4 px-2">
+                          {readByMonth.slice(1).map(([key, { label, books }]) => (
+                            <button
+                              key={key}
+                              onClick={() => setOpenMonthKey(key)}
+                              className="w-36 rounded-2xl border border-primary/10 bg-white/50 hover:bg-white/80 shadow-sm hover:shadow-md transition-all p-5 text-center"
+                            >
+                              <div className="text-3xl mb-2">🗃️</div>
+                              <p className="font-headline italic text-sm leading-tight">{label}</p>
+                              <p className="text-[11px] text-primary/50 mt-1">{books.length} livre{books.length > 1 ? "s" : ""}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="py-16 text-center glass-card border-dashed bg-white/20 rounded-[2rem]">
@@ -671,6 +810,78 @@ export default function LibraryPage() {
                       </Link>
                     );
                   })}
+                </div>
+              ) : block.id === "progress" && block.books.length > 0 ? (
+                <div className="space-y-6 max-w-2xl mx-auto">
+                  {block.books.map((book) => (
+                    <Card key={book.id} className="glass-card overflow-hidden border-none group">
+                      <div className="grid sm:grid-cols-[140px_1fr] gap-0">
+                        <div className="relative aspect-[3/2] sm:aspect-[2/3] overflow-hidden">
+                          <BookCover src={book.cover} alt={book.title || ""} className="object-cover group-hover:scale-110 transition-transform duration-700" />
+                        </div>
+                        <CardContent className="p-5 md:p-7 flex flex-col justify-between gap-4" style={{ background: "linear-gradient(135deg, #EFE6D4, #E4D4B8)" }}>
+                          <div className="space-y-2">
+                            <h3 className="text-lg md:text-2xl font-headline italic leading-tight">
+                              {cleanBookTitle(book.title)}{(book as any).volume ? ` — ${(book as any).volume}` : ""}
+                            </h3>
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{cleanAuthorName(book.author)}</p>
+                            <div className="space-y-1.5 pt-1">
+                              <div className="flex justify-between text-[11px] font-bold uppercase tracking-widest opacity-60 italic">
+                                <span>Progression</span>
+                                <span>{(book as any).progress || 0}%</span>
+                              </div>
+                              <Progress value={(book as any).progress || 0} className="h-2 bg-primary/5" />
+                            </div>
+                          </div>
+                          <Button asChild className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg h-11 text-sm font-headline italic self-start">
+                            <Link href={`/book/${book.id}`}><PenTool className="mr-2 h-4 w-4" /> Reprendre le voyage</Link>
+                          </Button>
+                        </CardContent>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              ) : block.id === "envie" && block.books.length > 0 ? (
+                <div className="space-y-10 py-4">
+                  {(() => {
+                    const rotations = [-7, 5, -4, 6, -6, 4];
+                    const rowSize = 6;
+                    const rows: typeof block.books[] = [];
+                    for (let i = 0; i < block.books.length; i += rowSize) rows.push(block.books.slice(i, i + rowSize));
+                    return rows.map((row, r) => (
+                      <div key={r} className="relative pt-6">
+                        <svg className="block w-full h-9" viewBox={`0 0 ${Math.max(420, row.length * 130)} 36`} preserveAspectRatio="none">
+                          <path
+                            d={`M 0 5 Q ${Math.max(420, row.length * 130) / 2} 36 ${Math.max(420, row.length * 130)} 5`}
+                            fill="none" stroke="hsl(var(--copper))" strokeWidth="2" opacity="0.4"
+                          />
+                        </svg>
+                        <div className="flex flex-wrap justify-center gap-5 -mt-4">
+                          {row.map((book, i) => {
+                            const idx = r * rowSize + i;
+                            return (
+                              <Link
+                                key={book.id}
+                                href={`/book/${book.id}`}
+                                className="group relative flex flex-col items-center shrink-0"
+                                style={{ transform: `rotate(${rotations[idx % rotations.length] * 0.5}deg)`, transition: "transform 300ms" }}
+                                onMouseEnter={(e) => (e.currentTarget.style.transform = "rotate(0deg) scale(1.06)")}
+                                onMouseLeave={(e) => (e.currentTarget.style.transform = `rotate(${rotations[idx % rotations.length] * 0.5}deg)`)}
+                              >
+                                <span className="w-3 h-5 rounded-[3px] bg-gradient-to-b from-amber-200 to-amber-600 shadow-sm -mb-1 z-10" />
+                                <div className="w-24 bg-white p-1.5 pb-2.5 rounded-sm shadow-lg">
+                                  <div className="relative aspect-[2/3] bg-secondary/5 overflow-hidden rounded-[4px]">
+                                    <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+                                  </div>
+                                  <p className="mt-1.5 text-center text-[10px] font-headline italic leading-tight line-clamp-2">{cleanBookTitle(book.title)}</p>
+                                </div>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ));
+                  })()}
                 </div>
               ) : block.books.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-10">
@@ -756,14 +967,83 @@ export default function LibraryPage() {
                       ? "Aucun résultat dans ce bloc."
                       : block.id === "nextmonth"
                       ? 'Aucune lecture prévue pour le mois prochain — étoile un livre de ta PAL avec "Prévoir pour le mois prochain".'
+                      : block.id === "progress"
+                      ? "Aucune lecture en cours pour le moment."
                       : `Aucun livre dans "${block.label}" pour le moment.`}
                   </p>
                 </div>
               )}
             </section>
-          ))}
+            );
+          })()}
         </div>
       )}
+
+      {/* Détail d'un mois archivé (onglet "Lu") — citation retenue, avis et
+          note, avec accès à la fiche complète via "Lire +". Corps
+          défilant indépendamment, en-tête fixe. */}
+      <Dialog open={!!openMonthKey} onOpenChange={(o) => !o && setOpenMonthKey(null)}>
+        <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[85vh] flex flex-col">
+          {(() => {
+            const monthEntry = readByMonth.find(([key]) => key === openMonthKey);
+            if (!monthEntry) return null;
+            const [, { label, books }] = monthEntry;
+            return (
+              <>
+                <div className="p-6 pb-4 border-b border-primary/10 shrink-0">
+                  <DialogTitle className="font-headline italic text-2xl font-normal">{label}</DialogTitle>
+                </div>
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="p-6 pt-4 space-y-6">
+                    {books.map((book: any) => {
+                      const quotes = (Array.isArray(book.favoriteQuotes) ? book.favoriteQuotes.filter(Boolean) : book.favoriteQuote ? [book.favoriteQuote] : []) as string[];
+                      const rating = Number(book.rating) || 0;
+                      const FormatIcon = book.format && FORMATS[book.format as BookFormat] ? FORMATS[book.format as BookFormat].icon : null;
+                      return (
+                        <div key={book.id} className="flex gap-4 pb-6 border-b border-primary/5 last:border-0 last:pb-0">
+                          <div className="relative w-20 aspect-[2/3] shrink-0 rounded-lg overflow-hidden shadow-md">
+                            <BookCover src={book.cover} alt={book.title || ""} className="object-cover" />
+                            <div className="absolute top-1 right-1">
+                              <Badge className="text-[7px] font-bold uppercase bg-emerald-400">Lu</Badge>
+                            </div>
+                            {FormatIcon && (
+                              <div className="absolute bottom-1 left-1 h-5 w-5 rounded-full bg-white/85 shadow-sm flex items-center justify-center" title={FORMATS[book.format as BookFormat].label}>
+                                <FormatIcon className={cn("h-2.5 w-2.5", FORMATS[book.format as BookFormat].color)} />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <h3 className="font-headline italic text-lg leading-tight">{cleanBookTitle(book.title)}</h3>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{cleanAuthorName(book.author)}</p>
+                            {rating > 0 && (
+                              <StarRating rating={rating} size={12} gap="gap-0.5" colorClass="text-copper fill-copper" emptyClass="fill-transparent text-muted-foreground/25" />
+                            )}
+                            {quotes.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-copper">Citation retenue</p>
+                                <p className="font-headline italic text-sm">"{quotes[0]}"</p>
+                              </div>
+                            )}
+                            {book.review && (
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-copper">Avis</p>
+                                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-4">{book.review}</p>
+                              </div>
+                            )}
+                            <Link href={`/book/${book.id}`} className="inline-block text-xs font-headline italic text-primary underline underline-offset-2 pt-1">
+                              Lire + →
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {isAdmin && (
         <Dialog open={!!editingMasterBook} onOpenChange={(open) => !open && setEditingMasterBook(null)}>
@@ -889,7 +1169,7 @@ export function BookCard({ book }: { book: UserBook }) {
 // pour les mois récents (logique gérée par le composant parent), avec
 // le compteur de livres dans l'en-tête et la grille de couvertures
 // dans le corps rétractable.
-function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor, selectMode, selectedIds, toggleSelect }: {
+function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor, selectMode, selectedIds, toggleSelect, quickDeleteBook }: {
   label: string;
   books: any[];
   isAdmin: boolean;
@@ -898,6 +1178,7 @@ function MonthGroup({ label, books, isAdmin, isLoadingEditBook, openMasterEditor
   selectMode: boolean;
   selectedIds: Set<string>;
   toggleSelect: (id: string) => void;
+  quickDeleteBook: (id: string, title: string, e: React.MouseEvent) => void;
 }) {
   const [open, setOpen] = useState(true);
   return (

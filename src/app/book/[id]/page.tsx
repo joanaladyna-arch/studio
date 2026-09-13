@@ -1092,13 +1092,13 @@ export default function BookDetailPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setEditedData({ ...editedData, plannedNextMonth: !(editedData as any).plannedNextMonth } as any)}
+                    title={(editedData as any).plannedNextMonth ? "Retirer des lectures du mois prochain" : "Prévoir pour le mois prochain"}
                     className={cn(
-                      "rounded-full h-9 px-4 text-[10px] uppercase font-bold transition-all gap-1.5",
-                      (editedData as any).plannedNextMonth ? "bg-amber-400 text-white border-amber-400 shadow-md" : "bg-white/40"
+                      "rounded-full h-12 w-12 p-0 transition-all",
+                      (editedData as any).plannedNextMonth ? "bg-amber-400 border-amber-400 shadow-md" : "bg-white/40"
                     )}
                   >
-                    <Star className={cn("h-3.5 w-3.5", (editedData as any).plannedNextMonth && "fill-white")} />
-                    {(editedData as any).plannedNextMonth ? "Prévu pour le mois prochain" : "Prévoir pour le mois prochain"}
+                    <Star className={cn("h-6 w-6", (editedData as any).plannedNextMonth ? "fill-white text-white" : "text-amber-500")} />
                   </Button>
                 )}
                 {editedData.status === "progress" && (() => {
