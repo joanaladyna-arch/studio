@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useFirestore, useStorage, useUser } from "@/firebase";
-import { doc, setDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -144,6 +144,29 @@ export function MasterBookEditor({
     try {
       const docId = isNew ? (cleanIsbnValue(form.isbn13) || slugify(`${form.title}-${form.author}`)) : book.id;
       const ref = doc(db, "masterBooks", docId);
+
+      // Garde-fou : l'ID d'une "nouvelle" fiche est déduit de l'ISBN ou
+      // d'un slug titre-auteur, donc déterministe — s'il tombe sur une
+      // fiche déjà en base (doublon involontaire), écrire directement
+      // écraserait silencieusement sa couverture/genres/tropes/thèmes
+      // déjà curatés pour TOUTES les lectrices qui l'ont dans leur
+      // bibliothèque, avec les champs vides du formulaire "nouvelle
+      // fiche". Même principe que isbn-importer.tsx : on bloque et on
+      // renvoie vers l'édition de la fiche existante plutôt que de
+      // risquer une perte de données partagées.
+      if (isNew) {
+        const existingSnap = await getDoc(ref);
+        if (existingSnap.exists()) {
+          toast({
+            variant: "destructive",
+            title: "Fiche déjà existante",
+            description: `${existingSnap.data()?.title || "Ce livre"} est déjà dans la base — modifie-la directement au lieu d'en créer une nouvelle, pour ne rien écraser.`,
+          });
+          setIsSaving(false);
+          return;
+        }
+      }
+
       const dataToSave = {
         title: form.title.trim(),
         subtitle: form.subtitle?.trim() || "",

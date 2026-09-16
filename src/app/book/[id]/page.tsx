@@ -711,9 +711,12 @@ export default function BookDetailPage() {
       await uploadBytes(storageRef, file);
       const url = await getDownloadURL(storageRef);
       const newDoc = { name: file.name, url, path, uploadedAt: Date.now(), type: file.type || "" };
-      const updatedDocs = [...(toArray<any>((editedData as any).reviewDocuments)), newDoc];
-      setEditedData((prev) => ({ ...prev, reviewDocuments: updatedDocs } as any));
-      await updateDoc(userBookRef, { reviewDocuments: updatedDocs });
+      // arrayUnion plutôt que réécrire le tableau entier depuis l'état
+      // local : si la fiche a été modifiée ailleurs (autre onglet/appareil)
+      // depuis le dernier chargement, une réécriture complète effacerait
+      // ce changement au lieu de simplement ajouter ce document.
+      setEditedData((prev) => ({ ...prev, reviewDocuments: [...(toArray<any>((prev as any)?.reviewDocuments)), newDoc] } as any));
+      await updateDoc(userBookRef, { reviewDocuments: arrayUnion(newDoc) });
       toast({ title: "Document ajouté", description: file.name });
     } catch (err) {
       console.error("Doc Upload Error:", err);
@@ -723,12 +726,17 @@ export default function BookDetailPage() {
     }
   };
 
-  const handleDocDelete = async (docToDelete: { path: string }) => {
+  const handleDocDelete = async (docToDelete: any) => {
     if (!storage || !userBookRef) return;
-    const updatedDocs = toArray<any>((editedData as any).reviewDocuments).filter((d: any) => d.path !== docToDelete.path);
-    setEditedData((prev) => ({ ...prev, reviewDocuments: updatedDocs } as any));
+    setEditedData((prev) => ({
+      ...prev,
+      reviewDocuments: toArray<any>((prev as any)?.reviewDocuments).filter((d: any) => d.path !== docToDelete.path),
+    } as any));
     try {
-      await updateDoc(userBookRef, { reviewDocuments: updatedDocs });
+      // arrayRemove (objet exact, ces documents ne changent jamais après
+      // upload) plutôt qu'une réécriture complète — même raison que pour
+      // l'ajout ci-dessus.
+      await updateDoc(userBookRef, { reviewDocuments: arrayRemove(docToDelete) });
       await deleteObject(ref(storage, docToDelete.path));
     } catch (err) {
       // Non bloquant : même si la suppression du fichier de stockage
