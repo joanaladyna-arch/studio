@@ -470,6 +470,14 @@ export default function AddBookPage() {
       const isExternalSource = pendingBook.source !== "master";
       let finalGenres = toArray<string>(pendingBook.genres);
       let finalTropes = toArray<string>(pendingBook.tropes);
+      // Couverture qui finit vraiment dans la bibliothèque de la
+      // lectrice : par défaut celle du résultat choisi, mais résolue via
+      // keepText() ci-dessous quand une fiche masterBook existante en a
+      // déjà une (curation admin, enrichissement ISBNdb...) que la
+      // recherche externe n'a pas ramenée cette fois-ci — sans quoi la
+      // couverture manquerait pour toujours dans SA bibliothèque même
+      // après que la fiche partagée a été complétée.
+      let resolvedCover = pendingBook.cover || "";
 
       if (isExternalSource) {
         const cleanedIsbn = cleanIsbnValue(pendingBook.isbn);
@@ -519,11 +527,13 @@ export default function AddBookPage() {
           }
         }
 
+        resolvedCover = keepText(pendingBook.cover, existing.cover);
+
         await setDoc(masterRef, {
           title: keepText(pendingBook.title, existing.title) || "Titre inconnu",
           subtitle: keepText(pendingBook.subtitle, existing.subtitle),
           author: keepText(pendingBook.author, existing.author) || "Auteur inconnu",
-          cover: keepText(pendingBook.cover, existing.cover),
+          cover: resolvedCover,
           isbn13: keepText(cleanedIsbn, existing.isbn13),
           isbn10: keepText(pendingBook.isbn10, existing.isbn10),
           description: finalDescription,
@@ -554,7 +564,7 @@ export default function AddBookPage() {
         masterBookId,
         title: pendingBook.title || "Titre inconnu",
         author: pendingBook.author || "Auteur inconnu",
-        cover: pendingBook.cover || "",
+        cover: resolvedCover,
         genres: finalGenres,
         tropes: finalTropes,
         themes: toArray<string>(pendingBook.themes),

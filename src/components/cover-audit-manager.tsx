@@ -1,0 +1,75 @@
+"use client";
+
+import { useState } from "react";
+import { useUser } from "@/firebase";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2, ShieldCheck } from "lucide-react";
+
+/**
+ * Répare en masse les couvertures manquantes dans les bibliothèques
+ * personnelles, en les resynchronisant depuis la fiche masterBooks liée
+ * quand celle-ci en a une (voir /api/admin/audit-covers pour le pourquoi
+ * du désync). Ne touche jamais les livres ajoutés manuellement (sans
+ * fiche masterBooks associée) : ceux-là restent à illustrer par la
+ * lectrice elle-même, cas typique de l'auto-édition.
+ */
+export function CoverAuditManager() {
+  const { user } = useUser();
+  const { toast } = useToast();
+  const [isRunning, setIsRunning] = useState(false);
+  const [result, setResult] = useState<{ scanned: number; missingCover: number; repaired: number; stillMissing: number } | null>(null);
+
+  const runAudit = async () => {
+    if (!user) return;
+    setIsRunning(true);
+    setResult(null);
+    try {
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/admin/audit-covers", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setResult(data);
+      toast({ title: "Audit terminé", description: `${data.repaired} couverture(s) réparée(s) sur ${data.missingCover} manquante(s).` });
+    } catch (err) {
+      console.error("Cover Audit Error:", err);
+      toast({ variant: "destructive", title: "Erreur d'audit", description: (err as any)?.message });
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-headline italic flex items-center gap-3">
+        <ShieldCheck className="h-5 w-5 text-primary" /> Réparer les couvertures manquantes
+      </h3>
+      <p className="text-xs italic opacity-60">
+        Recopie la couverture de la fiche catalogue partagée dans chaque livre personnel qui n'en a pas — utile quand
+        une fiche a été enrichie après coup. Les livres ajoutés manuellement (auto-édition sans fiche partagée) ne
+        sont jamais touchés.
+      </p>
+      <Button
+        onClick={runAudit}
+        disabled={isRunning}
+        className="h-11 rounded-xl italic font-headline bg-primary"
+      >
+        {isRunning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+        Lancer l'audit
+      </Button>
+      {result && (
+        <p className="text-xs opacity-60 italic">
+          {result.scanned} livre(s) analysé(s) au total, {result.missingCover} sans couverture, {result.repaired}{" "}
+          réparé(s), {result.stillMissing} toujours sans couverture disponible (fiche partagée elle-même incomplète,
+          ou ajout manuel).
+        </p>
+      )}
+    </div>
+  );
+}

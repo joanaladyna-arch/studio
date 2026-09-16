@@ -78,7 +78,7 @@ export default function Home() {
   };
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'cher lecteur';
-  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
+  const userPhoto = profile?.avatarUrl || user?.photoURL || undefined;
 
   const allBooksQuery = useMemo(() => {
     if (!db || !user) return null;
