@@ -299,19 +299,21 @@ export default function AddBookPage() {
         }
       }
 
-      // Garantie "jamais de livre sans couverture" : pour tout résultat
-      // encore sans image après Google Books / Apple Books / Open Library,
-      // tentative ultime via l'API de couvertures Open Library par ISBN
-      // (gratuite, sans clé, très large couverture éditoriale). Si l'ISBN
-      // n'a pas de couverture connue non plus, le composant BookCover gère
-      // déjà l'échec de chargement avec un repli visuel soigné plutôt
-      // qu'une image cassée.
-      allResults = allResults.map((r) => {
-        if (r.cover) return r;
-        const isbnForCover = (r.isbn13 || r.isbn || "").toString().replace(/[-\s]/g, "");
-        if (!isbnForCover) return r;
-        return { ...r, cover: `https://covers.openlibrary.org/b/isbn/${isbnForCover}-L.jpg` };
-      });
+      // Consigne explicite : un résultat externe (Google Books, Apple
+      // Books, Open Library) sans vraie couverture n'est plus proposé du
+      // tout à l'ajout — mieux vaut ne pas l'afficher que de laisser la
+      // lectrice ajouter un livre qu'elle sait déjà sans image. Les
+      // résultats déjà dans la base Lectoria ("master") restent affichés
+      // tels quels : ils existent déjà, les cacher ne réglerait rien.
+      //
+      // Ancienne "garantie couverture" retirée : elle devinait une URL
+      // Open Library depuis l'ISBN sans jamais vérifier qu'une vraie
+      // couverture existe pour cet ISBN. Or l'API de couvertures Open
+      // Library répond 200 avec une image 1×1 transparente quand elle
+      // n'a rien — le livre se retrouvait donc avec un champ `cover`
+      // non vide (jamais détecté comme "manquant" par l'audit) mais
+      // invisible à l'écran, résultat indiscernable d'un vrai bug.
+      allResults = allResults.filter((r) => r.source !== "api" || !!r.cover);
 
       setResults(sortBySaga(allResults));
 
