@@ -107,12 +107,13 @@ export async function POST(req: NextRequest) {
     if (!decoded.email || !ADMIN_EMAILS.includes(decoded.email)) {
       return NextResponse.json({ error: "Accès réservé à l'administratrice" }, { status: 403 });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("[vision-import] Token verification failed:", err);
     if (err instanceof AdminConfigError) {
       return NextResponse.json({ error: err.message }, { status: 500 });
     }
-    return NextResponse.json({ error: "Token invalide" }, { status: 401 });
+    const reason = err?.errorInfo?.code || err?.code || err?.message || "raison inconnue";
+    return NextResponse.json({ error: `Token invalide : ${reason}` }, { status: 401 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
