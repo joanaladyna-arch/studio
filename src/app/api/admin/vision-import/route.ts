@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth } from "@/lib/firebase-admin";
+import { getAdminAuth, AdminConfigError } from "@/lib/firebase-admin";
 import { ADMIN_EMAILS } from "@/lib/utils";
 
 /**
@@ -109,6 +109,9 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("[vision-import] Token verification failed:", err);
+    if (err instanceof AdminConfigError) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
     return NextResponse.json({ error: "Token invalide" }, { status: 401 });
   }
 

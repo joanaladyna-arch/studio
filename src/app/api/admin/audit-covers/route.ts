@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
+import { getAdminAuth, getAdminDb, AdminConfigError } from "@/lib/firebase-admin";
 import { ADMIN_EMAILS, fetchWithTimeout } from "@/lib/utils";
 
 /**
@@ -56,6 +56,9 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("[audit-covers] Token verification failed:", err);
+    if (err instanceof AdminConfigError) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
     return NextResponse.json({ error: "Token invalide" }, { status: 401 });
   }
 
