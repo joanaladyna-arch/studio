@@ -18,7 +18,7 @@ export function CoverAuditManager() {
   const { user } = useUser();
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
-  const [result, setResult] = useState<{ scanned: number; missingCover: number; repaired: number; stillMissing: number } | null>(null);
+  const [result, setResult] = useState<{ scanned: number; missingCover: number; repaired: number; stillMissing: number; masterCoversEnriched: number; masterCoversRemaining: number } | null>(null);
 
   const runAudit = async () => {
     if (!user) return;
@@ -51,9 +51,9 @@ export function CoverAuditManager() {
         <ShieldCheck className="h-5 w-5 text-primary" /> Réparer les couvertures manquantes
       </h3>
       <p className="text-xs italic opacity-60">
-        Recopie la couverture de la fiche catalogue partagée dans chaque livre personnel qui n'en a pas — utile quand
-        une fiche a été enrichie après coup. Les livres ajoutés manuellement (auto-édition sans fiche partagée) ne
-        sont jamais touchés.
+        Cherche d'abord une couverture sur Google Books pour les fiches catalogue qui n'en ont encore aucune, puis
+        recopie la couverture de chaque fiche dans les livres personnels qui n'en ont pas. Les livres ajoutés
+        manuellement (auto-édition sans fiche partagée) ne sont jamais touchés.
       </p>
       <Button
         onClick={runAudit}
@@ -64,11 +64,20 @@ export function CoverAuditManager() {
         Lancer l'audit
       </Button>
       {result && (
-        <p className="text-xs opacity-60 italic">
-          {result.scanned} livre(s) analysé(s) au total, {result.missingCover} sans couverture, {result.repaired}{" "}
-          réparé(s), {result.stillMissing} toujours sans couverture disponible (fiche partagée elle-même incomplète,
-          ou ajout manuel).
-        </p>
+        <div className="space-y-1">
+          <p className="text-xs opacity-60 italic">
+            {result.masterCoversEnriched} fiche(s) catalogue enrichie(s) depuis Google Books. {result.scanned}{" "}
+            livre(s) analysé(s) au total, {result.missingCover} sans couverture, {result.repaired} réparé(s),{" "}
+            {result.stillMissing} toujours sans couverture disponible (introuvable sur Google Books, ou ajout
+            manuel).
+          </p>
+          {result.masterCoversRemaining > 0 && (
+            <p className="text-xs text-copper italic">
+              {result.masterCoversRemaining} fiche(s) catalogue restent à traiter (plafond par passage) — relance
+              l'audit pour continuer.
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
