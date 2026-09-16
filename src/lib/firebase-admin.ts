@@ -11,6 +11,15 @@ import { getFirestore } from "firebase-admin/firestore";
  * de service), configurée dans Vercel → Settings → Environment
  * Variables. Elle n'est jamais commitée dans le dépôt.
  */
+/**
+ * Erreur distincte d'un jeton invalide : sans elle, les routes appelantes
+ * ne peuvent pas distinguer "la clé de service n'est pas configurée côté
+ * serveur" (à corriger dans Vercel, rien à voir avec la session de
+ * l'administratrice) d'un vrai jeton expiré/invalide — et renvoyaient
+ * toutes les deux le même "Token invalide" trompeur.
+ */
+export class AdminConfigError extends Error {}
+
 let adminApp: App | null = null;
 
 export function getAdminApp(): App {
@@ -22,14 +31,22 @@ export function getAdminApp(): App {
 
   const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!rawKey) {
-    throw new Error(
+    throw new AdminConfigError(
       "FIREBASE_SERVICE_ACCOUNT_KEY manquante — ajoute-la dans Vercel (Project Settings → Environment Variables) avec le contenu JSON complet de la clé de service Firebase."
     );
   }
 
-  const serviceAccount = JSON.parse(rawKey);
+  let serviceAccount: unknown;
+  try {
+    serviceAccount = JSON.parse(rawKey);
+  } catch {
+    throw new AdminConfigError(
+      "FIREBASE_SERVICE_ACCOUNT_KEY invalide — le contenu doit être le JSON complet de la clé de service Firebase, sans modification."
+    );
+  }
+
   adminApp = initializeApp({
-    credential: cert(serviceAccount),
+    credential: cert(serviceAccount as any),
   });
   return adminApp;
 }
