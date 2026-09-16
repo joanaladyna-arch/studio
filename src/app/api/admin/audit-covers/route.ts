@@ -189,6 +189,26 @@ export async function POST(req: NextRequest) {
 
     const booksSnap = await db.collectionGroup("books").get();
 
+    // Un livre personnel peut avoir hérité directement de la fausse
+    // couverture Open Library au moment de l'ajout (resolvedCover
+    // copiait alors telle quelle la couverture "devinée" du résultat de
+    // recherche) — indépendamment de ce que sa fiche masterBooks a comme
+    // valeur aujourd'hui. Un `cover` non vide mais factice doit être
+    // traité comme manquant ici aussi, sans quoi ce livre reste invisible
+    // pour toujours malgré tous les passages de l'audit.
+    const suspectUserBooks = booksSnap.docs.filter((d) => {
+      const cover = (d.data()?.cover || "").toString().trim();
+      return cover && /covers\.openlibrary\.org\/b\/isbn\//.test(cover);
+    });
+    const fakeUserBookIds = new Set<string>();
+    if (suspectUserBooks.length > 0) {
+      const verified = await mapWithConcurrency(suspectUserBooks, CONCURRENCY, async (d) => ({
+        id: d.id,
+        isFake: await isFakeOpenLibraryCover((d.data()?.cover || "").toString().trim()),
+      }));
+      for (const v of verified) if (v.isFake) fakeUserBookIds.add(v.id);
+    }
+
     let scanned = 0;
     let missingCover = 0;
     let repaired = 0;
@@ -209,13 +229,23 @@ export async function POST(req: NextRequest) {
       scanned++;
       const data = docSnap.data();
       const currentCover = (data?.cover || "").toString().trim();
-      if (currentCover) continue;
+      const isFake = fakeUserBookIds.has(docSnap.id);
+      if (currentCover && !isFake) continue;
 
       missingCover++;
       const masterBookId = data?.masterBookId;
       const newCover = masterBookId ? masterCovers.get(masterBookId) : undefined;
       if (!newCover) {
         stillMissing++;
+        // Vide au moins la fausse couverture (plutôt que la laisser
+        // invisible mais "présente") même si aucun remplacement n'a été
+        // trouvé cette fois — un prochain enrichissement de la fiche
+        // partagée pourra alors la repérer et la corriger.
+        if (isFake) {
+          batch.update(docSnap.ref, { cover: "" });
+          opsInBatch++;
+          await flushIfFull();
+        }
         continue;
       }
 
