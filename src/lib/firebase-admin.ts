@@ -36,12 +36,24 @@ export function getAdminApp(): App {
     );
   }
 
+  // .trim() : un copier-coller depuis Vercel ou un éditeur ajoute parfois
+  // un retour à la ligne ou une espace avant/après, invisible à l'œil mais
+  // suffisant pour faire échouer JSON.parse.
+  const cleanedKey = rawKey.trim();
   let serviceAccount: unknown;
   try {
-    serviceAccount = JSON.parse(rawKey);
-  } catch {
+    serviceAccount = JSON.parse(cleanedKey);
+  } catch (err) {
+    // Cause fréquente et invisible à l'œil : des guillemets courbes
+    // (“ ”) substitués aux guillemets droits (") par une appli qui
+    // "corrige" le texte à l'ouverture du fichier (TextEdit en mode
+    // texte enrichi, Pages, Notes...) — le JSON a alors l'air identique
+    // en le relisant, mais n'est plus du JSON valide.
+    const smartQuoteHint = /[“”‘’]/.test(cleanedKey)
+      ? " Des guillemets courbes (“ ”) ont été repérés à la place de guillemets droits (\") — probablement introduits par une appli qui « corrige » le texte à l'ouverture du fichier (TextEdit en mode texte enrichi, Pages, Notes...). Réouvre le .json original dans un éditeur de texte brut et recopie-le."
+      : "";
     throw new AdminConfigError(
-      "FIREBASE_SERVICE_ACCOUNT_KEY invalide — le contenu doit être le JSON complet de la clé de service Firebase, sans modification."
+      `FIREBASE_SERVICE_ACCOUNT_KEY invalide — le contenu doit être le JSON complet de la clé de service Firebase, sans modification. Détail : ${(err as Error).message}.${smartQuoteHint}`
     );
   }
 
