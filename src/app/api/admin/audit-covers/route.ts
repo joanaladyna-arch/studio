@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
-import { ADMIN_EMAILS } from "@/lib/utils";
+import { ADMIN_EMAILS, fetchWithTimeout } from "@/lib/utils";
 
 /**
  * Réparation en masse des couvertures manquantes dans les bibliothèques
@@ -12,12 +12,35 @@ import { ADMIN_EMAILS } from "@/lib/utils";
  * toujours, même après que la fiche partagée masterBooks a ensuite reçu
  * une vraie couverture (curation admin, enrichissement ISBNdb...).
  *
- * Cette route recopie, pour chaque livre personnel sans couverture, celle
- * de sa fiche masterBooks liée si elle en a une désormais. Elle ne touche
- * jamais aux livres sans masterBookId (ajout manuel — souvent de
- * l'auto-édition que seule la lectrice peut illustrer elle-même) ni à
- * ceux dont la fiche masterBooks n'a toujours pas de couverture.
+ * Deux étapes :
+ * 1. Pour chaque fiche masterBooks encore sans couverture, tente une
+ *    recherche Google Books par titre/auteur (l'outil "Compléter les
+ *    champs manquants (ISBNdb)" existant ne couvre que les fiches ayant
+ *    déjà un ISBN, ISBNdb ne cherchant qu'en exact — beaucoup de fiches
+ *    ajoutées par titre/auteur n'en ont jamais eu). Plafonné par passage
+ *    pour rester sous le temps d'exécution serverless — relancer l'audit
+ *    poursuit sur les fiches restantes.
+ * 2. Recopie, pour chaque livre personnel sans couverture, celle de sa
+ *    fiche masterBooks liée si elle en a une (déjà là ou tout juste
+ *    trouvée à l'étape 1). Ne touche jamais aux livres sans masterBookId
+ *    (ajout manuel — souvent de l'auto-édition que seule la lectrice
+ *    peut illustrer elle-même) ni à ceux dont la fiche masterBooks n'a
+ *    toujours pas de couverture.
  */
+const MAX_GOOGLE_LOOKUPS_PER_RUN = 60;
+
+async function findGoogleCover(title: string, author: string): Promise<string | null> {
+  const q = author ? `intitle:${title} inauthor:${author}` : `intitle:${title}`;
+  try {
+    const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=1`, {}, 8000);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const thumbnail = data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
+    return thumbnail ? thumbnail.replace("http://", "https://") : null;
+  } catch {
+    return null;
+  }
+}
 export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("authorization") || "";
   const idToken = authHeader.replace(/^Bearer\s+/i, "");
@@ -41,10 +64,27 @@ export async function POST(req: NextRequest) {
 
     const masterSnap = await db.collection("masterBooks").get();
     const masterCovers = new Map<string, string>();
+    const masterMissingCover: { id: string; title: string; author: string }[] = [];
     masterSnap.forEach((d) => {
-      const cover = (d.data()?.cover || "").toString().trim();
-      if (cover) masterCovers.set(d.id, cover);
+      const data = d.data();
+      const cover = (data?.cover || "").toString().trim();
+      if (cover) {
+        masterCovers.set(d.id, cover);
+      } else if ((data?.title || "").toString().trim()) {
+        masterMissingCover.push({ id: d.id, title: data.title, author: (data.author || "").toString() });
+      }
     });
+
+    let masterCoversEnriched = 0;
+    const toLookUp = masterMissingCover.slice(0, MAX_GOOGLE_LOOKUPS_PER_RUN);
+    for (const m of toLookUp) {
+      const found = await findGoogleCover(m.title, m.author);
+      if (!found) continue;
+      await db.collection("masterBooks").doc(m.id).update({ cover: found });
+      masterCovers.set(m.id, found);
+      masterCoversEnriched++;
+    }
+    const masterCoversRemaining = masterMissingCover.length - toLookUp.length;
 
     const booksSnap = await db.collectionGroup("books").get();
 
@@ -86,7 +126,10 @@ export async function POST(req: NextRequest) {
     if (opsInBatch > 0) commits.push(batch.commit());
     await Promise.all(commits);
 
-    return NextResponse.json({ scanned, missingCover, repaired, stillMissing });
+    return NextResponse.json({
+      scanned, missingCover, repaired, stillMissing,
+      masterCoversEnriched, masterCoversRemaining,
+    });
   } catch (err: any) {
     console.error("[audit-covers] Error:", err);
     return NextResponse.json({ error: err?.message || "Erreur inconnue" }, { status: 500 });
