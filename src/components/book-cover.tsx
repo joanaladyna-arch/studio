@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,13 +62,17 @@ export function BookCover({
 
   if (effectiveSrc) {
     return (
-      <Image
+      // <img> brut plutôt que next/image : ce composant sert aussi bien
+      // le lien direct que le data URI renvoyé par /api/proxy-image, et
+      // next/image a des comportements internes peu fiables avec les
+      // URLs data: — un échec silencieux là ferait perdre le bénéfice du
+      // relais de secours juste au-dessus. On n'optimise déjà pas ces
+      // images (unoptimized), donc rien à perdre à s'en passer.
+      <img
         src={effectiveSrc}
         alt={alt}
-        fill
-        className={className}
+        className={cn("absolute inset-0 h-full w-full", className)}
         onError={() => (proxiedSrc ? setProxyFailed(true) : setDirectFailed(true))}
-        unoptimized
       />
     );
   }
