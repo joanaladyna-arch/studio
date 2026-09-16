@@ -55,7 +55,7 @@ function parseJsonResponse(text: string): ExtractedBook[] {
   }
 }
 
-async function extractFromImage(base64: string, mediaType: string, apiKey: string): Promise<ExtractedBook[]> {
+async function extractFromImage(base64: string, mediaType: string, apiKey: string): Promise<{ books: ExtractedBook[]; error?: string }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -79,13 +79,19 @@ async function extractFromImage(base64: string, mediaType: string, apiKey: strin
   });
 
   if (!res.ok) {
-    console.error(`[vision-import] Anthropic HTTP ${res.status}`);
-    return [];
+    const errBody = await res.json().catch(() => null);
+    const message = errBody?.error?.message || `Erreur Anthropic HTTP ${res.status}`;
+    console.error(`[vision-import] Anthropic HTTP ${res.status}: ${message}`);
+    return { books: [], error: message };
   }
 
   const data = await res.json();
   const text = data?.content?.[0]?.text || "";
-  return parseJsonResponse(text);
+  const books = parseJsonResponse(text);
+  if (books.length === 0 && text.trim() && !text.trim().startsWith("[")) {
+    return { books: [], error: "Réponse de l'analyse illisible (JSON non reconnu)" };
+  }
+  return { books };
 }
 
 export async function POST(req: NextRequest) {
@@ -121,17 +127,20 @@ export async function POST(req: NextRequest) {
   }
 
   const results: (ExtractedBook & { sourceImageIndex: number })[] = [];
+  const errors: { imageIndex: number; message: string }[] = [];
   for (let i = 0; i < images.length; i++) {
     try {
-      const books = await extractFromImage(images[i].base64, images[i].mediaType, apiKey);
+      const { books, error } = await extractFromImage(images[i].base64, images[i].mediaType, apiKey);
+      if (error) errors.push({ imageIndex: i, message: error });
       for (const b of books) {
         results.push({ ...b, sourceImageIndex: i });
       }
     } catch (err) {
       console.error(`[vision-import] Error on image ${i}:`, err);
+      errors.push({ imageIndex: i, message: (err as Error)?.message || "Erreur inconnue" });
       // Une image qui échoue ne doit pas faire tomber tout le lot.
     }
   }
 
-  return NextResponse.json({ results, imagesProcessed: images.length });
+  return NextResponse.json({ results, imagesProcessed: images.length, errors });
 }

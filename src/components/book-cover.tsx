@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,10 +24,54 @@ export function BookCover({
   alt: string;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [directFailed, setDirectFailed] = useState(false);
+  const [proxiedSrc, setProxiedSrc] = useState<string | null>(null);
+  const [proxyFailed, setProxyFailed] = useState(false);
 
-  if (src && !failed) {
-    return <Image src={src} alt={alt} fill className={className} onError={() => setFailed(true)} unoptimized />;
+  useEffect(() => {
+    setDirectFailed(false);
+    setProxiedSrc(null);
+    setProxyFailed(false);
+  }, [src]);
+
+  // Beaucoup de couvertures viennent d'un lien direct Google Books
+  // (books.google.com/books/content...), qui refuse le hotlinking sans
+  // en-tête Referer adéquat — le navigateur envoie le nôtre, pas le
+  // sien, donc l'image échoue silencieusement (même souci documenté
+  // dans /api/proxy-image, jusqu'ici réservé à l'export de partage).
+  // Si le chargement direct échoue, on retente une fois via ce relais
+  // serveur avant d'abandonner sur le repli visuel.
+  useEffect(() => {
+    if (!directFailed || !src || proxiedSrc || proxyFailed) return;
+    let cancelled = false;
+    fetch(`/api/proxy-image?url=${encodeURIComponent(src)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.dataUri) setProxiedSrc(data.dataUri);
+        else setProxyFailed(true);
+      })
+      .catch(() => {
+        if (!cancelled) setProxyFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [directFailed, src, proxiedSrc, proxyFailed]);
+
+  const effectiveSrc = proxyFailed ? null : proxiedSrc || (!directFailed ? src : null);
+
+  if (effectiveSrc) {
+    return (
+      <Image
+        src={effectiveSrc}
+        alt={alt}
+        fill
+        className={className}
+        onError={() => (proxiedSrc ? setProxyFailed(true) : setDirectFailed(true))}
+        unoptimized
+      />
+    );
   }
   // Repli visuel premium quand aucune couverture n'a pu être trouvée
   // (base Lectoria, fiche partagée, puis Google Books en direct, toutes
