@@ -277,7 +277,11 @@ export default function ProfilePage() {
   );
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Lectoria';
-  const userPhoto = profile?.avatarUrl || user?.photoURL || `https://picsum.photos/seed/${user?.uid || 'lectoria'}/200/200`;
+  // Pas de repli sur une photo aléatoire externe (picsum.photos) quand la
+  // lectrice n'a pas mis d'avatar : ça ajoutait une dépendance réseau
+  // superflue qui peut échouer, pour un résultat sans rapport avec elle
+  // de toute façon. Le repli local "PL" du composant Avatar suffit.
+  const userPhoto = profile?.avatarUrl || user?.photoURL || undefined;
 
   // Remontée depuis les paramètres du dialogue d'édition (où elle
   // n'était visible qu'après plusieurs clics) directement dans le
