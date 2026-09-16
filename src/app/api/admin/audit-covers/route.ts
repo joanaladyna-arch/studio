@@ -27,18 +27,30 @@ import { ADMIN_EMAILS, fetchWithTimeout } from "@/lib/utils";
  *    peut illustrer elle-même) ni à ceux dont la fiche masterBooks n'a
  *    toujours pas de couverture.
  */
-// Traités en parallèle par petits lots plutôt qu'un par un : sur le
-// plan Hobby de Vercel, la fonction serverless a un temps d'exécution
-// limité, et le faire en série (une recherche Google Books à la fois)
-// ne permettait de traiter qu'une poignée de fiches par clic sur une
-// bibliothèque de plusieurs centaines de livres.
-const MAX_GOOGLE_LOOKUPS_PER_RUN = 300;
-const CONCURRENCY = 12;
+// Traités en petits lots plutôt qu'un par un pour rester sous le temps
+// d'exécution serverless — mais MODÉRÉMENT : l'API Google Books est
+// interrogée ici sans clé (quota gratuit partagé, très bas, le même
+// que celui déjà utilisé par la recherche d'ajout de livre en
+// production). Un passage trop agressif épuise ce quota pour toute
+// l'application, pas seulement pour cet outil — déjà arrivé avec des
+// valeurs plus hautes (300 fiches × jusqu'à 2 requêtes × 12 en
+// parallèle avait fait tomber la recherche Google Books en 429 pour
+// tout le monde). Mieux vaut plusieurs clics prudents qu'un seul qui
+// casse la recherche pour le reste de la journée.
+const MAX_GOOGLE_LOOKUPS_PER_RUN = 25;
+const CONCURRENCY = 3;
 export const maxDuration = 60;
 
+let quotaExceeded = false;
+
 async function queryGoogleBooks(q: string): Promise<string | null> {
+  if (quotaExceeded) return null;
   try {
     const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=1`, {}, 8000);
+    if (res.status === 429) {
+      quotaExceeded = true;
+      return null;
+    }
     if (!res.ok) return null;
     const data = await res.json();
     const thumbnail = data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
@@ -55,12 +67,14 @@ async function findGoogleCover(title: string, author: string): Promise<string | 
   const primaryAuthor = author.split(",")[0]?.trim() || "";
   const strict = primaryAuthor ? `intitle:${title} inauthor:${primaryAuthor}` : `intitle:${title}`;
   const found = await queryGoogleBooks(strict);
-  if (found) return found;
+  if (found || quotaExceeded) return found;
 
   // Repli en recherche libre (sans opérateurs de champ) : meilleur
   // rappel sur les titres/traductions que Google Books indexe mal avec
   // intitle/inauthor stricts, au prix d'une précision un peu moindre —
   // acceptable ici puisqu'on ne prend que le tout premier résultat.
+  // Coûte une deuxième requête par fiche, d'où MAX_GOOGLE_LOOKUPS_PER_RUN
+  // et CONCURRENCY volontairement bas.
   if (primaryAuthor) return queryGoogleBooks(`${title} ${primaryAuthor}`);
   return null;
 }
@@ -99,6 +113,11 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T)
   return results;
 }
 export async function POST(req: NextRequest) {
+  // Réinitialisé à chaque appel : ce module peut survivre entre deux
+  // requêtes sur une même instance serverless "chaude", et un quota
+  // dépassé hier ne doit pas bloquer un essai aujourd'hui.
+  quotaExceeded = false;
+
   const authHeader = req.headers.get("authorization") || "";
   const idToken = authHeader.replace(/^Bearer\s+/i, "");
   if (!idToken) {
@@ -260,6 +279,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       scanned, missingCover, repaired, stillMissing,
       masterCoversEnriched, masterCoversRemaining,
+      quotaExceeded,
     });
   } catch (err: any) {
     console.error("[audit-covers] Error:", err);

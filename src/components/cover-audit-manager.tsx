@@ -18,7 +18,7 @@ export function CoverAuditManager() {
   const { user } = useUser();
   const { toast } = useToast();
   const [isRunning, setIsRunning] = useState(false);
-  const [result, setResult] = useState<{ scanned: number; missingCover: number; repaired: number; stillMissing: number; masterCoversEnriched: number; masterCoversRemaining: number } | null>(null);
+  const [result, setResult] = useState<{ scanned: number; missingCover: number; repaired: number; stillMissing: number; masterCoversEnriched: number; masterCoversRemaining: number; quotaExceeded?: boolean } | null>(null);
 
   const runAudit = async () => {
     if (!user) return;
@@ -36,7 +36,15 @@ export function CoverAuditManager() {
       }
       const data = await res.json();
       setResult(data);
-      toast({ title: "Audit terminé", description: `${data.repaired} couverture(s) réparée(s) sur ${data.missingCover} manquante(s).` });
+      if (data.quotaExceeded) {
+        toast({
+          variant: "destructive",
+          title: "Quota Google Books dépassé",
+          description: "Réessaie plus tard (quota gratuit quotidien épuisé) — ce n'est pas propre à Lectoria.",
+        });
+      } else {
+        toast({ title: "Audit terminé", description: `${data.repaired} couverture(s) réparée(s) sur ${data.missingCover} manquante(s).` });
+      }
     } catch (err) {
       console.error("Cover Audit Error:", err);
       toast({ variant: "destructive", title: "Erreur d'audit", description: (err as any)?.message });
@@ -75,6 +83,12 @@ export function CoverAuditManager() {
             <p className="text-xs text-copper italic">
               {result.masterCoversRemaining} fiche(s) catalogue restent à traiter (plafond par passage) — relance
               l'audit pour continuer.
+            </p>
+          )}
+          {result.quotaExceeded && (
+            <p className="text-xs text-destructive italic">
+              Quota gratuit Google Books dépassé pour aujourd'hui — les recherches de couverture (ici et dans
+              Ajouter) ne fonctionneront plus jusqu'à demain. Relance l'audit alors pour continuer.
             </p>
           )}
         </div>
