@@ -262,7 +262,7 @@ export default function ProfilePage() {
           ? 'Vérifiez les règles Firebase Storage dans la console.'
           : isPermission
           ? 'Les règles Firebase Storage bloquent l\'upload.'
-          : 'La photo n\'a pas pu être envoyée. Réessaie.',
+          : `La photo n'a pas pu être envoyée. Réessaie. (${error?.code || error?.message || 'raison inconnue'})`,
       });
     } finally {
       setUploading(false);
