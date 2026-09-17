@@ -83,11 +83,13 @@ export function IsbnImporter() {
         return;
       }
 
-      // 3. Garantie couverture : Open Library en dernier recours si les
-      // deux sources principales n'en ont pas fourni.
-      if (!cover) {
-        cover = `https://covers.openlibrary.org/b/isbn/${cleanIsbn}-L.jpg`;
-      }
+      // 3. Pas de garantie couverture par ISBN Open Library ici : cette
+      // API répond 200 avec une image 1×1 transparente quand elle n'a
+      // rien pour cet ISBN — un champ `cover` non vide mais invisible à
+      // l'écran, indiscernable d'un vrai bug (voir /add et /author pour
+      // le même correctif). Mieux vaut laisser `cover` vide : l'outil
+      // "Compléter les couvertures manquantes" (admin) saura la trouver
+      // ensuite via une vraie recherche par titre/auteur.
 
       // 4. BnF, uniquement pour combler un résumé encore vide — jamais
       // pour la couverture, le titre ou l'auteur.

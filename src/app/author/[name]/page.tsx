@@ -262,14 +262,19 @@ export default function AuthorPage() {
 
         let combined = [...masterResults, ...dedupedGoogle, ...dedupedApple];
 
-        // Garantie "jamais de livre sans couverture" : repli Open Library
-        // par ISBN pour tout titre encore sans image.
-        combined = combined.map((r: any) => {
-          if (r.cover) return r;
-          const isbnForCover = (r.isbn || "").toString().replace(/[-\s]/g, "");
-          if (!isbnForCover) return r;
-          return { ...r, cover: `https://covers.openlibrary.org/b/isbn/${isbnForCover}-L.jpg` };
-        });
+        // Consigne explicite (même correctif que /add) : un résultat
+        // externe (Google Books, Apple Books) sans vraie couverture
+        // n'est plus proposé du tout — mieux vaut ne pas l'afficher dans
+        // la bibliographie que de laisser la lectrice ajouter un livre
+        // qu'elle sait déjà sans image. Les résultats déjà dans la base
+        // Lectoria ("master") restent affichés tels quels.
+        //
+        // Ancienne "garantie couverture" retirée : elle devinait une URL
+        // Open Library depuis l'ISBN sans jamais vérifier qu'une vraie
+        // couverture existe pour cet ISBN — l'API Open Library répond
+        // 200 avec une image 1×1 transparente quand elle n'a rien,
+        // invisible à l'écran mais indiscernable d'une vraie couverture.
+        combined = combined.filter((r: any) => r.source === "master" || !!r.cover);
 
         // BnF, uniquement pour compléter un résumé manquant — jamais pour
         // faire apparaître un titre. Limité aux premiers résultats sans
