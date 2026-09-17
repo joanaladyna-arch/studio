@@ -11,6 +11,15 @@ import { getFirestore } from "firebase-admin/firestore";
  * de service), configurée dans Vercel → Settings → Environment
  * Variables. Elle n'est jamais commitée dans le dépôt.
  */
+/**
+ * Erreur distincte d'un jeton invalide : sans elle, les routes appelantes
+ * ne peuvent pas distinguer "la clé de service n'est pas configurée côté
+ * serveur" (à corriger dans Vercel, rien à voir avec la session de
+ * l'administratrice) d'un vrai jeton expiré/invalide — et renvoyaient
+ * toutes les deux le même "Token invalide" trompeur.
+ */
+export class AdminConfigError extends Error {}
+
 let adminApp: App | null = null;
 
 export function getAdminApp(): App {
@@ -22,14 +31,34 @@ export function getAdminApp(): App {
 
   const rawKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (!rawKey) {
-    throw new Error(
+    throw new AdminConfigError(
       "FIREBASE_SERVICE_ACCOUNT_KEY manquante — ajoute-la dans Vercel (Project Settings → Environment Variables) avec le contenu JSON complet de la clé de service Firebase."
     );
   }
 
-  const serviceAccount = JSON.parse(rawKey);
+  // .trim() : un copier-coller depuis Vercel ou un éditeur ajoute parfois
+  // un retour à la ligne ou une espace avant/après, invisible à l'œil mais
+  // suffisant pour faire échouer JSON.parse.
+  const cleanedKey = rawKey.trim();
+  let serviceAccount: unknown;
+  try {
+    serviceAccount = JSON.parse(cleanedKey);
+  } catch (err) {
+    // Cause fréquente et invisible à l'œil : des guillemets courbes
+    // (“ ”) substitués aux guillemets droits (") par une appli qui
+    // "corrige" le texte à l'ouverture du fichier (TextEdit en mode
+    // texte enrichi, Pages, Notes...) — le JSON a alors l'air identique
+    // en le relisant, mais n'est plus du JSON valide.
+    const smartQuoteHint = /[“”‘’]/.test(cleanedKey)
+      ? " Des guillemets courbes (“ ”) ont été repérés à la place de guillemets droits (\") — probablement introduits par une appli qui « corrige » le texte à l'ouverture du fichier (TextEdit en mode texte enrichi, Pages, Notes...). Réouvre le .json original dans un éditeur de texte brut et recopie-le."
+      : "";
+    throw new AdminConfigError(
+      `FIREBASE_SERVICE_ACCOUNT_KEY invalide — le contenu doit être le JSON complet de la clé de service Firebase, sans modification. Détail : ${(err as Error).message}.${smartQuoteHint}`
+    );
+  }
+
   adminApp = initializeApp({
-    credential: cert(serviceAccount),
+    credential: cert(serviceAccount as any),
   });
   return adminApp;
 }

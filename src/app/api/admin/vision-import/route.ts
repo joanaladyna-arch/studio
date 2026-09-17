@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth } from "@/lib/firebase-admin";
+import { getAdminAuth, AdminConfigError } from "@/lib/firebase-admin";
 import { ADMIN_EMAILS } from "@/lib/utils";
 
 /**
@@ -55,7 +55,7 @@ function parseJsonResponse(text: string): ExtractedBook[] {
   }
 }
 
-async function extractFromImage(base64: string, mediaType: string, apiKey: string): Promise<ExtractedBook[]> {
+async function extractFromImage(base64: string, mediaType: string, apiKey: string): Promise<{ books: ExtractedBook[]; error?: string }> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -79,13 +79,19 @@ async function extractFromImage(base64: string, mediaType: string, apiKey: strin
   });
 
   if (!res.ok) {
-    console.error(`[vision-import] Anthropic HTTP ${res.status}`);
-    return [];
+    const errBody = await res.json().catch(() => null);
+    const message = errBody?.error?.message || `Erreur Anthropic HTTP ${res.status}`;
+    console.error(`[vision-import] Anthropic HTTP ${res.status}: ${message}`);
+    return { books: [], error: message };
   }
 
   const data = await res.json();
   const text = data?.content?.[0]?.text || "";
-  return parseJsonResponse(text);
+  const books = parseJsonResponse(text);
+  if (books.length === 0 && text.trim() && !text.trim().startsWith("[")) {
+    return { books: [], error: "Réponse de l'analyse illisible (JSON non reconnu)" };
+  }
+  return { books };
 }
 
 export async function POST(req: NextRequest) {
@@ -101,9 +107,13 @@ export async function POST(req: NextRequest) {
     if (!decoded.email || !ADMIN_EMAILS.includes(decoded.email)) {
       return NextResponse.json({ error: "Accès réservé à l'administratrice" }, { status: 403 });
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("[vision-import] Token verification failed:", err);
-    return NextResponse.json({ error: "Token invalide" }, { status: 401 });
+    if (err instanceof AdminConfigError) {
+      return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+    const reason = err?.errorInfo?.code || err?.code || err?.message || "raison inconnue";
+    return NextResponse.json({ error: `Token invalide : ${reason}` }, { status: 401 });
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -121,17 +131,20 @@ export async function POST(req: NextRequest) {
   }
 
   const results: (ExtractedBook & { sourceImageIndex: number })[] = [];
+  const errors: { imageIndex: number; message: string }[] = [];
   for (let i = 0; i < images.length; i++) {
     try {
-      const books = await extractFromImage(images[i].base64, images[i].mediaType, apiKey);
+      const { books, error } = await extractFromImage(images[i].base64, images[i].mediaType, apiKey);
+      if (error) errors.push({ imageIndex: i, message: error });
       for (const b of books) {
         results.push({ ...b, sourceImageIndex: i });
       }
     } catch (err) {
       console.error(`[vision-import] Error on image ${i}:`, err);
+      errors.push({ imageIndex: i, message: (err as Error)?.message || "Erreur inconnue" });
       // Une image qui échoue ne doit pas faire tomber tout le lot.
     }
   }
 
-  return NextResponse.json({ results, imagesProcessed: images.length });
+  return NextResponse.json({ results, imagesProcessed: images.length, errors });
 }

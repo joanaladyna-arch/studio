@@ -299,27 +299,27 @@ export default function AddBookPage() {
         }
       }
 
-      // Garantie "jamais de livre sans couverture" : pour tout résultat
-      // encore sans image après Google Books / Apple Books / Open Library,
-      // tentative ultime via l'API de couvertures Open Library par ISBN
-      // (gratuite, sans clé, très large couverture éditoriale). Si l'ISBN
-      // n'a pas de couverture connue non plus, le composant BookCover gère
-      // déjà l'échec de chargement avec un repli visuel soigné plutôt
-      // qu'une image cassée.
-      allResults = allResults.map((r) => {
-        const hadRealCover = !!r.cover;
-        if (hadRealCover) return { ...r, _hasCover: true };
-        const isbnForCover = (r.isbn13 || r.isbn || "").toString().replace(/[-\s]/g, "");
-        if (!isbnForCover) return { ...r, _hasCover: false };
-        return { ...r, cover: `https://covers.openlibrary.org/b/isbn/${isbnForCover}-L.jpg`, _hasCover: false };
-      });
+      // Consigne explicite : un résultat externe (Google Books, Apple
+      // Books, Open Library) sans vraie couverture n'est plus proposé du
+      // tout à l'ajout — mieux vaut ne pas l'afficher que de laisser la
+      // lectrice ajouter un livre qu'elle sait déjà sans image. Les
+      // résultats déjà dans la base Lectoria ("master") restent affichés
+      // tels quels : ils existent déjà, les cacher ne réglerait rien.
+      //
+      // Ancienne "garantie couverture" retirée : elle devinait une URL
+      // Open Library depuis l'ISBN sans jamais vérifier qu'une vraie
+      // couverture existe pour cet ISBN. Or l'API de couvertures Open
+      // Library répond 200 avec une image 1×1 transparente quand elle
+      // n'a rien — le livre se retrouvait donc avec un champ `cover`
+      // non vide (jamais détecté comme "manquant" par l'audit) mais
+      // invisible à l'écran, résultat indiscernable d'un vrai bug.
+      allResults = allResults.filter((r) => r.source !== "api" || !!r.cover);
 
-      // Les résultats avec une vraie couverture (Google/Apple/base
-      // Lectoria) passent devant ceux qui n'ont qu'une couverture devinée
-      // par ISBN (ou aucune) — ce sont les résultats les plus fiables à
-      // choisir en priorité. Tri stable : ne casse pas le regroupement
-      // par saga/tome fait ensuite par sortBySaga.
-      allResults.sort((a, b) => Number(b._hasCover) - Number(a._hasCover));
+      // Les résultats "master" restants peuvent encore être sans
+      // couverture (curation admin pas encore faite) — on les fait
+      // passer après ceux qui en ont une. Tri stable : ne casse pas le
+      // regroupement par saga/tome fait ensuite par sortBySaga.
+      allResults.sort((a, b) => Number(!!b.cover) - Number(!!a.cover));
 
       setResults(sortBySaga(allResults));
 
@@ -478,6 +478,14 @@ export default function AddBookPage() {
       const isExternalSource = pendingBook.source !== "master";
       let finalGenres = toArray<string>(pendingBook.genres);
       let finalTropes = toArray<string>(pendingBook.tropes);
+      // Couverture qui finit vraiment dans la bibliothèque de la
+      // lectrice : par défaut celle du résultat choisi, mais résolue via
+      // keepText() ci-dessous quand une fiche masterBook existante en a
+      // déjà une (curation admin, enrichissement ISBNdb...) que la
+      // recherche externe n'a pas ramenée cette fois-ci — sans quoi la
+      // couverture manquerait pour toujours dans SA bibliothèque même
+      // après que la fiche partagée a été complétée.
+      let resolvedCover = pendingBook.cover || "";
 
       if (isExternalSource) {
         const cleanedIsbn = cleanIsbnValue(pendingBook.isbn);
@@ -527,11 +535,13 @@ export default function AddBookPage() {
           }
         }
 
+        resolvedCover = keepText(pendingBook.cover, existing.cover);
+
         await setDoc(masterRef, {
           title: keepText(pendingBook.title, existing.title) || "Titre inconnu",
           subtitle: keepText(pendingBook.subtitle, existing.subtitle),
           author: keepText(pendingBook.author, existing.author) || "Auteur inconnu",
-          cover: keepText(pendingBook.cover, existing.cover),
+          cover: resolvedCover,
           isbn13: keepText(cleanedIsbn, existing.isbn13),
           isbn10: keepText(pendingBook.isbn10, existing.isbn10),
           description: finalDescription,
@@ -562,7 +572,7 @@ export default function AddBookPage() {
         masterBookId,
         title: pendingBook.title || "Titre inconnu",
         author: pendingBook.author || "Auteur inconnu",
-        cover: pendingBook.cover || "",
+        cover: resolvedCover,
         genres: finalGenres,
         tropes: finalTropes,
         themes: toArray<string>(pendingBook.themes),

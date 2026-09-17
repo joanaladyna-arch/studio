@@ -35,6 +35,7 @@ import { QuoteSubmissionsQueue } from "@/components/quote-submissions-queue";
 import { AdminAnalytics } from "@/components/admin-analytics";
 import { AdminActualitesQueue } from "@/components/admin-actualites-queue";
 import { VisionImportManager } from "@/components/vision-import-manager";
+import { CoverAuditManager } from "@/components/cover-audit-manager";
 import { PublisherDedupManager } from "@/components/publisher-dedup-manager";
 import { AppUpdateBroadcaster } from "@/components/app-update-broadcaster";
 import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb, searchHardcover } from "@/lib/utils";
@@ -603,6 +604,13 @@ export default function AdminPage() {
         <Card className="glass-card border-none bg-white/60 shadow-lg">
           <CardContent className="p-10">
             <VisionImportManager onImported={() => setActualitesQueueKey((k) => k + 1)} />
+          </CardContent>
+        </Card>
+
+        {/* ── AUDIT DES COUVERTURES MANQUANTES ── */}
+        <Card className="glass-card border-none bg-white/60 shadow-lg">
+          <CardContent className="p-10">
+            <CoverAuditManager />
           </CardContent>
         </Card>
 
