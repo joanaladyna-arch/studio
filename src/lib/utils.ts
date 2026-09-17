@@ -66,6 +66,23 @@ export async function syncMasterBookReadCount(
  * qui tourne pour toujours). Ce wrapper garantit qu'on échoue proprement
  * après un délai raisonnable pour pouvoir basculer sur la source suivante.
  */
+/**
+ * Construit une URL de recherche Google Books en y ajoutant
+ * automatiquement la clé API (NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY) quand
+ * elle est configurée. Sans clé, les requêtes partagent le quota
+ * anonyme de Google — très bas et mutualisé entre toutes les apps
+ * sortant par les mêmes IP serveur (Vercel...), ce qui l'épuisait vite
+ * en usage normal (recherche + admin + audit + page auteur + cron).
+ * Centralisé ici pour ne jamais oublier la clé sur un nouvel appel.
+ */
+export function googleBooksUrl(params: Record<string, string | number>): string {
+  const url = new URL("https://www.googleapis.com/books/v1/volumes");
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, String(value)));
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY;
+  if (apiKey) url.searchParams.set("key", apiKey);
+  return url.toString();
+}
+
 export async function fetchWithTimeout(
   url: string,
   options: RequestInit = {},

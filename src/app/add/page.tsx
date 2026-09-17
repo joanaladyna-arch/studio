@@ -33,7 +33,7 @@ import { IsbnScannerDialog } from "@/components/isbn-scanner-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga, isFrenchLanguage, languageLabel, syncMasterBookReadCount } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, ADMIN_EMAILS, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, sortBySaga, isFrenchLanguage, languageLabel, syncMasterBookReadCount, googleBooksUrl } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 
 export default function AddBookPage() {
@@ -141,7 +141,7 @@ export default function AddBookPage() {
           return masterSnap.docs.map(d => ({ ...d.data(), id: d.id, source: "master" }));
         })(),
         (async () => {
-          const gUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(googleQuery)}&maxResults=10`;
+          const gUrl = googleBooksUrl({ q: googleQuery, maxResults: 10 });
           const res = await fetchWithTimeout(gUrl, {}, 8000);
           if (!res.ok) return [];
           const data = await res.json();

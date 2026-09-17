@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { XMLParser } from "fast-xml-parser";
+import { googleBooksUrl } from "@/lib/utils";
 
 /**
  * Tâche planifiée (Vercel Cron, voir vercel.json) qui détecte les
@@ -102,7 +103,7 @@ export async function GET(req: NextRequest) {
     // le paramètre de requête Google Books et les champs déposés dans
     // actualitesPending diffèrent.
     async function detectFrom(query: string, extraFields: Record<string, any>) {
-      const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&orderBy=newest&maxResults=10&printType=books`;
+      const url = googleBooksUrl({ q: query, orderBy: "newest", maxResults: 10, printType: "books" });
       const res = await fetch(url);
       if (!res.ok) { console.log(`[cron] HTTP ${res.status} pour query: ${query}`); return; }
       const data = await res.json();

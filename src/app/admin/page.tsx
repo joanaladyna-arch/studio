@@ -38,7 +38,7 @@ import { VisionImportManager } from "@/components/vision-import-manager";
 import { CoverAuditManager } from "@/components/cover-audit-manager";
 import { PublisherDedupManager } from "@/components/publisher-dedup-manager";
 import { AppUpdateBroadcaster } from "@/components/app-update-broadcaster";
-import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb, searchHardcover } from "@/lib/utils";
+import { cn, fetchWithTimeout, ADMIN_EMAILS, slugify, cleanIsbnValue, cleanDescriptionHtml, stableBookKey, authorKey, searchBnF, searchIsbndb, searchHardcover, googleBooksUrl } from "@/lib/utils";
 
 export default function AdminPage() {
   const { user } = useUser();
@@ -521,24 +521,24 @@ export default function AdminPage() {
             description = cleanDescriptionHtml(bnfResults[0]?.description);
           }
           if (!description && isbn) {
-            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}&langRestrict=fr`, {}, 8000);
+            const res = await fetchWithTimeout(googleBooksUrl({ q: `isbn:${isbn}`, langRestrict: "fr" }), {}, 8000);
             const json = await res.json();
             description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }
           if (!description && title) {
             const q = author ? `${title} ${author}` : title;
-            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&langRestrict=fr`, {}, 8000);
+            const res = await fetchWithTimeout(googleBooksUrl({ q, langRestrict: "fr" }), {}, 8000);
             const json = await res.json();
             description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }
           if (!description && isbn) {
-            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(isbn)}`, {}, 8000);
+            const res = await fetchWithTimeout(googleBooksUrl({ q: `isbn:${isbn}` }), {}, 8000);
             const json = await res.json();
             description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }
           if (!description && title) {
             const q = author ? `${title} ${author}` : title;
-            const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}`, {}, 8000);
+            const res = await fetchWithTimeout(googleBooksUrl({ q }), {}, 8000);
             const json = await res.json();
             description = cleanDescriptionHtml(json.items?.[0]?.volumeInfo?.description);
           }

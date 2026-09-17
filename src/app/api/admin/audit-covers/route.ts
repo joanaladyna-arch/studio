@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb, AdminConfigError } from "@/lib/firebase-admin";
-import { ADMIN_EMAILS, fetchWithTimeout } from "@/lib/utils";
+import { ADMIN_EMAILS, fetchWithTimeout, googleBooksUrl } from "@/lib/utils";
 
 /**
  * Réparation en masse des couvertures manquantes dans les bibliothèques
@@ -46,7 +46,7 @@ let quotaExceeded = false;
 async function queryGoogleBooks(q: string): Promise<string | null> {
   if (quotaExceeded) return null;
   try {
-    const res = await fetchWithTimeout(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=1`, {}, 8000);
+    const res = await fetchWithTimeout(googleBooksUrl({ q, maxResults: 1 }), {}, 8000);
     if (res.status === 429) {
       quotaExceeded = true;
       return null;

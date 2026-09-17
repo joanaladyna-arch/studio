@@ -13,7 +13,7 @@ import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import Link from "next/link";
 import { RANKS, EMOTIONS, Book, BookCard } from "@/app/library/page";
-import { cn, toArray, getBookQuotes } from "@/lib/utils";
+import { cn, toArray, getBookQuotes, googleBooksUrl } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useDoc } from "@/firebase";
 import { collection, query, where, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -150,7 +150,7 @@ export default function SharePage() {
     let cancelled = false;
     const query = `${selectedBook.title || ""} ${selectedBook.author || ""}`.trim();
     if (!query) return;
-    fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`)
+    fetch(googleBooksUrl({ q: query, maxResults: 1 }))
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (cancelled || !data) return;

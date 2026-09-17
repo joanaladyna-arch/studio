@@ -32,7 +32,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { STATUSES, FORMATS, BookStatus, BookFormat } from "@/app/library/page";
-import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch, defaultAvatarUrl, syncMasterBookReadCount } from "@/lib/utils";
+import { cn, fetchWithTimeout, toArray, searchBnF, authorKey, cleanDescriptionHtml, cleanIsbnValue, stableBookKey, isAuthorMatch, defaultAvatarUrl, syncMasterBookReadCount, googleBooksUrl } from "@/lib/utils";
 import { useAdminMode } from "@/components/admin-mode";
 import { AuthorEditor } from "@/components/author-editor";
 import { MasterBookEditor } from "@/components/master-book-editor";
@@ -172,7 +172,7 @@ export default function AuthorPage() {
         // bas à compléter un résumé manquant sur un livre déjà trouvé.
         const [googleSettled, masterSettled, appleSettled] = await Promise.allSettled([
           (async () => {
-            const url = `https://www.googleapis.com/books/v1/volumes?q=inauthor:${encodeURIComponent(authorName)}&maxResults=40&orderBy=newest`;
+            const url = googleBooksUrl({ q: `inauthor:${authorName}`, maxResults: 40, orderBy: "newest" });
             const response = await fetchWithTimeout(url, {}, 8000);
             const data = await response.json();
             if (!data.items) return [];

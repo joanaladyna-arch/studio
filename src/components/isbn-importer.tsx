@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Book, Loader2 } from "lucide-react";
-import { fetchWithTimeout, searchBnF, slugify, cleanIsbnValue, cleanDescriptionHtml } from "@/lib/utils";
+import { fetchWithTimeout, searchBnF, slugify, cleanIsbnValue, cleanDescriptionHtml, googleBooksUrl } from "@/lib/utils";
 
 /**
  * Import d'un livre dans la base partagée par son ISBN, pensé pour être
@@ -47,7 +47,7 @@ export function IsbnImporter() {
 
       // 1. Google Books, source principale
       try {
-        const gUrl = `https://www.googleapis.com/books/v1/volumes?q=isbn:${encodeURIComponent(cleanIsbn)}`;
+        const gUrl = googleBooksUrl({ q: `isbn:${cleanIsbn}` });
         const res = await fetchWithTimeout(gUrl, {}, 8000);
         const data = await res.json();
         const info = data.items?.[0]?.volumeInfo;

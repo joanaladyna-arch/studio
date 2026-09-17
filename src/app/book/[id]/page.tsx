@@ -57,7 +57,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey, fetchWithTimeout, syncMasterBookReadCount } from "@/lib/utils";
+import { cn, toArray, cleanBookTitle, cleanAuthorName, cleanDescriptionHtml, authorKey, stableBookKey, fetchWithTimeout, syncMasterBookReadCount, googleBooksUrl } from "@/lib/utils";
 import { TagDropdown } from "@/components/tag-dropdown";
 import { UserBook, MasterBook, STATUSES, RANKS, SELECTABLE_RANKS, RankType, GENRES_LIST, TROPES_LIST, THEMES_LIST } from "@/app/library/page";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
@@ -422,7 +422,7 @@ export default function BookDetailPage() {
           const query = `${editedData.title || ""} ${editedData.author || ""}`.trim();
           if (query) {
             const gRes = await fetchWithTimeout(
-              `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=1`,
+              googleBooksUrl({ q: query, maxResults: 1 }),
               {},
               8000
             );
