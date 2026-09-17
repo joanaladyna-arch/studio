@@ -307,11 +307,19 @@ export default function AddBookPage() {
       // déjà l'échec de chargement avec un repli visuel soigné plutôt
       // qu'une image cassée.
       allResults = allResults.map((r) => {
-        if (r.cover) return r;
+        const hadRealCover = !!r.cover;
+        if (hadRealCover) return { ...r, _hasCover: true };
         const isbnForCover = (r.isbn13 || r.isbn || "").toString().replace(/[-\s]/g, "");
-        if (!isbnForCover) return r;
-        return { ...r, cover: `https://covers.openlibrary.org/b/isbn/${isbnForCover}-L.jpg` };
+        if (!isbnForCover) return { ...r, _hasCover: false };
+        return { ...r, cover: `https://covers.openlibrary.org/b/isbn/${isbnForCover}-L.jpg`, _hasCover: false };
       });
+
+      // Les résultats avec une vraie couverture (Google/Apple/base
+      // Lectoria) passent devant ceux qui n'ont qu'une couverture devinée
+      // par ISBN (ou aucune) — ce sont les résultats les plus fiables à
+      // choisir en priorité. Tri stable : ne casse pas le regroupement
+      // par saga/tome fait ensuite par sortBySaga.
+      allResults.sort((a, b) => Number(b._hasCover) - Number(a._hasCover));
 
       setResults(sortBySaga(allResults));
 
