@@ -5,8 +5,9 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Library, PenTool, User, Heart, LogOut, PlusCircle, ShieldCheck, Newspaper } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { cn, ADMIN_EMAILS } from "@/lib/utils";
+import { MaskIcon } from "@/components/mask-icon";
 import { useAuth, useUser, useFirestore } from "@/firebase";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { signOut } from "firebase/auth";
@@ -14,17 +15,32 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/notification-bell";
 
+// Icônes fournies par Joana (public/icons/nav) : même signature qu'une icône
+// lucide (className), pour que le reste de la navigation ne change pas.
+const navIcon = (src: string) =>
+  function NavIcon({ className }: { className?: string }) {
+    return <MaskIcon src={src} className={className} />;
+  };
+const HomeIcon = navIcon("/icons/nav/accueil.svg");
+const LibraryIcon = navIcon("/icons/nav/bibliotheque.svg");
+const AddIcon = navIcon("/icons/nav/ajouter.svg");
+const HeartsIcon = navIcon("/icons/nav/coeurs.svg");
+const LoungeNavIcon = navIcon("/icons/nav/lounge.svg");
+const JournalIcon = navIcon("/icons/nav/journal.svg");
+const ProfileIcon = navIcon("/icons/nav/profil.svg");
+const LogoutIcon = navIcon("/icons/nav/sortie.svg");
+
 // "id" est la clé stable utilisée pour stocker les personnalisations
 // (nom, visibilité) dans Firestore — séparée du href, qui lui ne change
 // jamais puisqu'il pointe vers une page réelle du code.
 export const navItems = [
-  { id: "home", href: "/", label: "Accueil", icon: Home },
-  { id: "library", href: "/library", label: "Bibliothèque", icon: Library },
-  { id: "add", href: "/add", label: "Ajouter", icon: PlusCircle },
-  { id: "coeur-de-plume", href: "/coups-de-coeur", label: "Coups de Cœur", icon: Heart },
-  { id: "actualites", href: "/actualites", label: "Actualités", icon: Newspaper },
-  { id: "journal", href: "/journal", label: "Journal", icon: PenTool },
-  { id: "profile", href: "/profile", label: "Profil", icon: User },
+  { id: "home", href: "/", label: "Accueil", icon: HomeIcon },
+  { id: "library", href: "/library", label: "Bibliothèque", icon: LibraryIcon },
+  { id: "add", href: "/add", label: "Ajouter", icon: AddIcon },
+  { id: "coeur-de-plume", href: "/coups-de-coeur", label: "Coups de Cœur", icon: HeartsIcon },
+  { id: "lounge", href: "/community", label: "Lounge", icon: LoungeNavIcon },
+  { id: "journal", href: "/journal", label: "Journal", icon: JournalIcon },
+  { id: "profile", href: "/profile", label: "Profil", icon: ProfileIcon },
 ];
 
 type NavOverride = { label?: string; visible?: boolean };
@@ -139,7 +155,7 @@ export function Navigation() {
               >
                 <Icon className={cn("h-5 w-5 shrink-0 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
                 <span className="hidden xl:inline text-sm font-headline italic whitespace-nowrap">{item.label}</span>
-                {item.id === "actualites" && hasUnseenActuality && (
+                {item.id === "lounge" && hasUnseenActuality && (
                   <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                 )}
               </Link>
@@ -153,7 +169,7 @@ export function Navigation() {
             className="text-muted-foreground hover:text-destructive transition-all p-3 rounded-full hover:bg-red-50 group shrink-0"
             title="Déconnexion"
           >
-            <LogOut className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+            <LogoutIcon className="h-6 w-6 group-hover:rotate-12 transition-transform" />
           </button>
         </div>
       </nav>
@@ -193,7 +209,7 @@ export function Navigation() {
                 isActive ? "bg-primary/10 scale-110 shadow-sm" : "bg-transparent"
               )}>
                 <Icon className={cn("h-5 w-5", isActive && "fill-primary/20")} />
-                {item.id === "actualites" && hasUnseenActuality && (
+                {item.id === "lounge" && hasUnseenActuality && (
                   <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-rose-500" />
                 )}
               </div>
@@ -209,7 +225,7 @@ export function Navigation() {
           className="flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 py-1 px-0 rounded-xl text-muted-foreground"
         >
           <div className="relative p-1.5 rounded-xl bg-transparent">
-            <LogOut className="h-5 w-5" />
+            <LogoutIcon className="h-5 w-5" />
           </div>
           <span className="text-[8px] font-headline italic font-bold opacity-75 leading-tight truncate w-full text-center px-0.5">Quitter</span>
         </button>

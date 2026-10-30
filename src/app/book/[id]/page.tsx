@@ -67,6 +67,7 @@ import { usePublishers } from "@/hooks/use-publishers";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ReviewCaptureDialog } from "@/components/review-capture-dialog";
+import { emitActivity } from "@/lib/salon";
 import { MaskIcon } from "@/components/mask-icon";
 
 // Grille d'évaluation détaillée, distincte de "Ma Note" — combine des
@@ -595,6 +596,19 @@ export default function BookDetailPage() {
         await syncMasterBookReadCount(db, masterBook.id, userBook?.status, editedData.status);
       }
       proposeMasterCompletion({ description: (editedData as any).description });
+
+      // Fil du Lounge : une ligne quand le livre passe à "Lu" ou qu'un
+      // premier avis est écrit — uniquement si la lectrice a activé
+      // "Partager mon activité", et jamais bloquant.
+      if (db && user) {
+        const wasRead = userBook?.status === "read" || userBook?.status === "reread";
+        const isRead = editedData.status === "read" || editedData.status === "reread";
+        const hadReview = !!((userBook as any)?.review || "").toString().trim();
+        const hasReview = !!((editedData as any).review || "").toString().trim();
+        const ev = { title: cleanBookTitle(masterBook?.title || userBook?.title || ""), author: cleanAuthorName(masterBook?.author || userBook?.author || ""), cover: ((editedData as any).cover || masterBook?.cover || "") as string, rating: Math.round(Number(editedData.rating) || 0) };
+        if (isRead && !wasRead) emitActivity(db, user, profile, { type: "finished", ...ev });
+        else if (hasReview && !hadReview) emitActivity(db, user, profile, { type: "review", ...ev });
+      }
 
       // Miroir vers la collection publique bookReviews, pour afficher les
       // avis/notes des autres lectrices sur la fiche — uniquement si la

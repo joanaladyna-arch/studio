@@ -10,7 +10,8 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Bell, BookHeart, Sparkles, Rocket, ArrowRight } from "lucide-react";
+import { MaskIcon } from "@/components/mask-icon";
+import { BookHeart, Sparkles, Rocket, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -145,7 +146,7 @@ export function NotificationBell() {
           className="relative flex items-center gap-1.5 pl-3 pr-3.5 py-2 rounded-full hover:bg-white/60 transition-colors text-muted-foreground hover:text-primary"
           title="Notifications"
         >
-          <Bell className="h-4 w-4" />
+          <MaskIcon src="/icons/nav/nouveau.svg" className="h-5 w-5" />
           <span className="hidden xl:inline text-[11px] font-bold uppercase tracking-widest">News</span>
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">

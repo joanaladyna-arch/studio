@@ -20,3 +20,13 @@ export function MaskIcon({ src, className, style }: { src: string; className?: s
     />
   );
 }
+
+/** Coupe (trophée) fournie par Joana : remplace l'icône Trophy de lucide partout, même signature (className). */
+export function Coupe({ className, style }: { className?: string; style?: CSSProperties }) {
+  return <MaskIcon src="/icons/accueil/coupe.svg" className={className} style={style} />;
+}
+
+/** Icône du Lounge (salon.svg fourni par Joana). */
+export function LoungeIcon({ className, style }: { className?: string; style?: CSSProperties }) {
+  return <MaskIcon src="/icons/nav/lounge.svg" className={className} style={style} />;
+}
