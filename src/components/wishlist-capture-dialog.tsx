@@ -161,11 +161,25 @@ function getFontEmbedCSS(): Promise<string> {
 
 /* ---------- mise en page ---------- */
 
-function paginate(books: CaptureBook[], mode: Mode, cols: number, format: Format): CaptureBook[][] {
-  if (format !== "pdf") return [books];
-  const perPage = mode === "list" ? Math.max(books.length, 1) : cols === 6 ? 18 : 8;
+type Split = "auto" | "1" | "2" | "3";
+
+// PDF : pages A4 de taille fixe. JPG/PNG : la wishlist est coupée en
+// plusieurs images (en "Auto", assez courtes pour rester lisibles sur un
+// téléphone) ; en mode couvertures on coupe toujours entre deux rangées.
+function paginate(books: CaptureBook[], mode: Mode, cols: number, format: Format, split: Split): CaptureBook[][] {
+  const n = books.length;
+  let perPage: number;
+  if (format === "pdf") {
+    perPage = mode === "list" ? 24 : cols === 6 ? 18 : 8;
+  } else if (split === "auto") {
+    perPage = mode === "list" ? 24 : cols === 6 ? 24 : 12;
+  } else {
+    const parts = Number(split);
+    perPage = mode === "list" ? Math.ceil(n / parts) : Math.ceil(Math.ceil(n / cols) / parts) * cols;
+  }
+  perPage = Math.max(perPage, 1);
   const pages: CaptureBook[][] = [];
-  for (let i = 0; i < books.length; i += perPage) pages.push(books.slice(i, i + perPage));
+  for (let i = 0; i < n; i += perPage) pages.push(books.slice(i, i + perPage));
   return pages.length ? pages : [[]];
 }
 
@@ -345,6 +359,7 @@ export function WishlistCaptureDialog({
   const [name, setName] = useState(defaultName);
   const [themeKey, setThemeKey] = useState<ThemeKey>("creme");
   const [page, setPage] = useState(0);
+  const [split, setSplit] = useState<Split>("auto");
   const [covers, setCovers] = useState<CoverMap>({});
   const [loaded, setLoaded] = useState(0);
   const [exporting, setExporting] = useState<"download" | "share" | null>(null);
@@ -389,7 +404,7 @@ export function WishlistCaptureDialog({
   }, [open, needsCovers, books]);
 
   const heading = showName && name.trim() ? `La wishlist de ${name.trim()}` : "Ma wishlist";
-  const pages = useMemo(() => paginate(books, mode, cols, format), [books, mode, cols, format]);
+  const pages = useMemo(() => paginate(books, mode, cols, format, split), [books, mode, cols, format, split]);
   const safePage = Math.min(page, pages.length - 1);
   const dateLabel = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
   const startIndexOf = (p: number) => pages.slice(0, p).reduce((n, arr) => n + arr.length, 0);
@@ -397,7 +412,7 @@ export function WishlistCaptureDialog({
   const sheetProps = (p: number): SheetProps => ({
     books: pages[p], covers, mode, cols, showTitles, showBoxes, heading, total, theme,
     a4: format === "pdf", startIndex: startIndexOf(p),
-    footerRight: format === "pdf" ? `Page ${p + 1} / ${pages.length}` : dateLabel,
+    footerRight: format === "pdf" ? `Page ${p + 1} / ${pages.length}` : pages.length > 1 ? `${dateLabel} · ${p + 1} / ${pages.length}` : dateLabel,
   });
 
   // Aperçu mis à l'échelle de la colonne (la feuille fait toujours 600 px de large).
@@ -418,21 +433,23 @@ export function WishlistCaptureDialog({
       fit();
     });
     return () => { cancelAnimationFrame(id); ro.disconnect(); };
-  }, [open, mode, format, cols, showTitles, safePage, covers]);
+  }, [open, mode, format, cols, showTitles, safePage, covers, split]);
 
   const dims = useMemo(() => {
     if (format === "pdf") return `PDF · A4 · ${pages.length} page${pages.length > 1 ? "s" : ""}${mode === "list" ? " · liste" : ""}`;
-    return `${format.toUpperCase()} · 1080 × ${Math.round((innerH || A4_H) * (1080 / SHEET_W))} px · une seule image`;
+    const h = `1080 × ${Math.round((innerH || A4_H) * (1080 / SHEET_W))} px`;
+    return `${format.toUpperCase()} · ${h} · ${pages.length > 1 ? `${pages.length} images` : "une seule image"}`;
   }, [format, pages.length, mode, innerH]);
 
   const fileBase = `lectoria-wishlist${showName && name.trim() ? `-${slugify(name.trim())}` : ""}`;
 
   // Capture réelle : on monte une copie hors écran à taille réelle (toutes
   // les pages), on attend que les images soient décodées, puis on capture.
-  const buildFile = async (): Promise<{ blob: Blob; filename: string; type: string }> => {
+  type OutFile = { blob: Blob; filename: string; type: string };
+  const buildFile = async (): Promise<OutFile[]> => {
     setOffscreen(true);
-    await new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())));
-    await new Promise((r) => setTimeout(r, 200));
+    // setTimeout plutôt que requestAnimationFrame : ce dernier est suspendu si l'onglet passe en arrière-plan.
+    await new Promise((r) => setTimeout(r, 350));
     try {
       const root = offRef.current;
       const nodes = root ? Array.from(root.querySelectorAll<HTMLElement>("[data-sheet]")) : [];
@@ -457,12 +474,17 @@ export function WishlistCaptureDialog({
           const k = Math.min(210 / w, 297 / h);
           doc.addImage(img, "JPEG", (210 - w * k) / 2, 0, w * k, h * k, undefined, "FAST");
         }
-        return { blob: doc.output("blob"), filename: `${fileBase}.pdf`, type: "application/pdf" };
+        return [{ blob: doc.output("blob"), filename: `${fileBase}.pdf`, type: "application/pdf" }];
       }
       const opts = { pixelRatio: 1080 / SHEET_W, cacheBust: true, fontEmbedCSS, backgroundColor: theme.solid };
-      const dataUrl = format === "jpg" ? await toJpeg(nodes[0], { ...opts, quality: 0.92 }) : await toPng(nodes[0], opts);
-      const blob = await (await fetch(dataUrl)).blob();
-      return { blob, filename: `${fileBase}.${format}`, type: format === "jpg" ? "image/jpeg" : "image/png" };
+      const files: OutFile[] = [];
+      for (let i = 0; i < nodes.length; i++) {
+        const dataUrl = format === "jpg" ? await toJpeg(nodes[i], { ...opts, quality: 0.92 }) : await toPng(nodes[i], opts);
+        const blob = await (await fetch(dataUrl)).blob();
+        const suffix = nodes.length > 1 ? `-${i + 1}sur${nodes.length}` : "";
+        files.push({ blob, filename: `${fileBase}${suffix}.${format}`, type: format === "jpg" ? "image/jpeg" : "image/png" });
+      }
+      return files;
     } finally {
       setOffscreen(false);
     }
@@ -472,26 +494,30 @@ export function WishlistCaptureDialog({
     if (exporting) return;
     setExporting(kind);
     try {
-      const { blob, filename, type } = await buildFile();
+      const out = await buildFile();
       if (kind === "share") {
-        const file = new File([blob], filename, { type });
-        if (typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })) {
+        const files = out.map((o) => new File([o.blob], o.filename, { type: o.type }));
+        if (typeof navigator !== "undefined" && navigator.canShare?.({ files })) {
           try {
-            await navigator.share({ files: [file], title: heading });
+            await navigator.share({ files, title: heading });
             return;
           } catch (err: any) {
             if (err?.name === "AbortError") return;
           }
         }
-        toast({ title: "Fichier enregistré", description: "Ton téléphone ne propose pas le partage direct : retrouve le fichier dans tes téléchargements pour l'envoyer." });
+        toast({ title: out.length > 1 ? "Fichiers enregistrés" : "Fichier enregistré", description: "Ton appareil ne propose pas le partage direct : retrouve-les dans tes téléchargements pour les envoyer." });
       }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-      if (kind === "download") toast({ title: "Capture enregistrée", description: filename });
+      // Plusieurs images : téléchargements espacés, sinon le navigateur n'en garde qu'un.
+      for (let i = 0; i < out.length; i++) {
+        const url = URL.createObjectURL(out[i].blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = out[i].filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        if (i < out.length - 1) await new Promise((r) => setTimeout(r, 450));
+      }
+      if (kind === "download") toast({ title: out.length > 1 ? `${out.length} images enregistrées` : "Capture enregistrée", description: out.length > 1 ? "Retrouve-les dans tes téléchargements." : out[0].filename });
     } catch (err) {
       console.error("Capture wishlist:", err);
       toast({ variant: "destructive", title: "La capture a échoué", description: "Réessaie, ou utilise la version « Liste seule » qui ne dépend d'aucune image." });
@@ -512,8 +538,8 @@ export function WishlistCaptureDialog({
 
   const fmtNote =
     mode === "list"
-      ? { pdf: "Toute la liste tient sur une seule page A4.", jpg: "Une image courte, idéale pour une conversation.", png: "Une image courte, texte le plus net." }[format]
-      : { pdf: "Toute la wishlist, répartie sur des pages A4.", jpg: "Toute la wishlist sur une seule image, facile à envoyer.", png: "Toute la wishlist sur une seule image, texte le plus net." }[format];
+      ? { pdf: "Toute la liste, répartie sur des pages A4.", jpg: "Images courtes, idéales pour une conversation.", png: "Images courtes, texte le plus net." }[format]
+      : { pdf: "Toute la wishlist, répartie sur des pages A4.", jpg: "Coupée en images lisibles, faciles à envoyer.", png: "Coupée en images lisibles, texte le plus net." }[format];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -528,11 +554,11 @@ export function WishlistCaptureDialog({
           <div className="bg-primary/[0.04] p-5 sm:p-6 flex flex-col gap-3 min-w-0 md:border-r md:border-primary/10">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground tabular-nums">{dims}</span>
-              {format === "pdf" && pages.length > 1 && (
+              {pages.length > 1 && (
                 <div className="flex items-center gap-1.5">
-                  <button type="button" aria-label="Page précédente" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} className="h-8 w-8 rounded-full border border-primary/15 bg-white grid place-items-center disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
-                  <span className="text-xs text-muted-foreground min-w-[84px] text-center">Page {safePage + 1} sur {pages.length}</span>
-                  <button type="button" aria-label="Page suivante" disabled={safePage >= pages.length - 1} onClick={() => setPage(safePage + 1)} className="h-8 w-8 rounded-full border border-primary/15 bg-white grid place-items-center disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
+                  <button type="button" aria-label="Précédent" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} className="h-8 w-8 rounded-full border border-primary/15 bg-white grid place-items-center disabled:opacity-40"><ChevronLeft className="h-4 w-4" /></button>
+                  <span className="text-xs text-muted-foreground min-w-[84px] text-center">{format === "pdf" ? "Page" : "Image"} {safePage + 1} sur {pages.length}</span>
+                  <button type="button" aria-label="Suivant" disabled={safePage >= pages.length - 1} onClick={() => setPage(safePage + 1)} className="h-8 w-8 rounded-full border border-primary/15 bg-white grid place-items-center disabled:opacity-40"><ChevronRight className="h-4 w-4" /></button>
                 </div>
               )}
             </div>
@@ -594,6 +620,19 @@ export function WishlistCaptureDialog({
               <p className="mt-2 text-xs text-muted-foreground">{fmtNote}</p>
             </div>
 
+            {format !== "pdf" && (
+              <div>
+                <Legend>Découpage</Legend>
+                <Seg label="Nombre d'images" value={split} onChange={(v) => { setSplit(v); setPage(0); }} options={[
+                  { value: "auto", title: "Auto", hint: "selon la taille" },
+                  { value: "1", title: "1 image" },
+                  { value: "2", title: "2 images" },
+                  { value: "3", title: "3 images" },
+                ]} />
+                <p className="mt-2 text-xs text-muted-foreground">Une seule image très longue devient illisible sur téléphone : en plusieurs morceaux, chaque couverture reste bien visible.</p>
+              </div>
+            )}
+
             {mode === "covers" && (
               <div>
                 <Legend>Taille des couvertures</Legend>
@@ -648,7 +687,7 @@ export function WishlistCaptureDialog({
             <div className="flex flex-col gap-2.5 pt-1">
               <Button type="button" onClick={() => run("download")} disabled={!!exporting || !coversReady || total === 0} className="h-14 rounded-2xl text-base font-semibold">
                 {exporting === "download" ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Download className="mr-2 h-5 w-5" />}
-                {exporting === "download" ? "Création du fichier…" : `Télécharger en ${format.toUpperCase()}`}
+                {exporting === "download" ? "Création du fichier…" : `Télécharger en ${format.toUpperCase()}${format !== "pdf" && pages.length > 1 ? ` (${pages.length} images)` : ""}`}
               </Button>
               {mode === "list" && (
                 <Button type="button" variant="outline" onClick={copyText} className="h-12 rounded-2xl"><Copy className="mr-2 h-4 w-4" /> Copier la liste en texte</Button>
