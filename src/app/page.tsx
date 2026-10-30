@@ -7,7 +7,6 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { 
   BookOpen, 
-  Trophy, 
   PenTool, 
   Sparkles,
   Plus,
@@ -35,6 +34,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DailyQuoteModal } from '@/components/daily-quote-modal';
 import { TrackAppOpen } from '@/components/track-app-open';
 import { BadgeVitrine } from '@/components/badge-vitrine';
+import { MaskIcon, Coupe } from '@/components/mask-icon';
 import { getCurrentSeasonalTheme } from '@/lib/seasonal-theme';
 
 function getGoalMotivation(name: string, progress: number, remaining: number) {
@@ -310,7 +310,7 @@ export default function Home() {
           style={seasonTheme ? { background: `linear-gradient(120deg, ${seasonTheme.top} 0%, ${seasonTheme.bottom} 140%)` } : { background: "rgba(255,255,255,0.6)" }}
         >
           <div className="flex flex-wrap items-center gap-4 md:gap-6">
-            <Trophy className="h-5 w-5 md:h-7 md:w-7 text-copper shrink-0" />
+            <Coupe className="h-5 w-5 md:h-7 md:w-7 text-copper shrink-0" />
             <div className="flex-1 min-w-[160px] space-y-2">
               <div className="flex justify-between items-baseline">
                 <h3 className="text-base md:text-xl font-headline italic">{stats.annualCount} / {stats.goals.annual} <span className="text-xs font-sans not-italic opacity-50">livres cette année</span></h3>
@@ -340,7 +340,7 @@ export default function Home() {
           <section className="space-y-4 md:space-y-8">
             <div className="flex justify-between items-center">
               <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
-                <Sparkles className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Lecture Actuelle
+                <MaskIcon src="/icons/accueil/etoile.svg" className="h-6 w-6 md:h-9 md:w-9 text-primary/40" /> Lecture Actuelle
               </h2>
               {currentRead && (
                  <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
@@ -461,7 +461,7 @@ export default function Home() {
           <section className="space-y-4 md:space-y-8">
             <div className="flex justify-between items-center px-2">
               <h2 className={cn("text-xl md:text-4xl font-headline flex items-center gap-2 md:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
-                <BookOpen className="h-5 w-5 md:h-8 md:w-8 text-primary/40" /> Votre pile de lectures
+                <MaskIcon src="/icons/accueil/livre-ouvert.svg" className="h-6 w-6 md:h-9 md:w-9 text-primary/40" /> Votre pile de lectures
               </h2>
               {readBooks.length > 0 && (
                 <Button asChild variant="link" className="text-primary italic text-sm md:text-lg group">
@@ -478,16 +478,13 @@ export default function Home() {
 
           <section className="space-y-4 lg:space-y-8">
             <h2 className={cn("text-xl lg:text-4xl font-headline flex items-center gap-2 lg:gap-4 italic", isAmbientDark && "text-[#F5F1E8]")}>
-              <TrendingUp className="h-5 w-5 lg:h-8 lg:w-8 text-primary/40" /> Raccourcis
+              <MaskIcon src="/icons/accueil/courbe-de-croissance.svg" className="h-6 w-6 lg:h-9 lg:w-9 text-primary/40" /> Raccourcis
             </h2>
             <div className="grid grid-cols-2 gap-3 lg:gap-6">
               <Link href="/library" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-copper/10 shadow-sm group-hover:scale-110 transition-transform duration-500">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="none" stroke="#B08457" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 5.5 C6.5 4.2 9.2 4.2 12 5.5 V19 C9.2 17.7 6.5 17.7 4 19 Z"/>
-                      <path d="M20 5.5 C17.5 4.2 14.8 4.2 12 5.5 V19 C14.8 17.7 17.5 17.7 20 19 Z"/>
-                    </svg>
+                    <MaskIcon src="/icons/accueil/livre-ouvert.svg" className="h-6 w-6 lg:h-7 lg:w-7 text-[#B08457]" />
                   </div>
                   <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{allBooks.length} livres</span>
                 </div>
@@ -496,9 +493,7 @@ export default function Home() {
               <Link href="/coups-de-coeur" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-rose/15 shadow-sm group-hover:scale-110 transition-transform duration-500">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="#D98BA0" stroke="none">
-                      <path d="M12 20 C7 16.5 3 13 3 8.8 C3 6.1 5.1 4 7.7 4 C9.4 4 10.9 4.9 12 6.3 C13.1 4.9 14.6 4 16.3 4 C18.9 4 21 6.1 21 8.8 C21 13 17 16.5 12 20 Z"/>
-                    </svg>
+                    <MaskIcon src="/icons/accueil/coeur.svg" className="h-6 w-6 lg:h-7 lg:w-7 text-[#D98BA0]" />
                   </div>
                   <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{coupsDeCoeurCount} coups de cœur</span>
                 </div>
@@ -507,9 +502,7 @@ export default function Home() {
               <Link href="/library?filter=envie" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-copper/10 shadow-sm group-hover:scale-110 transition-transform duration-500">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="none" stroke="#B08457" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 6.2 C10 3.6 6 4 5 7.2 C4.1 10 6.3 12.4 12 17 C17.7 12.4 19.9 10 19 7.2 C18 4 14 3.6 12 6.2 Z"/>
-                    </svg>
+                    <MaskIcon src="/icons/accueil/cadeau.svg" className="h-6 w-6 lg:h-7 lg:w-7 text-[#B08457]" />
                   </div>
                   <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{envieCount} envies</span>
                 </div>
@@ -518,9 +511,7 @@ export default function Home() {
               <Link href="/journal" className="flex flex-col gap-3 p-4 lg:p-6 rounded-2xl lg:rounded-[2rem] bg-white/40 border border-white/60 hover:bg-white transition-all group shadow-sm hover:shadow-xl">
                 <div className="flex items-center justify-between">
                   <div className="h-10 w-10 lg:h-12 lg:w-12 rounded-xl lg:rounded-2xl flex items-center justify-center bg-copper/10 shadow-sm group-hover:scale-110 transition-transform duration-500">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 lg:h-6 lg:w-6" fill="none" stroke="#B08457" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 3 L14.3 8.6 L20.4 9.1 L15.7 13 L17.2 19 L12 15.7 L6.8 19 L8.3 13 L3.6 9.1 L9.7 8.6 Z" strokeLinejoin="round"/>
-                    </svg>
+                    <MaskIcon src="/icons/accueil/etoile.svg" className="h-6 w-6 lg:h-7 lg:w-7 text-[#B08457]" />
                   </div>
                   <span className="text-[10px] font-bold bg-black/5 px-2 py-0.5 rounded-full text-muted-foreground">{avisCount} avis</span>
                 </div>

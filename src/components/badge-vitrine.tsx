@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Trophy, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { MaskIcon } from "@/components/mask-icon";
 import { GENRES_LIST, TROPES_LIST } from "@/app/library/page";
 import { toArray, cn } from "@/lib/utils";
@@ -72,7 +72,7 @@ export function BadgeVitrine({ allBooks }: { allBooks: any[] }) {
               className="h-11 w-11 shrink-0 rounded-2xl flex items-center justify-center text-xl"
               style={{ background: "linear-gradient(160deg, #FDF0DA, #F5DDB0)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.8), 0 2px 6px rgba(180,140,80,0.25)" }}
             >
-              <Trophy className="h-5 w-5 text-copper" />
+              <MaskIcon src="/icons/accueil/coupe.svg" className="h-6 w-6 text-copper" />
             </div>
             <div>
               <span className="block font-headline italic text-[13px] text-copper">Ma vitrine de</span>

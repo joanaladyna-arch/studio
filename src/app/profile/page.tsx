@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContactAdminDialog } from "@/components/contact-admin-dialog";
+import { Coupe } from "@/components/mask-icon";
 import { VisibleProfileButton } from "@/components/visible-profile-dialog";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { PublisherSubmissionDialog } from "@/components/publisher-submission-dialog";
@@ -26,7 +27,6 @@ import {
   ShoppingBag,
   Crown, 
   Sparkles, 
-  Trophy,
   BarChart3,
   Headphones, 
   LogOut,
@@ -474,7 +474,7 @@ export default function ProfilePage() {
               </CollapsibleTrigger>
               <CollapsibleContent className="w-full flex flex-col gap-1 items-center md:items-start md:pl-4">
                 <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                    <Link href="/passport"><Trophy className="h-4 w-4 mr-2.5" /> Passeport de lectrice</Link>
+                    <Link href="/passport"><Coupe className="h-4 w-4 mr-2.5" /> Passeport de lectrice</Link>
                 </Button>
                 <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
                     <Link href="/stats"><BarChart3 className="h-4 w-4 mr-2.5" /> Bilan de lecture</Link>
@@ -675,7 +675,7 @@ export default function ProfilePage() {
           <div className="absolute top-0 right-0 w-1.5 h-14 bg-rose rounded-bl-md" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
             {[
-              { label: "Annuel", icon: Trophy, value: `${stats.annualReadCount}`, total: `/ ${stats.goals.annual}`, progress: stats.annualProgress },
+              { label: "Annuel", icon: Coupe, value: `${stats.annualReadCount}`, total: `/ ${stats.goals.annual}`, progress: stats.annualProgress },
               { label: "Mensuel", icon: Target, value: `${stats.monthlyReadCount}`, total: `/ ${stats.goals.monthly}`, progress: stats.monthlyProgress },
               { label: "Pages", icon: FileText, value: `${stats.pagesRead.toLocaleString()}`, total: "", progress: stats.pagesProgress },
               { label: "Audio", icon: Headphones, value: `${stats.audioHours}`, total: "h", progress: stats.audioProgress }
