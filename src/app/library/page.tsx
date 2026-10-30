@@ -632,7 +632,7 @@ export default function LibraryPage() {
             {sortMode === "author" ? <Layers className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
             {sortMode === "author" ? "Revenir au tri par saga" : "Classer par auteur"}
           </button>
-          {activeTab === "envie" && activeBlock.books.length > 0 && (
+          {(activeTab === "envie" || activeTab === "pal") && (activeTab === "pal" ? palBlockBooks : activeBlock.books).length > 0 && (
             <button
               onClick={() => setCaptureOpen(true)}
               className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline bg-primary text-white shadow-md hover:bg-primary/90 transition-colors"
@@ -998,7 +998,8 @@ export default function LibraryPage() {
         open={captureOpen}
         onOpenChange={setCaptureOpen}
         defaultName={((user as any)?.displayName || "").split(" ")[0]}
-        books={envieBlockBooks.map((b: any) => ({
+        kind={activeTab === "pal" ? "pal" : "wishlist"}
+        books={(activeTab === "pal" ? palBlockBooks : envieBlockBooks).map((b: any) => ({
           id: b.id,
           title: cleanBookTitle(b.title || ""),
           author: cleanAuthorName(b.author || ""),

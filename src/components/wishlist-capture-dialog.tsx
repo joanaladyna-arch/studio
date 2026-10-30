@@ -189,6 +189,8 @@ function hash(s: string): number {
   return Math.abs(h);
 }
 
+type CaptureKind = "wishlist" | "pal";
+
 type SheetProps = {
   books: CaptureBook[];
   covers: CoverMap;
@@ -201,6 +203,7 @@ type SheetProps = {
   theme: SheetTheme;
   a4: boolean;
   footerRight: string;
+  footerLeft: string;
   startIndex: number;
 };
 
@@ -235,7 +238,7 @@ function Cover({ book, src, theme, tf }: { book: CaptureBook; src: string | null
   );
 }
 
-function Sheet({ books, covers, mode, cols, showTitles, showBoxes, heading, total, theme, a4, footerRight, startIndex }: SheetProps) {
+function Sheet({ books, covers, mode, cols, showTitles, showBoxes, heading, total, theme, a4, footerRight, footerLeft, startIndex }: SheetProps) {
   const tf = cols === 6 ? 10 : 13;
   const cf = cols === 6 ? 10 : 12.5;
   const rows: CaptureBook[][] = [];
@@ -301,7 +304,7 @@ function Sheet({ books, covers, mode, cols, showTitles, showBoxes, heading, tota
       )}
 
       <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", gap: 10, paddingTop: 6, fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase", opacity: 0.7 }}>
-        <span>Ma wishlist sur Lectoria</span>
+        <span>{footerLeft}</span>
         <span>{footerRight}</span>
       </div>
     </div>
@@ -342,12 +345,17 @@ export function WishlistCaptureDialog({
   onOpenChange,
   books,
   defaultName,
+  kind = "wishlist",
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   books: CaptureBook[];
   defaultName: string;
+  kind?: CaptureKind;
 }) {
+  const labels = kind === "pal"
+    ? { title: "Capturer ma PAL", nom: "La PAL de", sans: "Ma PAL", pied: "Ma PAL sur Lectoria", file: "lectoria-pal" }
+    : { title: "Capturer ma wishlist", nom: "La wishlist de", sans: "Ma wishlist", pied: "Ma wishlist sur Lectoria", file: "lectoria-wishlist" };
   const { toast } = useToast();
   const themes = useMemo(buildThemes, []);
   const [mode, setMode] = useState<Mode>("covers");
@@ -403,7 +411,7 @@ export function WishlistCaptureDialog({
     return () => { cancelled = true; };
   }, [open, needsCovers, books]);
 
-  const heading = showName && name.trim() ? `La wishlist de ${name.trim()}` : "Ma wishlist";
+  const heading = showName && name.trim() ? `${labels.nom} ${name.trim()}` : labels.sans;
   const pages = useMemo(() => paginate(books, mode, cols, format, split), [books, mode, cols, format, split]);
   const safePage = Math.min(page, pages.length - 1);
   const dateLabel = new Date().toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
@@ -411,7 +419,7 @@ export function WishlistCaptureDialog({
 
   const sheetProps = (p: number): SheetProps => ({
     books: pages[p], covers, mode, cols, showTitles, showBoxes, heading, total, theme,
-    a4: format === "pdf", startIndex: startIndexOf(p),
+    a4: format === "pdf", startIndex: startIndexOf(p), footerLeft: labels.pied,
     footerRight: format === "pdf" ? `Page ${p + 1} / ${pages.length}` : pages.length > 1 ? `${dateLabel} · ${p + 1} / ${pages.length}` : dateLabel,
   });
 
@@ -441,7 +449,7 @@ export function WishlistCaptureDialog({
     return `${format.toUpperCase()} · ${h} · ${pages.length > 1 ? `${pages.length} images` : "une seule image"}`;
   }, [format, pages.length, mode, innerH]);
 
-  const fileBase = `lectoria-wishlist${showName && name.trim() ? `-${slugify(name.trim())}` : ""}`;
+  const fileBase = `${labels.file}${showName && name.trim() ? `-${slugify(name.trim())}` : ""}`;
 
   // Capture réelle : on monte une copie hors écran à taille réelle (toutes
   // les pages), on attend que les images soient décodées, puis on capture.
@@ -539,13 +547,13 @@ export function WishlistCaptureDialog({
   const fmtNote =
     mode === "list"
       ? { pdf: "Toute la liste, répartie sur des pages A4.", jpg: "Images courtes, idéales pour une conversation.", png: "Images courtes, texte le plus net." }[format]
-      : { pdf: "Toute la wishlist, répartie sur des pages A4.", jpg: "Coupée en images lisibles, faciles à envoyer.", png: "Coupée en images lisibles, texte le plus net." }[format];
+      : { pdf: "Toute la liste, répartie sur des pages A4.", jpg: "Coupée en images lisibles, faciles à envoyer.", png: "Coupée en images lisibles, texte le plus net." }[format];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="glass-card border-none max-w-5xl p-0 bg-white/95 backdrop-blur-3xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="px-6 pt-6 pb-4 border-b border-primary/10 shrink-0">
-          <DialogTitle className="font-headline italic text-2xl font-normal flex items-center gap-3"><Camera className="h-5 w-5 text-rose" /> Capturer ma wishlist</DialogTitle>
+          <DialogTitle className="font-headline italic text-2xl font-normal flex items-center gap-3"><Camera className="h-5 w-5 text-rose" /> {labels.title}</DialogTitle>
           <DialogDescription className="mt-1 italic">{total} livre{total > 1 ? "s" : ""} · l'aperçu est exactement ce qui sera enregistré.</DialogDescription>
         </div>
 
@@ -658,7 +666,7 @@ export function WishlistCaptureDialog({
                   </label>
                 )}
                 <label className="flex items-center justify-between gap-3 py-2.5 cursor-pointer">
-                  <span><span className="block text-sm font-medium">Mon prénom</span><span className="block text-xs text-muted-foreground">« La wishlist de … »</span></span>
+                  <span><span className="block text-sm font-medium">Mon prénom</span><span className="block text-xs text-muted-foreground">« {labels.nom} … »</span></span>
                   <Switch checked={showName} onCheckedChange={setShowName} />
                 </label>
               </div>
