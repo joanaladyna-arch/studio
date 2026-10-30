@@ -6,7 +6,6 @@ import { useUser, useFirestore, useDoc, useCollection } from "@/firebase";
 import { doc, updateDoc, deleteDoc, serverTimestamp, getDoc, collection, getDocs, query, where, onSnapshot, setDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { 
   ArrowLeft, 
-  Sparkles, 
   BookOpen, 
   Trash2, 
   Save, 
@@ -67,7 +66,8 @@ import { useTaxonomy } from "@/hooks/use-taxonomy";
 import { usePublishers } from "@/hooks/use-publishers";
 import { MasterBookEditor } from "@/components/master-book-editor";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import AvisExportModal from "@/components/export/AvisExportModal";
+import { ReviewCaptureDialog } from "@/components/review-capture-dialog";
+import { MaskIcon } from "@/components/mask-icon";
 
 // Grille d'évaluation détaillée, distincte de "Ma Note" — combine des
 // critères sur le livre en lui-même (intrigue, personnages, écriture,
@@ -126,7 +126,7 @@ export default function BookDetailPage() {
   const taxonomy = useTaxonomy();
   const publishers = usePublishers();
   const [showMasterEditor, setShowMasterEditor] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
   const [showDates, setShowDates] = useState(false);
   const [showPublisherSuggestions, setShowPublisherSuggestions] = useState(false);
 
@@ -1398,7 +1398,19 @@ export default function BookDetailPage() {
 
           {/* Mon Avis */}
           <div className="space-y-6">
-            <Label className="italic text-3xl font-headline">Mon Avis & Réflexions</Label>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <Label className="italic text-3xl font-headline">Mon Avis & Réflexions</Label>
+              <Button
+                type="button"
+                onClick={() => setCaptureOpen(true)}
+                disabled={!(editedData.review || "").toString().trim()}
+                title={(editedData.review || "").toString().trim() ? "Capturer mon avis en image ou en PDF" : "Écris ton avis pour pouvoir le capturer"}
+                className="rounded-full h-11 px-5 bg-primary text-white font-headline italic text-base shadow-md"
+              >
+                <MaskIcon src="/icons/profil/avis-positif.svg" className="h-6 w-6 mr-2.5" />
+                Capturer un avis
+              </Button>
+            </div>
             <Textarea value={editedData.review || ""} onChange={(e) => setEditedData({ ...editedData, review: e.target.value })}
               placeholder="Qu'est-ce que cette lecture a gravé en vous ?"
               className="min-h-[160px] sm:min-h-[250px] rounded-2xl sm:rounded-[2rem] bg-white/40 border-none p-6 sm:p-10 italic text-lg sm:text-xl shadow-inner resize-none focus-visible:ring-1 focus-visible:ring-primary/20" />
@@ -1571,24 +1583,26 @@ export default function BookDetailPage() {
             <Button asChild variant="outline" className="flex-1 h-14 rounded-2xl font-headline italic text-lg border-primary/20">
               <Link href={`/share?book=${bookId}`}><Share2 className="mr-3 h-5 w-5" /> Partager</Link>
             </Button>
-            <Button onClick={() => setExportOpen(true)} variant="outline" className="flex-1 h-14 rounded-2xl font-headline italic text-lg border-primary/20">
-              <Sparkles className="mr-3 h-5 w-5" /> Exporter l'avis
-            </Button>
           </div>
         </TabsContent>
       </Tabs>
 
 
-            <AvisExportModal
-        isOpen={exportOpen}
-        onClose={() => setExportOpen(false)}
+      <ReviewCaptureDialog
+        open={captureOpen}
+        onOpenChange={setCaptureOpen}
+        defaultName={((profile as any)?.name || "").split(" ")[0]}
         book={{
-          title: masterBook?.title || userBook?.title,
-          author: masterBook?.author || userBook?.author,
-          plumeRank: editedData.plumeRank,
-          userNote: editedData.review,
-          genres: toArray<string>(editedData.genres),
-          isServicePresse: !!(editedData as any).isServicePresse,
+          title: cleanBookTitle(masterBook?.title || userBook?.title || ""),
+          author: cleanAuthorName(masterBook?.author || userBook?.author || ""),
+          cover: ((editedData as any).cover || masterBook?.cover || null) as string | null,
+          rating: Math.round(Number(editedData.rating) || 0),
+          spicy: Math.round(Number((editedData as any).spicyLevel) || 0),
+          rankLabel: editedData.plumeRank ? RANKS[editedData.plumeRank as RankType]?.label || null : null,
+          isPepite: Boolean((editedData as any).isRecommended),
+          genres: toArray<string>(editedData.genres).slice(0, 3),
+          review: (editedData.review || "").toString(),
+          quotes: [(editedData as any).favoriteQuote, ...toArray<string>((editedData as any).favoriteQuotes)].map((q: any) => (q || "").toString().trim()).filter(Boolean),
         }}
       />
 

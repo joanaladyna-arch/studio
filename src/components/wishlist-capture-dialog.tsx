@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { cn, slugify } from "@/lib/utils";
 import { getCurrentSeasonalTheme } from "@/lib/seasonal-theme";
+import { hexToRgb, mix, fetchCover, getFontEmbedCSS } from "@/lib/capture-utils";
 import { Camera, Check, ChevronLeft, ChevronRight, Copy, Download, Loader2, Share2 } from "lucide-react";
 
 /**
@@ -37,18 +38,6 @@ const COVER_PALETTE: [string, string][] = [
   ["#5c2a3e", "#b85a7a"], ["#26364d", "#6c7f9c"], ["#8a6a14", "#d1a73c"], ["#43351f", "#9c7a46"], ["#5a2d82", "#b979d6"],
 ];
 
-function hexToRgb(hex: string): [number, number, number] {
-  const h = hex.replace("#", "");
-  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function mix(a: string, b: string, t: number): string {
-  const [r1, g1, b1] = hexToRgb(a);
-  const [r2, g2, b2] = hexToRgb(b);
-  const m = (x: number, y: number) => Math.round(x + (y - x) * t).toString(16).padStart(2, "0");
-  return `#${m(r1, r2)}${m(g1, g2)}${m(b1, b2)}`;
-}
-
 function buildThemes(): Record<ThemeKey, SheetTheme | null> {
   const season = getCurrentSeasonalTheme();
   return {
@@ -67,96 +56,6 @@ function buildThemes(): Record<ThemeKey, SheetTheme | null> {
         }
       : null,
   };
-}
-
-/* ---------- couvertures : récupération avant capture ---------- */
-
-async function blobToDataUri(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(blob);
-  });
-}
-
-async function decodes(dataUri: string): Promise<boolean> {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => resolve(img.naturalWidth > 8 && img.naturalHeight > 8); // écarte les faux visuels 1×1
-    img.onerror = () => resolve(false);
-    img.src = dataUri;
-  });
-}
-
-async function fetchCover(url: string): Promise<string | null> {
-  if (!url) return null;
-  try {
-    let dataUri: string | null = null;
-    if (url.startsWith("data:")) {
-      dataUri = url;
-    } else if (url.startsWith("/")) {
-      const res = await fetch(url);
-      if (res.ok) dataUri = await blobToDataUri(await res.blob());
-    } else {
-      const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(url)}`);
-      const data = await res.json();
-      dataUri = data?.dataUri || null;
-    }
-    return dataUri && (await decodes(dataUri)) ? dataUri : null;
-  } catch {
-    return null;
-  }
-}
-
-/* ---------- polices embarquées ---------- */
-
-// html-to-image ne sait pas lire la feuille de style Google Fonts (accès
-// refusé) et, sans police embarquée, la capture retombe sur une police
-// par défaut. On construit donc nous-mêmes le CSS des polices (sous-ensemble
-// latin) avec les fichiers en data URI, avec un délai maximal par requête
-// pour qu'une connexion lente ne bloque jamais l'export.
-let fontCssPromise: Promise<string> | null = null;
-
-async function fetchWithTimeout(url: string, ms = 8000): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms);
-  try {
-    return await fetch(url, { signal: ctrl.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function getFontEmbedCSS(): Promise<string> {
-  if (fontCssPromise) return fontCssPromise;
-  fontCssPromise = (async () => {
-    try {
-      const link = document.querySelector<HTMLLinkElement>('link[href*="fonts.googleapis.com/css"]');
-      if (!link) return "";
-      const css = await (await fetchWithTimeout(link.href)).text();
-      const blocks = Array.from(css.matchAll(/\/\*\s*([\w-]+)\s*\*\/\s*(@font-face\s*\{[^}]*\})/g)).filter((m) => m[1] === "latin");
-      const out = await Promise.all(
-        blocks.map(async (m) => {
-          let block = m[2];
-          const urls = Array.from(block.matchAll(/url\((https:[^)]+)\)/g));
-          for (const u of urls) {
-            try {
-              const res = await fetchWithTimeout(u[1]);
-              block = block.replace(u[1], await blobToDataUri(await res.blob()));
-            } catch {
-              return "";
-            }
-          }
-          return block;
-        })
-      );
-      return out.join("\n");
-    } catch {
-      return "";
-    }
-  })();
-  return fontCssPromise;
 }
 
 /* ---------- mise en page ---------- */
