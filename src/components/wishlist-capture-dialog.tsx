@@ -694,7 +694,7 @@ export function WishlistCaptureDialog({
               )}
               <Button type="button" variant="outline" onClick={() => run("share")} disabled={!!exporting || !coversReady || total === 0} className="h-12 rounded-2xl">
                 {exporting === "share" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Share2 className="mr-2 h-4 w-4" />}
-                Envoyer à un proche
+                Partager à un proche ou sur les réseaux
               </Button>
             </div>
           </div>
