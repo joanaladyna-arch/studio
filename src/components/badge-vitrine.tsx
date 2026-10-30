@@ -2,7 +2,8 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { Trophy, Shield, Medal, ArrowRight } from "lucide-react";
+import { Trophy, ArrowRight } from "lucide-react";
+import { MaskIcon } from "@/components/mask-icon";
 import { GENRES_LIST, TROPES_LIST } from "@/app/library/page";
 import { toArray, cn } from "@/lib/utils";
 
@@ -94,15 +95,20 @@ export function BadgeVitrine({ allBooks }: { allBooks: any[] }) {
           <div className="flex flex-col">
             {topBadges.map((b) => (
               <div key={`${b.kind}-${b.name}`} className="flex items-center gap-3 py-2.5 border-b last:border-b-0" style={{ borderColor: "rgba(212,175,120,0.18)" }}>
-                <div
-                  className="h-[52px] w-[52px] shrink-0 flex items-center justify-center"
-                  style={{
-                    background: b.level.gradient,
-                    clipPath: "polygon(50% 0%, 100% 20%, 100% 58%, 50% 100%, 0% 58%, 0% 20%)",
-                    filter: "drop-shadow(0 4px 6px rgba(120,90,50,0.3))",
-                  }}
-                >
-                  {b.kind === "genre" ? <Shield className="h-5 w-5 text-white" strokeWidth={2} /> : <Medal className="h-5 w-5 text-white" strokeWidth={2} />}
+                <div className="shrink-0" style={{ filter: "drop-shadow(0 4px 6px rgba(120,90,50,0.3))" }}>
+                  <div
+                    className="h-[58px] w-[52px] flex items-center justify-center pb-1"
+                    style={{
+                      background: b.level.gradient,
+                      WebkitMask: "url(/icons/badges/ecu.svg) center / 100% 100% no-repeat",
+                      mask: "url(/icons/badges/ecu.svg) center / 100% 100% no-repeat",
+                    }}
+                  >
+                    <MaskIcon
+                      src={b.kind === "genre" ? "/icons/badges/blason.svg" : "/icons/badges/medaille-dhonneur.svg"}
+                      className="h-7 w-7 text-white"
+                    />
+                  </div>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-[13px] font-semibold leading-tight truncate">{b.name}</p>

@@ -6,6 +6,7 @@ import { Navigation } from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Award, Medal, BookOpen, Star, Sparkles, Diamond, Crown, Shield, Lock } from "lucide-react";
+import { MaskIcon } from "@/components/mask-icon";
 import { useUser, useFirestore, useCollection } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { GENRES_LIST, TROPES_LIST, Book } from "@/app/library/page";
@@ -102,7 +103,7 @@ export default function BadgesMedalsPage() {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className={cn("p-1.5 rounded-lg", level ? level.bg : "bg-muted")}>
-                      {isUnlocked ? <Shield className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                      {isUnlocked ? <MaskIcon src="/icons/badges/blason.svg" className={cn("h-4 w-4", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                     </div>
                     {level && <span className={cn("text-[8px] font-bold uppercase tracking-widest", level.color)}>{level.label}</span>}
                   </div>
@@ -139,7 +140,7 @@ export default function BadgesMedalsPage() {
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-center justify-between">
                     <div className={cn("p-1.5 rounded-lg", level ? level.bg : "bg-muted")}>
-                      {isUnlocked ? <Medal className={cn("h-3.5 w-3.5", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
+                      {isUnlocked ? <MaskIcon src="/icons/badges/medaille-dhonneur.svg" className={cn("h-4 w-4", level ? level.color : "text-muted-foreground")} /> : <Lock className="h-3.5 w-3.5 text-muted-foreground/40" />}
                     </div>
                     {level && <span className={cn("text-[8px] font-bold uppercase tracking-widest", level.color)}>{level.label}</span>}
                   </div>
