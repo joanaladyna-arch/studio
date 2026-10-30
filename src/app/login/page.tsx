@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import { useAuth, useFirestore, useUser } from "@/firebase";
 import { 
   signInWithEmailAndPassword, 
@@ -13,13 +13,13 @@ import {
   sendPasswordResetEmail
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Feather, Mail, Lock, Chrome, Apple, ArrowRight } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LoginScene, SEASON_LINES } from "@/components/login-scene";
+
+const stagger = (i: number) => ({ "--ls-i": i }) as CSSProperties;
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -31,6 +31,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     if (user && !authLoading) {
@@ -166,102 +167,110 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center p-4 animate-in fade-in duration-1000">
-      <Card className="glass-card w-full max-w-md border-none shadow-2xl bg-white/60">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto h-12 w-12 rounded-full bg-amber-100/60 flex items-center justify-center text-amber-700">
-            <Feather className="h-6 w-6" />
+    <LoginScene>
+      {({ season }) => (
+        <section className="ls-card ls-enter" aria-labelledby="login-title">
+          <div className="ls-ribbon" aria-hidden="true" />
+          <div className="ls-logo">
+            <img src="/icon-192-v3.png" alt="Lectoria" width={84} height={84} />
           </div>
-          <CardTitle className="text-3xl font-headline italic">Heureux de vous revoir</CardTitle>
-          <CardDescription className="italic">Retrouvez votre réserve littéraire.</CardDescription>
-        </CardHeader>
-        <CardContent>
+          <h1 id="login-title" className="ls-title">Heureux de vous revoir</h1>
+          <svg className="ls-flourish" viewBox="0 0 220 12" aria-hidden="true">
+            <path pathLength={1} d="M3 7C30 1 46 11 74 6S120 2 148 7 196 9 217 4" />
+          </svg>
+          <p className="ls-sub">Retrouvez votre réserve littéraire.</p>
+
           {user ? (
-            <div className="space-y-6 text-center py-8">
-              <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
-                <p className="text-sm italic text-primary">Vous êtes déjà connecté : <b>{user.email}</b></p>
-              </div>
-              <Button onClick={() => router.replace("/")} className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-lg shadow-lg shadow-primary/20">
-                Entrer dans LECTORIA <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+            <div className="ls-form">
+              <p className="ls-sub" style={{ margin: "0 0 4px" }}>
+                Vous êtes déjà connecté : <b>{user.email}</b>
+              </p>
+              <button type="button" className="ls-btn ls-primary" onClick={() => router.replace("/")}>
+                Entrer dans LECTORIA <span className="ls-arrow" aria-hidden="true"><ArrowRight /></span>
+              </button>
             </div>
           ) : (
-            <>
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                    <Input 
-                      type="email" 
-                      placeholder="Email" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 bg-white/50 border-none h-12 rounded-xl italic"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-                    <Input 
-                      type="password" 
-                      placeholder="Mot de passe" 
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 bg-white/50 border-none h-12 rounded-xl italic"
-                      required
-                    />
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-[10px] text-primary/60 hover:text-primary hover:underline italic float-right uppercase font-bold tracking-widest"
-                    disabled={resetLoading}
-                  >
-                    Mot de passe oublié ?
-                  </button>
-                </div>
-                <Button type="submit" className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90 font-headline italic text-lg shadow-md" disabled={loading}>
-                  {loading ? "Connexion..." : "Se connecter"}
-                </Button>
-              </form>
-
-              <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-primary/10"></span>
-                </div>
-                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-[0.3em]">
-                  <span className="bg-[#fdfaf8] px-4 text-muted-foreground/40 italic">Ou</span>
-                </div>
+            <form className="ls-form" onSubmit={handleLogin}>
+              <div className="ls-field ls-stagger" style={stagger(0)}>
+                <label className="ls-sr" htmlFor="login-email">Email</label>
+                <Mail aria-hidden="true" />
+                <input
+                  id="login-email"
+                  type="email"
+                  placeholder="Email"
+                  autoComplete="email"
+                  inputMode="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
-
-              <Button 
-                variant="outline" 
-                className="w-full h-12 rounded-2xl border-primary/10 hover:bg-primary/5 italic"
-                onClick={handleGoogleLogin}
+              <div className="ls-field ls-stagger" style={stagger(1)}>
+                <label className="ls-sr" htmlFor="login-password">Mot de passe</label>
+                <Lock aria-hidden="true" />
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mot de passe"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="ls-eye"
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  <Eye className="ls-on" aria-hidden="true" />
+                  <EyeOff className="ls-off" aria-hidden="true" />
+                </button>
+              </div>
+              <button
+                type="button"
+                className="ls-forgot ls-stagger"
+                style={stagger(2)}
+                onClick={handleForgotPassword}
+                disabled={resetLoading}
               >
-                <Chrome className="mr-2 h-4 w-4" /> Continuer avec Google
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full h-12 rounded-2xl border-primary/10 hover:bg-primary/5 italic mt-3"
-                onClick={handleAppleLogin}
-              >
-                <Apple className="mr-2 h-4 w-4" /> Continuer avec Apple
-              </Button>
-            </>
+                Mot de passe oublié ?
+              </button>
+              <button type="submit" className="ls-btn ls-primary ls-stagger" style={stagger(3)} disabled={loading}>
+                <span>{loading ? "Ouverture du livre…" : "Se connecter"}</span>
+                <span className="ls-arrow" aria-hidden="true"><ArrowRight /></span>
+              </button>
+              <div className="ls-or ls-stagger" style={stagger(4)} aria-hidden="true">ou</div>
+              <button type="button" className="ls-btn ls-soft ls-stagger" style={stagger(5)} onClick={handleGoogleLogin}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                Continuer avec Google
+              </button>
+              <button type="button" className="ls-btn ls-soft ls-stagger" style={stagger(6)} onClick={handleAppleLogin}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="currentColor" d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
+                </svg>
+                Continuer avec Apple
+              </button>
+            </form>
           )}
-        </CardContent>
-        <CardFooter className="justify-center">
-          <p className="text-sm text-muted-foreground italic">
-            Pas encore de compte ?{" "}
-            <Link href="/signup" className="text-primary font-bold hover:underline">
-              S'inscrire
-            </Link>
+
+          <p className="ls-signup ls-stagger" style={stagger(7)}>
+            Pas encore de compte ? <Link href="/signup">S'inscrire</Link>
           </p>
-        </CardFooter>
-      </Card>
-    </div>
+          {season !== "none" && (
+            <p className="ls-seasonline ls-stagger" style={stagger(8)}>
+              <span className="ls-tag" key={`tag-${season}`}>{SEASON_LINES[season].tag}</span>
+              <span key={`text-${season}`}>{SEASON_LINES[season].text}</span>
+            </p>
+          )}
+        </section>
+      )}
+    </LoginScene>
   );
 }
