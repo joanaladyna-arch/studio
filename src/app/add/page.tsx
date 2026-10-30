@@ -313,7 +313,14 @@ export default function AddBookPage() {
       // n'a rien — le livre se retrouvait donc avec un champ `cover`
       // non vide (jamais détecté comme "manquant" par l'audit) mais
       // invisible à l'écran, résultat indiscernable d'un vrai bug.
-      allResults = allResults.filter((r) => r.source !== "api" || !!r.cover);
+      //
+      // Exception : une recherche par ISBN (saisie ou scan du code-barres)
+      // garde les résultats sans couverture. La lectrice a le livre en
+      // main et cible cette édition précise — beaucoup de poches (J'ai lu,
+      // Pocket, 10/18...) sont connus de Google Books par leur ISBN sans
+      // aucune image, et les masquer donnerait "Aucun résultat" à tort.
+      // BookCover affiche alors son repli visuel.
+      allResults = allResults.filter((r) => isIsbnQuery || r.source !== "api" || !!r.cover);
 
       // Les résultats "master" restants peuvent encore être sans
       // couverture (curation admin pas encore faite) — on les fait
