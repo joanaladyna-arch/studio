@@ -45,11 +45,13 @@ import {
   Eye,
   ListOrdered,
   Trash2,
-  PenTool
+  PenTool,
+  Camera
 } from "lucide-react";
 import Image from "next/image";
 import { BookCover } from "@/components/book-cover";
 import { StarRating } from "@/components/star-rating";
+import { WishlistCaptureDialog } from "@/components/wishlist-capture-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -538,6 +540,7 @@ export default function LibraryPage() {
   // raccourci Wishlist de l'Accueil, ?filter=envie) bascule directement
   // sur l'onglet correspondant au chargement.
   const [activeTab, setActiveTab] = useState<string>("pal");
+  const [captureOpen, setCaptureOpen] = useState(false);
   useEffect(() => {
     const filterParam = searchParams?.get("filter");
     if (!filterParam || loading) return;
@@ -629,6 +632,15 @@ export default function LibraryPage() {
             {sortMode === "author" ? <Layers className="h-4 w-4" /> : <UserRound className="h-4 w-4" />}
             {sortMode === "author" ? "Revenir au tri par saga" : "Classer par auteur"}
           </button>
+          {activeTab === "envie" && activeBlock.books.length > 0 && (
+            <button
+              onClick={() => setCaptureOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl text-sm italic font-headline bg-primary text-white shadow-md hover:bg-primary/90 transition-colors"
+            >
+              <Camera className="h-4 w-4" />
+              Capturer
+            </button>
+          )}
           {activeTab === "pal" && (
             <button
               onClick={() => setSortMode(sortMode === "manual" ? "saga" : "manual")}
@@ -982,6 +994,18 @@ export default function LibraryPage() {
       {/* Détail d'un mois archivé (onglet "Lu") — citation retenue, avis et
           note, avec accès à la fiche complète via "Lire +". Corps
           défilant indépendamment, en-tête fixe. */}
+      <WishlistCaptureDialog
+        open={captureOpen}
+        onOpenChange={setCaptureOpen}
+        defaultName={((user as any)?.displayName || "").split(" ")[0]}
+        books={envieBlockBooks.map((b: any) => ({
+          id: b.id,
+          title: cleanBookTitle(b.title || ""),
+          author: cleanAuthorName(b.author || ""),
+          cover: b.cover || null,
+        }))}
+      />
+
       <Dialog open={!!openMonthKey} onOpenChange={(o) => !o && setOpenMonthKey(null)}>
         <DialogContent className="glass-card border-none max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-3xl max-h-[85vh] flex flex-col">
           {(() => {
