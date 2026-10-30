@@ -153,7 +153,7 @@ export function Navigation() {
                     : "text-muted-foreground hover:text-primary hover:bg-white"
                 )}
               >
-                <Icon className={cn("h-5 w-5 shrink-0 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
+                <Icon className={cn("h-7 w-7 shrink-0 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
                 <span className="hidden xl:inline text-sm font-headline italic whitespace-nowrap">{item.label}</span>
                 {item.id === "lounge" && hasUnseenActuality && (
                   <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
@@ -169,7 +169,7 @@ export function Navigation() {
             className="text-muted-foreground hover:text-destructive transition-all p-3 rounded-full hover:bg-red-50 group shrink-0"
             title="Déconnexion"
           >
-            <LogoutIcon className="h-6 w-6 group-hover:rotate-12 transition-transform" />
+            <LogoutIcon className="h-8 w-8 group-hover:rotate-12 transition-transform" />
           </button>
         </div>
       </nav>
@@ -208,7 +208,7 @@ export function Navigation() {
                 "relative p-1.5 rounded-xl transition-all duration-300",
                 isActive ? "bg-primary/10 scale-110 shadow-sm" : "bg-transparent"
               )}>
-                <Icon className={cn("h-5 w-5", isActive && "fill-primary/20")} />
+                <Icon className={cn("h-7 w-7", isActive && "fill-primary/20")} />
                 {item.id === "lounge" && hasUnseenActuality && (
                   <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-rose-500" />
                 )}
@@ -225,7 +225,7 @@ export function Navigation() {
           className="flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 py-1 px-0 rounded-xl text-muted-foreground"
         >
           <div className="relative p-1.5 rounded-xl bg-transparent">
-            <LogoutIcon className="h-5 w-5" />
+            <LogoutIcon className="h-7 w-7" />
           </div>
           <span className="text-[8px] font-headline italic font-bold opacity-75 leading-tight truncate w-full text-center px-0.5">Quitter</span>
         </button>
