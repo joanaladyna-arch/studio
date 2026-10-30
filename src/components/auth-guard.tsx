@@ -7,6 +7,10 @@ import { useEffect } from "react";
 
 const publicRoutes = ["/login", "/signup"];
 
+// Profils partagés par lien (/p/{jeton}) : lisibles sans compte, y compris
+// pour une lectrice connectée (aucune redirection vers l'accueil).
+const isSharedProfile = (pathname: string) => pathname.startsWith("/p/");
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useUser();
   const router = useRouter();
@@ -14,7 +18,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading) {
-      if (!user && !publicRoutes.includes(pathname)) {
+      if (!user && !publicRoutes.includes(pathname) && !isSharedProfile(pathname)) {
         console.log("LECTORIA AuthGuard: Pas d'utilisateur, redirection vers /login");
         router.replace("/login");
       } else if (user && publicRoutes.includes(pathname)) {
@@ -36,7 +40,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   // Permettre l'accès aux pages publiques si déconnecté
-  if (!user && publicRoutes.includes(pathname)) {
+  if (!user && (publicRoutes.includes(pathname) || isSharedProfile(pathname))) {
     return <>{children}</>;
   }
 

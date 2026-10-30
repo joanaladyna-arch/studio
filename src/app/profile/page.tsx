@@ -15,6 +15,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContactAdminDialog } from "@/components/contact-admin-dialog";
+import { VisibleProfileButton } from "@/components/visible-profile-dialog";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { PublisherSubmissionDialog } from "@/components/publisher-submission-dialog";
 import { ThemeBackgroundDialog } from "@/components/theme-background-dialog";
 import { sortBySaga } from "@/lib/utils";
@@ -452,27 +454,43 @@ export default function ProfilePage() {
         <div className="flex flex-col gap-2.5 w-full items-center md:items-start">
             <div className="flex gap-3 items-center justify-center md:justify-start flex-wrap">
               <EditProfileDialog profile={profile} />
+              <VisibleProfileButton />
               <ContactAdminDialog />
             </div>
             <div className="flex justify-center md:justify-start">
               <PublisherSubmissionDialog />
             </div>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/passport"><Trophy className="h-4 w-4 mr-2.5" /> Passeport de lectrice</Link>
-            </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/stats"><BarChart3 className="h-4 w-4 mr-2.5" /> Bilan de lecture</Link>
-            </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/share"><Share2 className="h-4 w-4 mr-2.5" /> Exporter vers les réseaux</Link>
-            </Button>
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/community"><Users className="h-4 w-4 mr-2.5" /> Communauté de lectrices</Link>
-            </Button>
-            <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
-            <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                <Link href="/guide"><HelpCircle className="h-4 w-4 mr-2.5" /> Comment utiliser Lectoria</Link>
-            </Button>
+            <Collapsible className="w-full flex flex-col items-center md:items-start gap-1">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className={cn("group rounded-full h-11 px-5 text-sm md:h-14 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                  <span
+                    aria-hidden="true"
+                    className="inline-block h-5 w-5 mr-2.5 shrink-0"
+                    style={{ backgroundColor: "currentColor", WebkitMask: "url(/icons/profil/reglages.svg) center / contain no-repeat", mask: "url(/icons/profil/reglages.svg) center / contain no-repeat" }}
+                  />
+                  Réglages
+                  <ChevronDown className="h-4 w-4 ml-2.5 transition-transform group-data-[state=open]:rotate-180" />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="w-full flex flex-col gap-1 items-center md:items-start md:pl-4">
+                <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                    <Link href="/passport"><Trophy className="h-4 w-4 mr-2.5" /> Passeport de lectrice</Link>
+                </Button>
+                <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                    <Link href="/stats"><BarChart3 className="h-4 w-4 mr-2.5" /> Bilan de lecture</Link>
+                </Button>
+                <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                    <Link href="/share"><Share2 className="h-4 w-4 mr-2.5" /> Exporter vers les réseaux</Link>
+                </Button>
+                <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                    <Link href="/community"><Users className="h-4 w-4 mr-2.5" /> Communauté de lectrices</Link>
+                </Button>
+                <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
+                <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
+                    <Link href="/guide"><HelpCircle className="h-4 w-4 mr-2.5" /> Comment utiliser Lectoria</Link>
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
             {(profile?.wattpadUrl || profile?.amazonUrl) && (
               <div className="flex gap-3 justify-center md:justify-start px-2">
                 {profile?.wattpadUrl && (

@@ -111,7 +111,7 @@ export function Navigation() {
     }
   };
 
-  if (pathname === "/login" || pathname === "/signup") return null;
+  if (pathname === "/login" || pathname === "/signup" || pathname.startsWith("/p/")) return null;
 
   return (
     <>
