@@ -82,3 +82,9 @@ export async function getAdminAuth() {
   const { getAuth } = await import("firebase-admin/auth");
   return getAuth(getAdminApp());
 }
+
+/** Messagerie push (FCM) — import dynamique pour la même raison que getAdminAuth. */
+export async function getAdminMessaging() {
+  const { getMessaging } = await import("firebase-admin/messaging");
+  return getMessaging(getAdminApp());
+}

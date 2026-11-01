@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
 import { ADMIN_EMAILS } from "@/lib/utils";
 import { FieldValue } from "firebase-admin/firestore";
+import { sendPush } from "@/lib/push-server";
 
 /**
  * Fan-out des notifications "nouvelle annonce livre à paraître" vers les
@@ -76,6 +77,13 @@ export async function POST(req: NextRequest) {
       });
     });
     await batch.commit();
+
+    // Alerte push (appareils enregistrés), en plus de la cloche — best effort.
+    await sendPush(Array.from(uids), {
+      title: "Nouvelle annonce !",
+      body: title ? `Une nouvelle actualité vient de paraître : "${title}".` : "Une nouvelle actualité vient de paraître.",
+      link,
+    });
 
     return NextResponse.json({ notified: uids.size });
   } catch (err) {

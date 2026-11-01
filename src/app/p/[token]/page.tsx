@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useFirestore, useUser, useDoc } from "@/firebase";
 import { PublicProfileView, themeVars } from "@/components/public-profile-view";
 import { toArray } from "@/lib/utils";
+import { notifyUser } from "@/lib/salon";
 import type { ShareDoc } from "@/lib/public-profile";
 
 /**
@@ -47,7 +48,16 @@ export default function SharedProfilePage() {
       await setDoc(doc(db, "users", user.uid), { followedUsers: following ? arrayRemove(data.uid) : arrayUnion(data.uid) }, { merge: true });
       const entry = doc(db, "followers", data.uid, "entries", user.uid);
       if (following) await deleteDoc(entry);
-      else await setDoc(entry, { followedAt: serverTimestamp() });
+      else {
+        await setDoc(entry, { followedAt: serverTimestamp() });
+        notifyUser(db, user, data.uid, {
+          type: "new_follower",
+          id: `follow_${user.uid}_${data.uid}`,
+          title: "Nouvelle abonnée",
+          body: `${(me as any)?.name || "Une lectrice"} te suit désormais.`,
+          link: `/profile/${user.uid}`,
+        });
+      }
     } catch (err) {
       console.error("Follow from shared profile:", err);
     } finally {

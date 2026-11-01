@@ -12,6 +12,7 @@ import { cleanBookTitle, cleanAuthorName } from "@/lib/utils";
 import { useFirestore, useDoc, useUser } from "@/firebase";
 import { doc, setDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
 import { toArray } from "@/lib/utils";
+import { notifyUser } from "@/lib/salon";
 import { useToast } from "@/hooks/use-toast";
 
 /**
@@ -67,6 +68,13 @@ export default function PublicProfilePage() {
         await deleteDoc(followerEntryRef);
       } else {
         await setDoc(followerEntryRef, { followedAt: serverTimestamp() });
+        notifyUser(db, user, uid, {
+          type: "new_follower",
+          id: `follow_${user.uid}_${uid}`,
+          title: "Nouvelle abonnée",
+          body: `${(myProfile as any)?.name || "Une lectrice"} te suit désormais.`,
+          link: `/profile/${user.uid}`,
+        });
       }
       toast({
         title: isFollowing ? "Lectrice retirée du suivi" : "Lectrice suivie",

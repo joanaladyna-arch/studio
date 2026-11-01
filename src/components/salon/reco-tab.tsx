@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BookCover } from "@/components/book-cover";
 import { ADMIN_EMAILS, cleanAuthorName, cleanBookTitle, cn } from "@/lib/utils";
 import { GENRES_LIST, TROPES_LIST } from "@/app/library/page";
-import { prefillLink, relativeTime, reportContent, RULES_HINT, type RecoAnswer, type RecoRequest } from "@/lib/salon";
+import { notifyUser, prefillLink, relativeTime, reportContent, RULES_HINT, type RecoAnswer, type RecoRequest } from "@/lib/salon";
 
 const MAX_TAGS = 3;
 const ALL_TAGS: string[] = [...(GENRES_LIST as string[]), ...(TROPES_LIST as string[])];
@@ -47,7 +47,7 @@ function Who({ name, avatarUrl, when }: { name: string; avatarUrl?: string; when
   );
 }
 
-function ProposeBook({ requestId, onDone }: { requestId: string; onDone: () => void }) {
+function ProposeBook({ requestId, ownerUid, onDone }: { requestId: string; ownerUid: string; onDone: () => void }) {
   const { user } = useUser();
   const db = useFirestore();
   const { toast } = useToast();
@@ -76,6 +76,12 @@ function ProposeBook({ requestId, onDone }: { requestId: string; onDone: () => v
         title: picked.title, author: picked.author, cover: picked.cover, masterBookId: picked.id,
         note: note.trim().slice(0, 120),
         createdAt: serverTimestamp(),
+      });
+      notifyUser(db, user, ownerUid, {
+        type: "reco_answer",
+        title: "Une lectrice a répondu à ta demande",
+        body: `${(profile as any)?.name || "Une lectrice"} te conseille « ${picked.title} ».`,
+        link: "/community",
       });
       setPicked(null); setTerm(""); setNote("");
       onDone();
@@ -212,7 +218,7 @@ function RequestCard({ req, isAdmin, onDeleted }: { req: RecoRequest; isAdmin: b
             </div>
           ))}
           {answers?.length === 0 && <p className="text-sm italic text-muted-foreground">Pas encore de réponse : sois la première à proposer un livre.</p>}
-          <ProposeBook requestId={req.id} onDone={() => { loadAnswers(); }} />
+          <ProposeBook requestId={req.id} ownerUid={req.uid} onDone={() => { loadAnswers(); }} />
         </div>
       )}
     </article>

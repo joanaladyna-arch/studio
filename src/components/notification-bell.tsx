@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFirestore, useUser } from "@/firebase";
 import {
-  collection, query, where, orderBy, limit, onSnapshot,
+  collection, query, where, orderBy, limit, onSnapshot, type Query,
   doc, updateDoc, writeBatch, arrayUnion,
 } from "firebase/firestore";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -11,7 +11,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { MaskIcon } from "@/components/mask-icon";
-import { BookHeart, Sparkles, Rocket, ArrowRight } from "lucide-react";
+import { BookHeart, Sparkles, Rocket, ArrowRight, MessageCircleHeart, UserPlus } from "lucide-react";
+import { PushToggle } from "@/components/push-toggle";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
@@ -23,6 +26,11 @@ import { useRouter } from "next/navigation";
  *   (voir /api/admin/notify-actuality-followers).
  * - "app_update" : annonce de mise à jour de l'application, diffusée à
  *   tout le monde par l'administratrice (voir AppUpdateBroadcaster).
+ * - "reco_answer" / "new_follower" : événements du Lounge, créés par la
+ *   personne concernée (voir notifyUser dans lib/salon.ts).
+ *
+ * Temps réel : les deux écoutes sont des onSnapshot ; toute notification qui
+ * arrive après le premier chargement déclenche aussi un pop-up (toast).
  *
  * Deux formes de document dans la collection `notifications` :
  * - Personnel (book_added, upcoming_release) : targetUid + read (booléen).
@@ -33,7 +41,7 @@ import { useRouter } from "next/navigation";
 
 type NotifDoc = {
   id: string;
-  type: "book_added" | "upcoming_release" | "app_update";
+  type: "book_added" | "upcoming_release" | "app_update" | "reco_answer" | "new_follower";
   title: string;
   body: string;
   link?: string;
@@ -48,28 +56,56 @@ const TYPE_META: Record<NotifDoc["type"], { icon: any; className: string }> = {
   book_added: { icon: BookHeart, className: "bg-emerald-500/10 text-emerald-600" },
   upcoming_release: { icon: Sparkles, className: "bg-purple-500/10 text-purple-600" },
   app_update: { icon: Rocket, className: "bg-amber-500/10 text-amber-600" },
+  reco_answer: { icon: MessageCircleHeart, className: "bg-rose-500/10 text-rose-600" },
+  new_follower: { icon: UserPlus, className: "bg-sky-500/10 text-sky-600" },
 };
 
 export function NotificationBell() {
   const db = useFirestore();
   const { user } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
+  const toastRef = useRef<(n: NotifDoc) => void>(() => {});
   const [personal, setPersonal] = useState<NotifDoc[]>([]);
   const [broadcast, setBroadcast] = useState<NotifDoc[]>([]);
   const [open, setOpen] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState<NotifDoc | null>(null);
 
+  // Pop-up à l'arrivée d'une notification (jamais pour celles déjà là au chargement).
+  toastRef.current = (n) => {
+    const link = n.link;
+    toast({
+      title: n.title,
+      description: n.body,
+      action: link ? <ToastAction altText="Voir" onClick={() => router.push(link)}>Voir</ToastAction> : undefined,
+    });
+  };
+
   useEffect(() => {
     if (!db || !user) return;
-    const unsubPersonal = onSnapshot(
+    const listen = (q: Query, set: (l: NotifDoc[]) => void, label: string) => {
+      let ready = false;
+      return onSnapshot(
+        q,
+        (snap) => {
+          set(snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) } as NotifDoc)));
+          if (ready) {
+            snap.docChanges().forEach((c) => {
+              if (c.type === "added" && !c.doc.metadata.hasPendingWrites) toastRef.current({ id: c.doc.id, ...(c.doc.data() as object) } as NotifDoc);
+            });
+          }
+          ready = true;
+        },
+        (err) => console.error(`Notifications ${label} Error:`, err)
+      );
+    };
+    const unsubPersonal = listen(
       query(collection(db, "notifications"), where("targetUid", "==", user.uid), orderBy("createdAt", "desc"), limit(30)),
-      (snap) => setPersonal(snap.docs.map((d) => ({ id: d.id, ...d.data() } as NotifDoc))),
-      (err) => console.error("Notifications Personal Error:", err)
+      setPersonal, "Personal"
     );
-    const unsubBroadcast = onSnapshot(
+    const unsubBroadcast = listen(
       query(collection(db, "notifications"), where("broadcast", "==", true), orderBy("createdAt", "desc"), limit(30)),
-      (snap) => setBroadcast(snap.docs.map((d) => ({ id: d.id, ...d.data() } as NotifDoc))),
-      (err) => console.error("Notifications Broadcast Error:", err)
+      setBroadcast, "Broadcast"
     );
     return () => { unsubPersonal(); unsubBroadcast(); };
   }, [db, user]);
@@ -203,6 +239,7 @@ export function NotificationBell() {
             </div>
           )}
         </ScrollArea>
+        <PushToggle />
       </PopoverContent>
     </Popover>
       <Dialog open={!!selectedNotif} onOpenChange={(v) => { if (!v) setSelectedNotif(null); }}>

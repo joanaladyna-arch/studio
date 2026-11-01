@@ -1,4 +1,4 @@
-import { addDoc, collection, serverTimestamp, type Firestore } from "firebase/firestore";
+import { addDoc, collection, doc, serverTimestamp, setDoc, type Firestore } from "firebase/firestore";
 
 /**
  * Le Lounge : demandes de reco, fil d'activité, signalements.
@@ -99,3 +99,31 @@ export async function emitActivity(
 }
 
 export const RULES_HINT = "Firestore refuse l'accès : les règles du Lounge (recoRequests, activity, reports) doivent être ajoutées dans la console Firebase.";
+
+/**
+ * Notification personnelle à une autre lectrice (cloche + push) : réponse à
+ * une demande de reco, nouvelle abonnée. Jamais bloquant. `id` fixe = une
+ * seule notification par couple (ex. première fois qu'on suit quelqu'un).
+ */
+export async function notifyUser(
+  db: Firestore,
+  user: { uid: string; getIdToken: () => Promise<string> },
+  targetUid: string,
+  n: { type: "reco_answer" | "new_follower"; title: string; body: string; link: string; id?: string }
+) {
+  if (!targetUid || targetUid === user.uid) return;
+  try {
+    const data = { type: n.type, title: n.title, body: n.body, link: n.link, targetUid, fromUid: user.uid, read: false, createdAt: serverTimestamp() };
+    let id: string;
+    if (n.id) {
+      await setDoc(doc(db, "notifications", n.id), data);
+      id = n.id;
+    } else {
+      id = (await addDoc(collection(db, "notifications"), data)).id;
+    }
+    const idToken = await user.getIdToken();
+    fetch("/api/push/notify", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` }, body: JSON.stringify({ notificationId: id }) }).catch(() => {});
+  } catch {
+    /* déjà notifiée, ou règle Firestore pas encore publiée : on ignore */
+  }
+}
