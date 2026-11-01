@@ -91,7 +91,10 @@ export function NotificationBell() {
           set(snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) } as NotifDoc)));
           if (ready) {
             snap.docChanges().forEach((c) => {
-              if (c.type === "added" && !c.doc.metadata.hasPendingWrites) toastRef.current({ id: c.doc.id, ...(c.doc.data() as object) } as NotifDoc);
+              if (c.type !== "added" || c.doc.metadata.hasPendingWrites) return;
+              const n = { id: c.doc.id, ...(c.doc.data() as object) } as NotifDoc;
+              const seen = n.broadcast ? (n.readBy || []).includes(user.uid) : !!n.read;
+              if (!seen) toastRef.current(n);
             });
           }
           ready = true;
@@ -183,7 +186,7 @@ export function NotificationBell() {
           title="Notifications"
         >
           <MaskIcon src="/icons/nav/notification.svg" className="h-7 w-7" />
-          <span className="hidden xl:inline text-[11px] font-bold uppercase tracking-widest">News</span>
+          <span className="hidden 2xl:inline text-[11px] font-bold uppercase tracking-widest">News</span>
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
               {unreadCount > 9 ? "9+" : unreadCount}

@@ -44,7 +44,9 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
           path: path,
           operation: 'list',
         });
-        errorEmitter.emit('permission-error', permissionError);
+        // Seul un vrai refus de droits mérite la barre rouge ; une coupure
+        // réseau ou un index manquant restent dans la console.
+        if ((err as any)?.code === 'permission-denied') errorEmitter.emit('permission-error', permissionError);
         setError(err);
         setLoading(false);
       }

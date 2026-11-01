@@ -813,7 +813,7 @@ export default function BookDetailPage() {
         <div className="space-y-4 w-[140px] sm:w-[200px] shrink-0 mx-auto sm:mx-0">
           <div className="relative aspect-[2/3] rounded-[2rem] overflow-hidden shadow-xl border border-white/60 bg-secondary/5 group">
             <BookCover src={editedData.cover || masterBook?.cover} alt={masterBook?.title || "Livre"} className="object-contain" />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center [@media(hover:none)]:opacity-100 [@media(hover:none)]:bg-transparent [@media(hover:none)]:items-end [@media(hover:none)]:pb-3">
               <Label className="cursor-pointer bg-white text-primary px-4 py-2 rounded-full flex items-center gap-2 font-headline italic">
                 <Camera className="h-4 w-4" /> Changer
                 <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} disabled={isUploading} />

@@ -145,6 +145,7 @@ export function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
+                title={item.label}
                 className={cn(
                   "group flex items-center gap-2 shrink-0 transition-all duration-500 py-3 px-3 rounded-2xl",
                   isActive
@@ -153,7 +154,7 @@ export function Navigation() {
                 )}
               >
                 <Icon className={cn("h-7 w-7 shrink-0 transition-all duration-500", isActive && "scale-110 text-primary fill-primary/10")} />
-                <span className="hidden xl:inline text-sm font-headline italic whitespace-nowrap">{item.label}</span>
+                <span className="hidden 2xl:inline text-sm font-headline italic whitespace-nowrap">{item.label}</span>
                 {item.id === "lounge" && hasUnseenActuality && (
                   <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
                 )}
@@ -199,12 +200,12 @@ export function Navigation() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 py-1 px-0 rounded-xl",
+                "flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 min-w-0 py-1 px-0 rounded-xl",
                 isActive ? "text-primary" : "text-muted-foreground"
               )}
             >
               <div className={cn(
-                "relative p-1.5 rounded-xl transition-all duration-300",
+                "relative p-1 min-[400px]:p-1.5 rounded-xl transition-all duration-300",
                 isActive ? "bg-primary/10 scale-110 shadow-sm" : "bg-transparent"
               )}>
                 <Icon className={cn("h-7 w-7", isActive && "fill-primary/20")} />
@@ -221,9 +222,9 @@ export function Navigation() {
         })}
         <button
           onClick={handleLogout}
-          className="flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 py-1 px-0 rounded-xl text-muted-foreground"
+          className="flex flex-col items-center justify-center gap-0.5 transition-all duration-300 flex-1 min-w-0 py-1 px-0 rounded-xl text-muted-foreground"
         >
-          <div className="relative p-1.5 rounded-xl bg-transparent">
+          <div className="relative p-1 min-[400px]:p-1.5 rounded-xl bg-transparent">
             <LogoutIcon className="h-7 w-7" />
           </div>
           <span className="text-[8px] font-headline italic font-bold opacity-75 leading-tight truncate w-full text-center px-0.5">Quitter</span>
