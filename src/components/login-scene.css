@@ -72,6 +72,9 @@
 .ls-root[data-season="summer"]{--ls-wall:#f5e4bd;--ls-wall-low:#ecd096;--ls-sky-top:#47b0e6;--ls-sky-bot:#c6ebf7;--ls-leaf:#58a64f;--ls-leaf2:#3f8c47;--ls-ground:#7fba5a;--ls-wood:#c58b50;--ls-sun:#ffe27a;--ls-b1:#e8735a;--ls-b2:#2a8793;--ls-b3:#f0c24a;--ls-b4:#2d4170;--ls-b5:#8fd0b4}
 .ls-root[data-season="autumn"]{--ls-wall:#ecd3a8;--ls-wall-low:#dcb47c;--ls-sky-top:#e98f4e;--ls-sky-bot:#f8dba2;--ls-leaf:#e07a2a;--ls-leaf2:#b84a22;--ls-ground:#a9692f;--ls-wood:#8d5a36;--ls-sun:#ffc766;--ls-b1:#7a2335;--ls-b2:#d49a2a;--ls-b3:#3f5a3a;--ls-b4:#b5562a;--ls-b5:#55304a}
 .ls-root[data-season="winter"]{--ls-wall:#dde5ee;--ls-wall-low:#c5d2e0;--ls-sky-top:#8ea6c6;--ls-sky-bot:#e3ebf4;--ls-leaf:#dfe9f2;--ls-leaf2:#c9d8e6;--ls-ground:#f3f7fb;--ls-wood:#7f5d47;--ls-sun:#f4f1e6;--ls-b1:#2d405f;--ls-b2:#8ba4c4;--ls-b3:#9b3040;--ls-b4:#30594a;--ls-b5:#eee4d3}
+/* Décors à part : ciel vert sombre à Noël, tons roses à la Saint-Valentin */
+.ls-root[data-variant="noel"]{--ls-wall:#e3e9df;--ls-wall-low:#c5d3c3;--ls-sky-top:#24443a;--ls-sky-bot:#7f9d86}
+.ls-root[data-variant="valentin"]{--ls-wall:#f6e6e6;--ls-wall-low:#e8c9c8;--ls-sky-top:#f1c3c8;--ls-sky-bot:#fbeaea;--ls-ground:#f1d2cc}
 
 .ls-root[data-season="none"]{--ls-wall:#efe6d6;--ls-wall-low:#e2d3bb;--ls-sky-top:#bcd9ea;--ls-sky-bot:#f4efe2;--ls-leaf:#8fae7a;--ls-leaf2:#739a64;--ls-ground:#9bb585;--ls-wood:#a67c52;--ls-sun:#fff3c4;--ls-b1:#7a2335;--ls-b2:#d49a2a;--ls-b3:#3f5a3a;--ls-b4:#2d405f;--ls-b5:#b99ad1}
 .ls-layer{position:absolute;pointer-events:none}
@@ -89,15 +92,23 @@
 .ls-window::after{left:calc(50% + 232px)}
 .ls-transom{position:absolute;left:0;right:0;top:108px;height:8px;background:var(--ls-c-wood);z-index:2;transition:background-color .9s}
 .ls-sky{fill:url(#ls-sky)}
-.ls-stars circle{fill:#fff;opacity:calc(var(--ls-night) * .9)}
-.ls-sunwrap{transform:translate(650px,200px);transition:transform 1.6s cubic-bezier(.4,.1,.2,1)}
+.ls-stars{opacity:calc(var(--ls-night) * .95)}
+.ls-star{fill:#fff;animation:ls-star 4.2s ease-in-out infinite}
+@keyframes ls-star{0%,100%{opacity:1}50%{opacity:.45}}
+/* bancs de nuages : blancs et doux le jour, bleus profonds le soir */
+.ls-bank-1{fill:color-mix(in srgb,rgb(255 255 255 / .34) var(--ls-n),#062f50)}
+.ls-bank-2{fill:color-mix(in srgb,rgb(255 255 255 / .5) var(--ls-n),#224e73)}
+.ls-bank-3{fill:color-mix(in srgb,rgb(255 255 255 / .7) var(--ls-n),#71a2cd)}
+/* lune blanche (illustration) : remplace le soleil quand la nuit tombe */
+.ls-moonwrap{opacity:var(--ls-night)}
+.ls-sunwrap{transform:translate(650px,200px);opacity:calc(1 - var(--ls-night));transition:transform 1.6s cubic-bezier(.4,.1,.2,1)}
 .ls-root[data-season="summer"] .ls-sunwrap{transform:translate(690px,150px) scale(1.3)}
 .ls-root[data-season="autumn"] .ls-sunwrap{transform:translate(560px,470px) scale(1.7)}
 .ls-root[data-season="winter"] .ls-sunwrap{transform:translate(660px,190px) scale(.8)}
 .ls-sun{fill:var(--ls-c-sun);transition:fill .9s}
 .ls-halo{fill:var(--ls-c-sun);opacity:.3;transition:fill .9s}
 .ls-cloud{animation:ls-drift var(--ls-d,90s) linear infinite;animation-delay:var(--ls-dl,0s)}
-.ls-cloud ellipse{fill:var(--ls-c-cloud);opacity:.85;transition:fill .9s}
+.ls-cloud image{opacity:.95;filter:brightness(calc(1 - var(--ls-night) * .5)) saturate(calc(1 - var(--ls-night) * .35))}
 @keyframes ls-drift{from{transform:translateX(-260px)}to{transform:translateX(1180px)}}
 .ls-hill-far{fill:var(--ls-c-hill);transition:fill .9s}
 .ls-hill-near{fill:var(--ls-c-ground);transition:fill .9s}
@@ -110,6 +121,9 @@
 .ls-blossoms,.ls-snowcap{opacity:0;transition:opacity 1.1s}
 .ls-root[data-season="spring"] .ls-blossoms,.ls-root[data-season="winter"] .ls-snowcap{opacity:1}
 .ls-snowcap{fill:#fff}
+/* arbres illustrés (public/login) : remplacent l'arbre dessiné quand une saison est active */
+.ls-root:not([data-variant="none"]) .ls-tree-css{display:none}
+.ls-trees image{filter:brightness(calc(1 - var(--ls-night) * .45)) saturate(calc(1 - var(--ls-night) * .2))}
 
 .ls-wainscot{z-index:1;left:var(--ls-shelfW);right:var(--ls-shelfW);bottom:var(--ls-floor);height:84px;
   background:repeating-linear-gradient(90deg,transparent 0 138px,rgb(0 0 0 / .2) 138px 140px),linear-gradient(var(--ls-c-wood-dk),var(--ls-c-wood));
@@ -150,12 +164,18 @@
 .ls-lamp.ls-l{left:calc(var(--ls-shelfW) + 78px);--ls-len:84px}
 .ls-lamp.ls-r{right:calc(var(--ls-shelfW) + 78px);--ls-len:112px;animation-delay:-3.4s}
 .ls-lamp i{position:absolute;display:block}
-.ls-lamp .ls-cord{left:-1px;top:0;width:2px;height:var(--ls-len);background:var(--ls-c-wood-dk)}
-.ls-lamp .ls-shade{left:-31px;top:var(--ls-len);width:62px;height:34px;border-radius:50% 50% 4px 4px / 100% 100% 4px 4px;background:linear-gradient(#c58d44,#9a6428)}
-.ls-lamp .ls-bulbl{left:-7px;top:calc(var(--ls-len) + 30px);width:14px;height:14px;border-radius:50%;background:#ffe9b0;box-shadow:0 0 calc(6px + var(--ls-night) * 16px) rgb(255 210 120 / .9)}
-.ls-lamp .ls-glow{left:-120px;top:calc(var(--ls-len) + 10px);width:240px;height:240px;border-radius:50%;
+.ls-lamp .ls-cord{left:-1px;top:0;width:2px;height:calc(var(--ls-len) - 44px);background:#1f5560}
+.ls-lamp .ls-lustre{position:absolute;left:-32px;top:calc(var(--ls-len) - 52px);width:64px;max-width:none;height:auto;display:block;filter:brightness(calc(1 + var(--ls-night) * .25))}
+/* le halo est centré sur l'ampoule (≈ 34 px sous le haut du lustre) */
+.ls-lamp .ls-glow{left:-120px;top:calc(var(--ls-len) + 34px - 120px);width:240px;height:240px;border-radius:50%;
   background:radial-gradient(circle,rgb(255 214 140 / .9),rgb(255 190 100 / 0) 66%);opacity:calc(.12 + var(--ls-night) * .78);mix-blend-mode:screen}
 @keyframes ls-swing{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+
+/* Noël : boule, cadeau et houx posés sur le rebord */
+.ls-noel{z-index:3;height:auto;max-width:none}
+.ls-boule{width:34px;left:calc(var(--ls-shelfW) + 66px);bottom:calc(var(--ls-floor) + 80px)}
+.ls-houx{width:58px;right:calc(var(--ls-shelfW) + 70px);bottom:calc(var(--ls-floor) + 78px);transform:rotate(14deg)}
+.ls-cadeau{width:58px;left:calc(var(--ls-shelfW) + 110px);bottom:calc(var(--ls-floor) + 80px);transform:rotate(-6deg)}
 
 .ls-fx{z-index:4;inset:0;width:100%;height:100%}
 .ls-vignette{z-index:4;inset:0;background:radial-gradient(ellipse at 50% 45%,transparent 38%,rgb(12 6 20 / calc(var(--ls-night) * .62)) 100%)}
@@ -165,6 +185,7 @@
   .ls-window{left:14px;right:14px}
   .ls-wainscot{left:0;right:0}
   .ls-lamp.ls-l{left:64px}.ls-lamp.ls-r{right:64px}
+  .ls-boule{left:34px}.ls-houx{right:22px}.ls-cadeau{left:78px}
 }
 @media (max-width:620px){
   .ls-window::before,.ls-window::after{display:none}

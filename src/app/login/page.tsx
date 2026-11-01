@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LoginScene, SEASON_LINES } from "@/components/login-scene";
+import { LoginScene, seasonLine } from "@/components/login-scene";
 import { useSeasonalLogo } from "@/lib/seasonal-logo";
 
 const stagger = (i: number) => ({ "--ls-i": i }) as CSSProperties;
@@ -170,7 +170,7 @@ export default function LoginPage() {
 
   return (
     <LoginScene>
-      {({ season }) => (
+      {({ season, variant }) => (
         <section className="ls-card ls-enter" aria-labelledby="login-title">
           <div className="ls-ribbon" aria-hidden="true" />
           <div className="ls-logo">
@@ -267,8 +267,8 @@ export default function LoginPage() {
           </p>
           {season !== "none" && (
             <p className="ls-seasonline ls-stagger" style={stagger(8)}>
-              <span className="ls-tag" key={`tag-${season}`}>{SEASON_LINES[season].tag}</span>
-              <span key={`text-${season}`}>{SEASON_LINES[season].text}</span>
+              <span className="ls-tag" key={`tag-${variant}`}>{seasonLine(season, variant).tag}</span>
+              <span key={`text-${variant}`}>{seasonLine(season, variant).text}</span>
             </p>
           )}
         </section>

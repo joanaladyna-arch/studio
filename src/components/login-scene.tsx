@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { getCurrentSeasonalTheme } from "@/lib/seasonal-theme";
+import { CLOUD_BANKS_HTML, CLOUD_DEF, starPath } from "./login-sky";
 import "./login-scene.css";
 
 /**
@@ -10,11 +11,14 @@ import "./login-scene.css";
  * saisonnier de l'app (lib/seasonal-theme.ts), avec un mode "Lecture du
  * soir". Purement visuel : aucune donnée, aucun appel Firebase.
  *
- * Aperçu possible sans attendre la bonne date : /login?saison=printemps|ete|automne|hiver|aucune
+ * Aperçu possible sans attendre la bonne date :
+ * /login?saison=printemps|ete|rentree|automne|hiver|noel|valentin|aucune
  * et /login?soir=1 pour la lecture du soir.
  */
 
 export type LoginSeason = "spring" | "summer" | "autumn" | "winter" | "none";
+/** Décor précis du jour (calendrier de lib/seasonal-theme.ts) : plusieurs variantes partagent une même saison. */
+export type LoginVariant = "printemps" | "ete" | "rentree" | "automne" | "hiver" | "noel" | "valentin" | "none";
 
 export const SEASON_LINES: Record<Exclude<LoginSeason, "none">, { tag: string; text: string }> = {
   spring: { tag: "Printemps", text: "Les pages aussi fleurissent au printemps." },
@@ -23,22 +27,44 @@ export const SEASON_LINES: Record<Exclude<LoginSeason, "none">, { tag: string; t
   winter: { tag: "Hiver", text: "Une lumière douce, un plaid, et la pile à lire qui attend." },
 };
 
-const THEME_TO_SEASON: Record<string, LoginSeason> = {
-  valentin: "winter",
-  printemps: "spring",
-  ete: "summer",
-  rentree: "autumn",
-  automne: "autumn",
-  noel: "winter",
-  hiver: "winter",
+/** Légende de la carte pour les décors qui ont leur propre ambiance (sinon : celle de la saison). */
+const VARIANT_LINES: Partial<Record<LoginVariant, { tag: string; text: string }>> = {
+  valentin: { tag: "Saint-Valentin", text: "Un roman à deux voix, et une pluie de petits cœurs." },
+  noel: { tag: "Noël", text: "Un chocolat chaud, un plaid, et un roman à ouvrir." },
+  rentree: { tag: "Rentrée", text: "Un nouveau cahier, une nouvelle pile à lire." },
 };
 
-const PREVIEW_PARAM: Record<string, LoginSeason> = {
-  printemps: "spring",
-  ete: "summer",
-  automne: "autumn",
-  hiver: "winter",
+export function seasonLine(season: Exclude<LoginSeason, "none">, variant: LoginVariant) {
+  return VARIANT_LINES[variant] ?? SEASON_LINES[season];
+}
+
+
+const PREVIEW_PARAM: Record<string, LoginVariant> = {
+  printemps: "printemps",
+  ete: "ete",
+  rentree: "rentree",
+  automne: "automne",
+  hiver: "hiver",
+  noel: "noel",
+  valentin: "valentin",
   aucune: "none",
+};
+
+const VARIANT_SEASON: Record<LoginVariant, LoginSeason> = {
+  printemps: "spring", ete: "summer", rentree: "autumn", automne: "autumn",
+  hiver: "winter", noel: "winter", valentin: "winter", none: "none",
+};
+
+/* Arbres illustrés de la fenêtre (public/login). x = centre, base = pied de l'arbre, h = hauteur, dans le repère 900×780 de la fenêtre. */
+type TreeSpec = { src: string; x: number; base: number; h: number };
+const TREES: Record<Exclude<LoginVariant, "none">, TreeSpec[]> = {
+  printemps: [{ src: "cerisier", x: 770, base: 655, h: 400 }, { src: "cerisier", x: 150, base: 705, h: 520 }],
+  ete: [{ src: "arbre-vert", x: 770, base: 655, h: 420 }, { src: "arbre-vert", x: 150, base: 705, h: 540 }],
+  rentree: [{ src: "arbre-vert", x: 770, base: 655, h: 420 }, { src: "arbre-orange", x: 150, base: 705, h: 520 }],
+  automne: [{ src: "arbre-orange", x: 770, base: 655, h: 430 }, { src: "arbre-rouge", x: 150, base: 705, h: 540 }],
+  hiver: [{ src: "arbre-nu", x: 770, base: 655, h: 430 }, { src: "arbre-nu", x: 150, base: 705, h: 540 }],
+  noel: [{ src: "arbre-nu", x: 770, base: 655, h: 430 }, { src: "arbre-nu", x: 150, base: 705, h: 540 }],
+  valentin: [{ src: "arbre-nu", x: 770, base: 655, h: 430 }, { src: "arbre-nu", x: 150, base: 705, h: 540 }],
 };
 
 const NIGHT_KEY = "lectoria-login-night";
@@ -109,8 +135,10 @@ const SHELF_R = buildShelf(23, "B", 2, true);
 const WINDOW_HTML = (() => {
   const r = rng(5);
   let stars = "";
-  for (let i = 0; i < 34; i++) {
-    stars += `<circle cx="${Math.round(r() * 900)}" cy="${Math.round(r() * 380)}" r="${(r() * 1.4 + 0.6).toFixed(1)}"/>`;
+  for (let i = 0; i < 30; i++) {
+    const big = i % 7 === 0;
+    const rad = big ? 7 + r() * 4 : 2.6 + r() * 3.6;
+    stars += `<path class="ls-star" style="animation-delay:${(-r() * 5).toFixed(1)}s" d="${starPath(Math.round(r() * 900), Math.round(r() * 370), rad)}"/>`;
   }
   let blossoms = "";
   for (let i = 0; i < 26; i++) {
@@ -120,6 +148,8 @@ const WINDOW_HTML = (() => {
   }
   return `<svg viewBox="0 0 900 780" preserveAspectRatio="xMidYMax slice">
 <defs>
+<radialGradient id="ls-moonglow"><stop offset="0" stop-color="#eaf1ff" stop-opacity=".34"/><stop offset="1" stop-color="#eaf1ff" stop-opacity="0"/></radialGradient>
+${CLOUD_DEF}
 <linearGradient id="ls-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--ls-c-sky-top)"/><stop offset="1" style="stop-color:var(--ls-c-sky-bot)"/></linearGradient>
 <g id="ls-tree">
 <path class="ls-trunk" stroke-width="24" d="M0 0C4 -80 -6 -150 6 -232"/>
@@ -141,14 +171,16 @@ const WINDOW_HTML = (() => {
 </defs>
 <rect class="ls-sky" width="900" height="780"/>
 <g class="ls-stars">${stars}</g>
+${CLOUD_BANKS_HTML}
 <g class="ls-sunwrap"><circle class="ls-halo" r="66"/><circle class="ls-sun" r="30"/></g>
-<g class="ls-cloud" style="--ls-d:110s;--ls-dl:-20s"><g transform="translate(0 150)"><ellipse rx="64" ry="19"/><ellipse cx="42" cy="-10" rx="40" ry="16"/><ellipse cx="-38" cy="-6" rx="34" ry="14"/></g></g>
-<g class="ls-cloud" style="--ls-d:150s;--ls-dl:-90s"><g transform="translate(0 260)"><ellipse rx="52" ry="15"/><ellipse cx="34" cy="-9" rx="32" ry="13"/></g></g>
-<g class="ls-cloud" style="--ls-d:130s;--ls-dl:-60s"><g transform="translate(0 70)"><ellipse rx="44" ry="13"/><ellipse cx="-30" cy="-6" rx="28" ry="11"/></g></g>
+<g class="ls-moonwrap" transform="translate(800 172)"><circle r="110" fill="url(#ls-moonglow)"/><image href="/login/lune.svg" x="-46" y="-46" width="92" height="92"/></g>
+<g class="ls-cloud" style="--ls-d:110s;--ls-dl:-20s"><g transform="translate(0 150)"><image href="/login/nuage.svg" x="-88" y="-68" width="176" height="136"/></g></g>
+<g class="ls-cloud" style="--ls-d:150s;--ls-dl:-90s"><g transform="translate(0 262)"><image href="/login/nuage.svg" x="-66" y="-51" width="132" height="102"/></g></g>
+<g class="ls-cloud" style="--ls-d:130s;--ls-dl:-60s"><g transform="translate(0 72)"><image href="/login/nuage.svg" x="-56" y="-43" width="112" height="86"/></g></g>
 <path class="ls-hill-far" d="M0 560C200 500 380 540 560 520S800 500 900 540V780H0Z"/>
-<use href="#ls-tree" transform="translate(770 640) scale(.78)"/>
+<use class="ls-tree-css" href="#ls-tree" transform="translate(770 640) scale(.78)"/>
 <path class="ls-hill-near" d="M0 650C220 600 420 660 640 630S820 610 900 640V780H0Z"/>
-<use href="#ls-tree" transform="translate(150 680) scale(1.2)"/>
+<use class="ls-tree-css" href="#ls-tree" transform="translate(150 680) scale(1.2)"/>
 </svg><i class="ls-transom"></i>`;
 })();
 
@@ -177,7 +209,8 @@ function garlandItem(s: LoginSeason, x: number, y: number, ang: number, i: numbe
 }
 
 function buildGarland(el: SVGSVGElement, width: number, season: LoginSeason) {
-  if (season === "none") {
+  // Pas de guirlande en hiver / à Noël (le décor passe par les flocons et les petits objets).
+  if (season === "none" || season === "winter") {
     el.innerHTML = "";
     return;
   }
@@ -216,38 +249,81 @@ function buildGarland(el: SVGSVGElement, width: number, season: LoginSeason) {
 
 /* ---------- particules ---------- */
 
+type Kind = "petal" | "leaf" | "maple" | "snow" | "flake" | "heart" | "sparkle";
+
 type Particle = {
   x: number; y: number; ph: number; f: number; rot: number; vr: number; c: string;
   s: number; vy: number; vx: number; amp: number; a?: number;
+  kind: Kind; img?: HTMLImageElement; fadeAtNight?: boolean;
 };
 
-const COLORS: Record<Exclude<LoginSeason, "none">, string[]> = {
-  spring: ["#f6b8cb", "#f9d0dc", "#f2a0b8", "#ffffff"],
-  autumn: ["#d9742b", "#b84a22", "#e2a21f", "#8f3a1c", "#c4572a"],
-  summer: ["#ffe27a", "#fff2b0", "#ffd24d"],
-  winter: ["#ffffff"],
-};
+const COLORS_SUMMER = ["#ffe27a", "#fff2b0", "#ffd24d"];
 
-function makeParticle(t: Exclude<LoginSeason, "none">, W: number, H: number): Particle {
+/* Illustrations qui tombent (public/login) : [fichiers, mélange, quantité relative]. */
+const FALL: Partial<Record<LoginVariant, { mix: [Kind, number][]; k: number }>> = {
+  printemps: { mix: [["petal", 1]], k: 1 },
+  rentree: { mix: [["leaf", 0.55], ["maple", 0.45]], k: 0.5 },
+  automne: { mix: [["leaf", 0.55], ["maple", 0.45]], k: 1 },
+  hiver: { mix: [["flake", 0.65], ["snow", 0.35]], k: 0.7 },
+  noel: { mix: [["snow", 1]], k: 0.45 },
+  valentin: { mix: [["heart", 1]], k: 0.5 },
+};
+const FILES: Record<Exclude<Kind, "sparkle">, string[]> = {
+  petal: [0, 1, 2, 3, 5, 8, 9].map((i) => `petale-${i}`),
+  leaf: ["feuille"],
+  maple: ["feuilles-brunes"],
+  snow: ["flocon-blanc"],
+  flake: [0, 3, 5, 8, 12, 15].map((i) => `flocon-bleu-${i}`),
+  heart: [0, 1, 2, 4, 5, 6, 7].map((i) => `coeur-${i}`),
+};
+const IMG_CACHE: Record<string, HTMLImageElement> = {};
+function loadImg(name: string, onLoad?: () => void) {
+  let im = IMG_CACHE[name];
+  if (!im) { im = new Image(); im.src = `/login/${name}.svg`; IMG_CACHE[name] = im; }
+  if (onLoad) { if (im.complete && im.naturalWidth) onLoad(); else im.addEventListener("load", onLoad, { once: true }); }
+  return im;
+}
+
+function pickKind(mix: [Kind, number][]): Kind {
+  let r = Math.random();
+  for (const [k, w] of mix) { if ((r -= w) <= 0) return k; }
+  return mix[0][0];
+}
+
+function makeParticle(variant: LoginVariant, W: number, H: number, onLoad: () => void): Particle {
   const R = Math.random;
-  const p: Particle = {
-    x: R() * W, y: R() * H, ph: R() * 6.28, f: 0.5 + R(), rot: R() * 6.28, vr: (R() - 0.5) * 0.05,
-    c: COLORS[t][Math.floor(R() * COLORS[t].length)], s: 0, vy: 0, vx: 0, amp: 0,
+  const base: Particle = {
+    x: R() * W, y: R() * H, ph: R() * 6.28, f: 0.5 + R(), rot: R() * 6.28, vr: (R() - 0.5) * 0.04,
+    c: "#fff", s: 0, vy: 0, vx: 0, amp: 0, kind: "snow",
   };
-  if (t === "spring") { p.s = 4.5 + R() * 4; p.vy = 0.45 + R() * 0.7; p.vx = 0.25; p.amp = 0.45; }
-  else if (t === "autumn") { p.s = 8 + R() * 8; p.vy = 0.7 + R() * 0.9; p.vx = 0.1; p.amp = 0.6; p.vr *= 1.6; }
-  else if (t === "winter") { p.s = 1.2 + R() * 2.8; p.vy = 0.35 + R(); p.vx = 0; p.amp = 0.3; p.a = 0.55 + R() * 0.4; p.vr = 0; }
-  else { p.s = 1.6 + R() * 1.8; p.vy = -(0.12 + R() * 0.3); p.vx = 0.1; p.amp = 0.25; p.vr = 0; }
+  if (variant === "ete") {
+    const p = base;
+    p.kind = "sparkle"; p.c = COLORS_SUMMER[Math.floor(R() * COLORS_SUMMER.length)];
+    p.s = 1.6 + R() * 1.8; p.vy = -(0.12 + R() * 0.3); p.vx = 0.1; p.amp = 0.25; p.vr = 0;
+    return p;
+  }
+  const fall = FALL[variant]!;
+  const zoom = W > 900 ? 1.25 : 1;
+  const kind = pickKind(fall.mix);
+  const files = FILES[kind as Exclude<Kind, "sparkle">];
+  const p = { ...base, kind, img: loadImg(files[Math.floor(R() * files.length)], onLoad) };
+  if (kind === "petal") { p.s = (10 + R() * 11) * zoom; p.vy = 0.5 + R() * 0.6; p.vx = 0.25; p.amp = 0.45; p.a = 0.95; }
+  else if (kind === "leaf" || kind === "maple") { p.s = (22 + R() * 26) * zoom; p.vy = 0.7 + R() * 0.8; p.vx = 0.1; p.amp = 0.6; p.vr *= 1.6; p.a = kind === "maple" ? 0.55 : 1; }
+  else if (kind === "heart") { p.s = (14 + R() * 16) * zoom; p.vy = 0.5 + R() * 0.5; p.vx = 0.1; p.amp = 0.4; p.a = 0.75 + R() * 0.25; }
+  else { p.s = (7 + R() * 13) * zoom; p.vy = 0.4 + R() * 0.6; p.vx = 0; p.amp = 0.3; p.a = 0.6 + R() * 0.35; p.vr *= 0.4; }
+  // Le soir, seule une partie des feuilles / pétales / cœurs continue de tomber (la neige reste).
+  p.fadeAtNight = kind !== "snow" && kind !== "flake" && R() > 0.4;
   return p;
 }
 
 /* ---------- composant ---------- */
 
-export function LoginScene({ children }: { children: (ctx: { season: LoginSeason }) => ReactNode }) {
+export function LoginScene({ children }: { children: (ctx: { season: LoginSeason; variant: LoginVariant }) => ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const garlandRef = useRef<SVGSVGElement>(null);
-  const [season, setSeason] = useState<LoginSeason>("none");
+  const [variant, setVariant] = useState<LoginVariant>("none");
+  const season = VARIANT_SEASON[variant];
   const [night, setNight] = useState(false);
 
   // Saison (calendrier de l'app, ou aperçu via ?saison=) et thème du soir
@@ -256,7 +332,8 @@ export function LoginScene({ children }: { children: (ctx: { season: LoginSeason
     const params = new URLSearchParams(window.location.search);
     const preview = PREVIEW_PARAM[params.get("saison") ?? ""];
     const theme = getCurrentSeasonalTheme();
-    setSeason(preview ?? (theme ? THEME_TO_SEASON[theme.id] ?? "none" : "none"));
+    const today = (theme?.id as LoginVariant | undefined) ?? "none";
+    setVariant(preview ?? (today in VARIANT_SEASON ? today : "none"));
 
     let dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     try {
@@ -290,9 +367,11 @@ export function LoginScene({ children }: { children: (ctx: { season: LoginSeason
     let parts: Particle[] = [];
 
     const seed = () => {
-      if (season === "none") { parts = []; return; }
-      const n = Math.max(22, Math.min(120, Math.round((W * H) / (season === "winter" ? 8500 : 16000))));
-      parts = Array.from({ length: n }, () => makeParticle(season, W, H));
+      if (variant === "none") { parts = []; return; }
+      let n: number;
+      if (variant === "ete") n = Math.max(22, Math.min(120, Math.round((W * H) / 16000)));
+      else n = Math.max(1, Math.round(Math.max(10, Math.min(24, Math.round((W * H) / 40000))) * FALL[variant]!.k));
+      parts = Array.from({ length: n }, () => makeParticle(variant, W, H, () => { if (reduce) render(0, 0); }));
     };
 
     const render = (ts: number, dt: number) => {
@@ -308,11 +387,7 @@ export function LoginScene({ children }: { children: (ctx: { season: LoginSeason
           if (p.x > W + 40) p.x = -40; else if (p.x < -40) p.x = W + 40;
         }
         ctx.globalAlpha = fade;
-        if (season === "winter") {
-          ctx.globalAlpha = fade * (p.a ?? 0.8);
-          ctx.fillStyle = "#fff";
-          ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, 6.283); ctx.fill();
-        } else if (season === "summer") {
+        if (p.kind === "sparkle") {
           const tw = 0.5 + 0.5 * Math.sin(ts * 0.002 * p.f + p.ph);
           const r = p.s * (2.2 + night01 * 5.5);
           const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
@@ -320,16 +395,13 @@ export function LoginScene({ children }: { children: (ctx: { season: LoginSeason
           ctx.globalAlpha = fade * (0.35 + 0.55 * (night01 ? tw : 1));
           ctx.fillStyle = g;
           ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.283); ctx.fill();
-        } else {
+        } else if (p.img && p.img.complete && p.img.naturalWidth) {
+          const w = p.s, h = p.s * (p.img.naturalHeight / p.img.naturalWidth);
+          ctx.globalAlpha = fade * (p.a ?? 1) * (p.fadeAtNight ? 1 - night01 : 1);
+          if (ctx.globalAlpha < 0.02) continue;
           ctx.save();
-          ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; ctx.beginPath();
-          if (season === "spring") ctx.ellipse(0, 0, p.s, p.s * 0.55, 0, 0, 6.283);
-          else { const s = p.s; ctx.moveTo(0, -s); ctx.quadraticCurveTo(s * 0.95, -s * 0.2, 0, s); ctx.quadraticCurveTo(-s * 0.95, -s * 0.2, 0, -s); }
-          ctx.fill();
-          if (season === "autumn") {
-            ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(0, -p.s); ctx.lineTo(0, p.s); ctx.stroke();
-          }
+          ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+          ctx.drawImage(p.img, -w / 2, -h / 2, w, h);
           ctx.restore();
         }
       }
@@ -349,6 +421,7 @@ export function LoginScene({ children }: { children: (ctx: { season: LoginSeason
       dpr = Math.min(2, window.devicePixelRatio || 1);
       W = root.clientWidth; H = root.clientHeight;
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      night01 = parseFloat(getComputedStyle(root).getPropertyValue("--ls-night")) || 0;
       seed();
       buildGarland(garland, W, season);
       if (reduce) { fade = 1; render(0, 0); }
@@ -358,20 +431,36 @@ export function LoginScene({ children }: { children: (ctx: { season: LoginSeason
     ro.observe(root);
     if (!reduce) raf = requestAnimationFrame(loop);
     return () => { ro.disconnect(); cancelAnimationFrame(raf); };
-  }, [season]);
+  }, [variant, season]);
 
   return (
     <div className="ls-viewport">
-      <div ref={rootRef} className="ls-root" data-season={season} data-night={night ? "1" : "0"}>
+      <div ref={rootRef} className="ls-root" data-season={season} data-variant={variant} data-night={night ? "1" : "0"}>
         <div className="ls-layer ls-wall" />
-        <div className="ls-layer ls-window" aria-hidden="true" dangerouslySetInnerHTML={{ __html: WINDOW_HTML }} />
+        <div className="ls-layer ls-window" aria-hidden="true">
+          <div dangerouslySetInnerHTML={{ __html: WINDOW_HTML }} />
+          {variant !== "none" && (
+            <svg className="ls-trees" viewBox="0 0 900 780" preserveAspectRatio="xMidYMax slice">
+              {TREES[variant].map((tr, i) => (
+                <image key={`${variant}-${i}`} href={`/login/${tr.src}.svg`} x={tr.x - tr.h / 2} y={tr.base - tr.h} width={tr.h} height={tr.h} preserveAspectRatio="xMidYMax meet" />
+              ))}
+            </svg>
+          )}
+        </div>
         <div className="ls-layer ls-wainscot" />
         <div className="ls-layer ls-floor" />
         <div className="ls-shelf ls-l" aria-hidden="true" dangerouslySetInnerHTML={{ __html: SHELF_L }} />
         <div className="ls-shelf ls-r" aria-hidden="true" dangerouslySetInnerHTML={{ __html: SHELF_R }} />
         <svg ref={garlandRef} className="ls-layer ls-garland" aria-hidden="true" />
-        <div className="ls-layer ls-lamp ls-l" aria-hidden="true"><i className="ls-glow" /><i className="ls-cord" /><i className="ls-shade" /><i className="ls-bulbl" /></div>
-        <div className="ls-layer ls-lamp ls-r" aria-hidden="true"><i className="ls-glow" /><i className="ls-cord" /><i className="ls-shade" /><i className="ls-bulbl" /></div>
+        <div className="ls-layer ls-lamp ls-l" aria-hidden="true"><i className="ls-glow" /><i className="ls-cord" /><img className="ls-lustre" src="/login/lustre.svg" alt="" /></div>
+        <div className="ls-layer ls-lamp ls-r" aria-hidden="true"><i className="ls-glow" /><i className="ls-cord" /><img className="ls-lustre" src="/login/lustre.svg" alt="" /></div>
+        {variant === "noel" && (
+          <>
+            <img className="ls-layer ls-noel ls-boule" src="/login/boule-rouge.svg" alt="" aria-hidden="true" />
+            <img className="ls-layer ls-noel ls-houx" src="/login/houx-vert.svg" alt="" aria-hidden="true" />
+            <img className="ls-layer ls-noel ls-cadeau" src="/login/cadeau-rouge.svg" alt="" aria-hidden="true" />
+          </>
+        )}
         <canvas ref={canvasRef} className="ls-layer ls-fx" aria-hidden="true" />
         <div className="ls-layer ls-vignette" />
 
@@ -380,7 +469,7 @@ export function LoginScene({ children }: { children: (ctx: { season: LoginSeason
           Lecture du soir <span className="ls-track" aria-hidden="true" />
         </button>
 
-        {children({ season })}
+        {children({ season, variant })}
       </div>
     </div>
   );
