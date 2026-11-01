@@ -6,7 +6,11 @@ import { Query, onSnapshot, DocumentData } from 'firebase/firestore';
 import { errorEmitter } from '../error-emitter';
 import { FirestorePermissionError } from '../errors';
 
-export function useCollection<T = DocumentData>(query: Query<T> | null) {
+/**
+ * `silent` : pour une lecture accessoire (ex. citations de la communauté) dont l'échec ne doit pas
+ * afficher la barre rouge "Erreur de permission" — la fonctionnalité se dégrade simplement.
+ */
+export function useCollection<T = DocumentData>(query: Query<T> | null, opts?: { silent?: boolean }) {
   const [data, setData] = useState<(T & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -46,7 +50,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null) {
         });
         // Seul un vrai refus de droits mérite la barre rouge ; une coupure
         // réseau ou un index manquant restent dans la console.
-        if ((err as any)?.code === 'permission-denied') errorEmitter.emit('permission-error', permissionError);
+        if ((err as any)?.code === 'permission-denied' && !opts?.silent) errorEmitter.emit('permission-error', permissionError);
         setError(err);
         setLoading(false);
       }

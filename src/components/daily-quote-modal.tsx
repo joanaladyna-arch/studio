@@ -34,7 +34,7 @@ export function DailyQuoteModal() {
     if (!db) return null;
     return query(collection(db, "quoteSubmissions"), where("status", "==", "approved"));
   }, [db]);
-  const { data: communityQuotesRaw = [] } = useCollection(communityQuotesQuery);
+  const { data: communityQuotesRaw = [] } = useCollection(communityQuotesQuery, { silent: true });
 
   const dailyQuote = useMemo(
     () => getDailyQuote(booksRaw || [], (communityQuotesRaw || []).map((q: any) => ({ text: q.text, author: q.author }))),
