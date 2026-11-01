@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn, slugify } from "@/lib/utils";
 import { getCurrentSeasonalTheme } from "@/lib/seasonal-theme";
 import { hexToRgb, mix, fetchCover, getFontEmbedCSS } from "@/lib/capture-utils";
+import { useSeasonalLogo } from "@/lib/seasonal-logo";
 import { Camera, Check, ChevronLeft, ChevronRight, Copy, Download, Loader2, Share2 } from "lucide-react";
 
 /**
@@ -103,6 +104,7 @@ type SheetProps = {
   a4: boolean;
   footerRight: string;
   footerLeft: string;
+  logoSrc: string;
   startIndex: number;
 };
 
@@ -137,7 +139,7 @@ function Cover({ book, src, theme, tf }: { book: CaptureBook; src: string | null
   );
 }
 
-function Sheet({ books, covers, mode, cols, showTitles, showBoxes, heading, total, theme, a4, footerRight, footerLeft, startIndex }: SheetProps) {
+function Sheet({ books, covers, mode, cols, showTitles, showBoxes, heading, total, theme, a4, footerRight, footerLeft, logoSrc, startIndex }: SheetProps) {
   const tf = cols === 6 ? 10 : 13;
   const cf = cols === 6 ? 10 : 12.5;
   const rows: CaptureBook[][] = [];
@@ -154,7 +156,7 @@ function Sheet({ books, covers, mode, cols, showTitles, showBoxes, heading, tota
     >
       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/icon-192-v3.png" alt="" width={48} height={48} style={{ width: 48, height: 48, borderRadius: 13, boxShadow: "0 6px 12px -6px rgba(0,0,0,.5)" }} />
+        <img src={logoSrc} alt="" width={48} height={48} style={{ width: 48, height: 48, borderRadius: 13, boxShadow: "0 6px 12px -6px rgba(0,0,0,.5)" }} />
         <div>
           <div className="font-headline" style={{ fontStyle: "italic", fontWeight: 700, fontSize: 26, lineHeight: 1.05 }}>{heading}</div>
           <div style={{ marginTop: 3, fontSize: 12, letterSpacing: ".14em", textTransform: "uppercase", opacity: 0.7 }}>
@@ -256,6 +258,7 @@ export function WishlistCaptureDialog({
     ? { title: "Capturer ma PAL", nom: "La PAL de", sans: "Ma PAL", pied: "Ma PAL sur Lectoria", file: "lectoria-pal" }
     : { title: "Capturer ma wishlist", nom: "La wishlist de", sans: "Ma wishlist", pied: "Ma wishlist sur Lectoria", file: "lectoria-wishlist" };
   const { toast } = useToast();
+  const logoSrc = useSeasonalLogo();
   const themes = useMemo(buildThemes, []);
   const [mode, setMode] = useState<Mode>("covers");
   const [format, setFormat] = useState<Format>("pdf");
@@ -318,7 +321,7 @@ export function WishlistCaptureDialog({
 
   const sheetProps = (p: number): SheetProps => ({
     books: pages[p], covers, mode, cols, showTitles, showBoxes, heading, total, theme,
-    a4: format === "pdf", startIndex: startIndexOf(p), footerLeft: labels.pied,
+    a4: format === "pdf", startIndex: startIndexOf(p), footerLeft: labels.pied, logoSrc,
     footerRight: format === "pdf" ? `Page ${p + 1} / ${pages.length}` : pages.length > 1 ? `${dateLabel} · ${p + 1} / ${pages.length}` : dateLabel,
   });
 

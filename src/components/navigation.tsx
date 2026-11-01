@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { cn, ADMIN_EMAILS } from "@/lib/utils";
 import { MaskIcon } from "@/components/mask-icon";
+import { useSeasonalLogo } from "@/lib/seasonal-logo";
 import { useAuth, useUser, useFirestore } from "@/firebase";
 import { doc, getDoc, getDocs, collection } from "firebase/firestore";
 import { signOut } from "firebase/auth";
@@ -52,6 +52,7 @@ export function Navigation() {
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  const logoSrc = useSeasonalLogo();
   const [overrides, setOverrides] = useState<Record<string, NavOverride>>({});
   const [hasUnseenActuality, setHasUnseenActuality] = useState(false);
 
@@ -133,9 +134,7 @@ export function Navigation() {
     <>
       <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-4 px-4 shadow-sm overflow-x-auto">
         <div className="flex items-center gap-2 mr-4 shrink-0 cursor-pointer group" onClick={() => router.push("/")}>
-          <div className="relative h-10 w-10 shrink-0 rounded-full overflow-hidden group-hover:scale-110 transition-transform">
-             <Image src="/brand/logo-lectoria-v3.png" alt="" fill className="object-cover" unoptimized />
-          </div>
+          <img src={logoSrc} alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl shadow-md group-hover:scale-110 transition-transform" />
           <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase whitespace-nowrap">LECTORIA</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">

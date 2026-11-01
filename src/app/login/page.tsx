@@ -18,10 +18,12 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LoginScene, SEASON_LINES } from "@/components/login-scene";
+import { useSeasonalLogo } from "@/lib/seasonal-logo";
 
 const stagger = (i: number) => ({ "--ls-i": i }) as CSSProperties;
 
 export default function LoginPage() {
+  const logoSrc = useSeasonalLogo();
   const auth = useAuth();
   const db = useFirestore();
   const { user, loading: authLoading } = useUser();
@@ -172,7 +174,7 @@ export default function LoginPage() {
         <section className="ls-card ls-enter" aria-labelledby="login-title">
           <div className="ls-ribbon" aria-hidden="true" />
           <div className="ls-logo">
-            <img src="/icon-192-v3.png" alt="Lectoria" width={84} height={84} />
+            <img src={logoSrc} alt="Lectoria" width={84} height={84} />
           </div>
           <h1 id="login-title" className="ls-title">Heureux de vous revoir</h1>
           <svg className="ls-flourish" viewBox="0 0 220 12" aria-hidden="true">

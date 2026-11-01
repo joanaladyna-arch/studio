@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 import { getCurrentSeasonalTheme } from "@/lib/seasonal-theme";
+import { useSeasonalLogo } from "@/lib/seasonal-logo";
 
 /**
  * Écran d'ouverture, affiché une seule fois par session (cf. layout.tsx,
@@ -19,12 +20,12 @@ import { getCurrentSeasonalTheme } from "@/lib/seasonal-theme";
  */
 export function SplashScreen({ onFinish }: { onFinish: () => void }) {
   const theme = useMemo(() => getCurrentSeasonalTheme(), []);
+  const logoSrc = useSeasonalLogo();
 
   const background = theme
     ? `linear-gradient(180deg, ${theme.top} 0%, ${theme.bottom} 100%)`
     : "linear-gradient(180deg, #1B2430 0%, #2A3644 100%)";
   const textColor = theme ? theme.ink : "#FFFFFF";
-  const markColor = theme ? theme.ink : "#F5F1E8";
   const accentColor = theme ? theme.accent : "#D98BA0";
   const buttonBg = theme ? theme.ink : "#F5F1E8";
   const buttonText = theme ? theme.top : "#1B2430";
@@ -45,17 +46,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
       )}
 
       <div className="relative z-10 flex flex-col items-center max-w-sm animate-in fade-in duration-700">
-        <div
-          className="mb-10 drop-shadow-sm"
-          style={{
-            width: 140, height: 140,
-            backgroundColor: markColor,
-            WebkitMaskImage: "url(/logo-icon.png)", maskImage: "url(/logo-icon.png)",
-            WebkitMaskSize: "contain", maskSize: "contain",
-            WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
-            WebkitMaskPosition: "center", maskPosition: "center",
-          }}
-        />
+        <img src={logoSrc} alt="Lectoria" width={140} height={140} className="mb-10 rounded-[2.2rem] shadow-xl" style={{ width: 140, height: 140 }} />
 
         <h1 className="font-headline text-5xl italic" style={{ color: textColor }}>Bienvenue</h1>
 
