@@ -53,13 +53,13 @@ export default function SignupPage() {
       });
 
       toast({
-        title: "Bienvenue sur Lectoria !",
+        title: "Bienvenue sur Lisoria !",
         description: `Votre réserve littéraire est prête, ${name}.`,
       });
       
       router.replace("/");
     } catch (error: any) {
-      console.error("Lectoria Signup Error:", error.code, error.message);
+      console.error("Lisoria Signup Error:", error.code, error.message);
       toast({ variant: "destructive", title: "Erreur d'inscription", description: error.message });
     } finally {
       setLoading(false);
@@ -85,7 +85,7 @@ export default function SignupPage() {
                 <p className="text-sm italic text-primary">Compte créé avec succès.</p>
               </div>
               <Button onClick={() => router.replace("/")} className="w-full h-12 rounded-2xl bg-primary hover:bg-primary/90">
-                Entrer dans LECTORIA <ArrowRight className="ml-2 h-4 w-4" />
+                Entrer dans LISORIA <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           ) : (

@@ -2,7 +2,7 @@
 
 /**
  * usePublishers — liste en temps réel de toutes les maisons d'édition
- * référencées dans la collection masterBooks de Lectoria.
+ * référencées dans la collection masterBooks de Lisoria.
  *
  * Utilise onSnapshot pour se mettre à jour automatiquement dès qu'un
  * nouveau livre est ajouté à la base. Retourne un tableau de noms

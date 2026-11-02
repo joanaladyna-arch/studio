@@ -9,12 +9,12 @@ import { cn } from "@/lib/utils";
 const SECTIONS = [
   {
     icon: Smartphone,
-    title: "Installer Lectoria & compatibilité",
+    title: "Installer Lisoria & compatibilité",
     items: [
-      "Lectoria fonctionne dans le navigateur de ton iPhone, ton téléphone Android, ta tablette et ton ordinateur : l'affichage s'adapte tout seul à la taille de l'écran.",
+      "Lisoria fonctionne dans le navigateur de ton iPhone, ton téléphone Android, ta tablette et ton ordinateur : l'affichage s'adapte tout seul à la taille de l'écran.",
       "Sur téléphone et tablette, la navigation se trouve en bas de l'écran ; sur ordinateur, elle passe en haut. La cloche des notifications est toujours accessible.",
-      "iPhone / iPad : ouvre Lectoria dans Safari, touche le bouton Partager puis \"Sur l'écran d'accueil\". Android : menu du navigateur puis \"Installer l'application\" ou \"Ajouter à l'écran d'accueil\".",
-      "✦ Nouveau — Installée sur l'écran d'accueil, Lectoria s'ouvre comme une vraie application, en plein écran, avec son icône Plume.",
+      "iPhone / iPad : ouvre Lisoria dans Safari, touche le bouton Partager puis \"Sur l'écran d'accueil\". Android : menu du navigateur puis \"Installer l'application\" ou \"Ajouter à l'écran d'accueil\".",
+      "✦ Nouveau — Installée sur l'écran d'accueil, Lisoria s'ouvre comme une vraie application, en plein écran, avec son icône Plume.",
       "À la connexion, la page d'accueil suit les saisons : le décor et le logo changent au fil de l'année. Le petit interrupteur en haut passe de \"Lecture du soir\" (mode sombre) à la lumière du jour.",
     ],
   },
@@ -52,7 +52,7 @@ const SECTIONS = [
       "\"Service de presse\" : coche cette case pour un livre reçu en service de presse — un ruban SP apparaît sur sa couverture.",
       "\"Pépite Incontournable\" : recommande ce livre à la communauté — il apparaît sur ton profil public.",
       "Le bouton \"Suivre\" à côté de la Maison d'édition permet d'être alertée des nouveautés de cet éditeur.",
-      "\"Lu par X lectrices Lectoria\" : sous le titre, indique combien de lectrices ont terminé ce livre, avec un raccourci direct vers leurs avis.",
+      "\"Lu par X lectrices Lisoria\" : sous le titre, indique combien de lectrices ont terminé ce livre, avec un raccourci direct vers leurs avis.",
       "En cours de lecture, indique directement la page où tu t'es arrêtée : le pourcentage se calcule tout seul dès que le nombre total de pages est connu.",
       "Pour changer la couverture : survole-la avec la souris (ordinateur) ou regarde le bouton \"Changer\" au bas de la couverture (téléphone et tablette).",
       "✦ Nouveau — \"Capturer un avis\" (onglet Mon Journal) : choisis ce que tu veux montrer (avis, citation du livre, note Spicy, palme de classement). La page de capture découpe tout automatiquement et l'exporte en JPG, PNG ou PDF.",
@@ -97,8 +97,8 @@ const SECTIONS = [
       "✦ Nouveau — La cloche te prévient en direct, sans recharger la page : un message s'affiche en haut ou en bas de l'écran dès qu'une notification arrive, avec un bouton \"Voir\".",
       "Elle t'avertit quand : un livre signalé comme introuvable est ajouté, une actualité paraît pour un auteur ou un éditeur que tu suis, l'appli reçoit une mise à jour importante, quelqu'un répond à ta demande de recommandation, ou une lectrice commence à te suivre.",
       "Un point rouge apparaît sur la cloche tant qu'une notification n'a pas été lue. \"Tout marquer lu\" les efface d'un coup.",
-      "✦ Nouveau — Alertes même quand Lectoria est fermée : en bas de la cloche, active \"Alertes sur cet appareil\" et accepte la demande du navigateur. À faire une fois sur chaque appareil.",
-      "Sur iPhone et iPad, ces alertes ne fonctionnent que si Lectoria est installée sur l'écran d'accueil (voir la première section). Si tu as refusé la demande, autorise les notifications dans les réglages de ton navigateur.",
+      "✦ Nouveau — Alertes même quand Lisoria est fermée : en bas de la cloche, active \"Alertes sur cet appareil\" et accepte la demande du navigateur. À faire une fois sur chaque appareil.",
+      "Sur iPhone et iPad, ces alertes ne fonctionnent que si Lisoria est installée sur l'écran d'accueil (voir la première section). Si tu as refusé la demande, autorise les notifications dans les réglages de ton navigateur.",
     ],
   },
   {
@@ -152,7 +152,7 @@ export default function GuidePage() {
         </Link>
         <div>
           <h1 className={cn("text-3xl md:text-4xl font-headline italic flex items-center gap-3", isAmbientDark && "text-[#F5F1E8]")}>
-            <HelpCircle className="hidden sm:block h-8 w-8 shrink-0 text-primary/40" /> Comment utiliser Lectoria
+            <HelpCircle className="hidden sm:block h-8 w-8 shrink-0 text-primary/40" /> Comment utiliser Lisoria
           </h1>
           <p className="text-sm italic text-muted-foreground mt-1">Un tour rapide de toutes les fonctionnalités, expliquées simplement.</p>
         </div>

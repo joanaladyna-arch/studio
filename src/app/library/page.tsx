@@ -495,7 +495,7 @@ export default function LibraryPage() {
   // la plupart des livres déjà organisés par mois le sont. Mais pour un
   // livre RETIRÉ DES OBJECTIFS (typiquement un import d'historique sans
   // date précise), dateAdded n'est plus utilisée : elle ne représente
-  // que le jour où le livre a été ajouté à Lectoria, pas lu, et
+  // que le jour où le livre a été ajouté à Lisoria, pas lu, et
   // grouperait à tort tout un lot d'anciens livres importés le même
   // jour dans le mois en cours. Ces livres tombent alors dans
   // "Lu également" s'ils n'ont pas de vraie date de lecture.
@@ -505,7 +505,7 @@ export default function LibraryPage() {
       const excluded = (b as any).countTowardGoals === false;
       // Priorité : date de fin saisie → date de début → dateRead historique
       // On ne prend JAMAIS dateAdded comme repli : cette date représente
-      // le jour d'ajout à Lectoria, pas la date de lecture réelle.
+      // le jour d'ajout à Lisoria, pas la date de lecture réelle.
       // Les livres sans aucune date de lecture atterrissent dans "Lu également".
       const genuineDate = (b as any).readEndDate || (b as any).readStartDate || b.dateRead;
       const raw = genuineDate || null;

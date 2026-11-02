@@ -21,7 +21,7 @@ const TITLES = [
 
 export default function PassportPage() {
   const { user } = useUser();
-  const userName = user?.displayName || user?.email?.split('@')[0] || "Lectrice Lectoria";
+  const userName = user?.displayName || user?.email?.split('@')[0] || "Lectrice Lisoria";
   const userPhoto = user?.photoURL || undefined;
 
   return (
@@ -51,7 +51,7 @@ export default function PassportPage() {
             <div className="space-y-2">
               <h2 className="text-3xl font-headline italic">{userName}</h2>
               <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                <Badge className="bg-primary/20 text-primary border-none">Exploratrice Lectoria</Badge>
+                <Badge className="bg-primary/20 text-primary border-none">Exploratrice Lisoria</Badge>
                 <Badge variant="outline" className="border-primary/20 text-primary/60 italic">Membre depuis peu</Badge>
               </div>
               <p className="text-sm text-muted-foreground italic">"Chaque livre est une nouvelle vie."</p>

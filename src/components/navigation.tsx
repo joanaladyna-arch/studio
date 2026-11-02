@@ -120,11 +120,11 @@ export function Navigation() {
       await signOut(auth);
       toast({
         title: "Déconnexion",
-        description: "À bientôt sur Lectoria !",
+        description: "À bientôt sur Lisoria !",
       });
       router.push("/login");
     } catch (error) {
-      console.error("LECTORIA Auth Error:", error);
+      console.error("LISORIA Auth Error:", error);
     }
   };
 
@@ -135,7 +135,7 @@ export function Navigation() {
       <nav className="hidden lg:flex fixed top-0 left-0 right-0 z-50 bg-white/60 backdrop-blur-xl border-b border-white/40 h-24 items-center justify-center gap-4 px-4 shadow-sm overflow-x-auto">
         <div className="flex items-center gap-2 mr-4 shrink-0 cursor-pointer group" onClick={() => router.push("/")}>
           <img src={logoSrc} alt="" width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl shadow-md group-hover:scale-110 transition-transform" />
-          <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase whitespace-nowrap">LECTORIA</span>
+          <span className="font-headline text-3xl tracking-widest italic text-primary/80 uppercase whitespace-nowrap">LISORIA</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {allNavItems.map((item) => {

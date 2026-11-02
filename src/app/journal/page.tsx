@@ -80,7 +80,7 @@ export default function JournalPage() {
   };
 
   const shareBook = (book: any) => {
-    const text = `${cleanBookTitle(book.title)}, par ${cleanAuthorName(book.author)} — une pépite de ma bibliothèque Lectoria.`;
+    const text = `${cleanBookTitle(book.title)}, par ${cleanAuthorName(book.author)} — une pépite de ma bibliothèque Lisoria.`;
     shareText(book.title, text, () => toast({ title: "Copié", description: "Le texte de partage a été copié dans le presse-papier." }));
   };
 

@@ -162,7 +162,7 @@ export default function AuthorPage() {
         }
 
         // On interroge en parallèle Google Books (univers large), la
-        // Interroge en parallèle Google Books, la base Lectoria
+        // Interroge en parallèle Google Books, la base Lisoria
         // (masterBooks) et Apple Books.
         //
         // IMPORTANT (consigne explicite) : la BnF n'est plus jamais
@@ -247,7 +247,7 @@ export default function AuthorPage() {
           .filter((g: any) => isAuthorMatch(g.author, authorName));
         const masterResults = (masterSettled.status === "fulfilled" ? masterSettled.value : [])
           .filter((m: any) => isAuthorMatch(m.author, authorName));
-        // La base Lectoria (masterBooks) est prioritaire ; on évite les
+        // La base Lisoria (masterBooks) est prioritaire ; on évite les
         // doublons en excluant de chaque source suivante tout titre déjà
         // présent dans les sources précédentes.
         const dedupedGoogle = googleResults.filter((g: any) =>
@@ -267,7 +267,7 @@ export default function AuthorPage() {
         // n'est plus proposé du tout — mieux vaut ne pas l'afficher dans
         // la bibliographie que de laisser la lectrice ajouter un livre
         // qu'elle sait déjà sans image. Les résultats déjà dans la base
-        // Lectoria ("master") restent affichés tels quels.
+        // Lisoria ("master") restent affichés tels quels.
         //
         // Ancienne "garantie couverture" retirée : elle devinait une URL
         // Open Library depuis l'ISBN sans jamais vérifier qu'une vraie
@@ -314,7 +314,7 @@ export default function AuthorPage() {
 
     setIsAdding(true);
     try {
-      // Si le livre vient déjà de la base Lectoria (masterBooks), on réutilise
+      // Si le livre vient déjà de la base Lisoria (masterBooks), on réutilise
       // sa fiche existante au lieu d'en recréer une en double. Sinon
       // (résultat Google Books/BnF/Open Library), on calcule un
       // identifiant STABLE (ISBN nettoyé, ou clé titre+auteur normalisée)
@@ -542,7 +542,7 @@ export default function AuthorPage() {
                         {book.subtitle && <p className="text-sm text-muted-foreground italic opacity-60">{book.subtitle}</p>}
                         {book.source === 'master' && (
                           <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px]">
-                            Base Lectoria
+                            Base Lisoria
                           </Badge>
                         )}
                         <div className="flex gap-6 text-[10px] font-bold uppercase tracking-widest opacity-40 pt-2">

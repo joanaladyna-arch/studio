@@ -1,4 +1,4 @@
-/* Service worker des notifications push Lectoria (FCM).
+/* Service worker des notifications push Lisoria (FCM).
    La configuration Firebase arrive dans l'adresse d'enregistrement (voir lib/push-client.ts).
    Quand le message contient un champ "notification", FCM l'affiche tout seul et ouvre
    le lien au clic (webpush.fcmOptions.link) : rien d'autre à faire ici. */

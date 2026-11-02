@@ -33,7 +33,7 @@ export default function SharedProfilePage() {
   }, [db, token]);
 
   useEffect(() => {
-    if (data?.name) document.title = `${data.name} sur Lectoria`;
+    if (data?.name) document.title = `${data.name} sur Lisoria`;
   }, [data]);
 
   const myRef = useMemo(() => (db && user ? doc(db, "users", user.uid) : null), [db, user]);
@@ -79,7 +79,7 @@ export default function SharedProfilePage() {
         <div>
           <p style={{ fontFamily: "var(--pv-font-d)", fontStyle: "italic", fontSize: 24, margin: 0 }}>Ce lien n'est plus actif.</p>
           <p style={{ margin: "8px 0 20px", color: "var(--pv-muted)" }}>La lectrice a désactivé ou renouvelé le partage de son profil.</p>
-          <Link href="/login" className="pv-gbtn pv-alt" style={{ display: "inline-flex" }}>Découvrir Lectoria</Link>
+          <Link href="/login" className="pv-gbtn pv-alt" style={{ display: "inline-flex" }}>Découvrir Lisoria</Link>
         </div>
       </div>
     );
@@ -94,7 +94,7 @@ export default function SharedProfilePage() {
     </button>
   ) : (
     <>
-      <Link href="/signup" className="pv-gbtn">Rejoindre Lectoria</Link>
+      <Link href="/signup" className="pv-gbtn">Rejoindre Lisoria</Link>
       <Link href="/login" className="pv-gbtn pv-alt">Suivre</Link>
     </>
   );

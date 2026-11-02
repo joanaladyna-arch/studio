@@ -115,7 +115,7 @@ export default function PublicProfilePage() {
           <AvatarFallback className="font-headline italic text-3xl">{(p.name || "?").charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="space-y-2">
-          <h1 className="text-4xl font-headline italic">{p.name || "Lectrice Lectoria"}</h1>
+          <h1 className="text-4xl font-headline italic">{p.name || "Lectrice Lisoria"}</h1>
           {p.bio && <p className="text-muted-foreground italic max-w-md">{p.bio}</p>}
         </div>
         {user && (

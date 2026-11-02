@@ -135,7 +135,7 @@ function Body() {
 
   const share = async () => {
     if (navigator.share) {
-      try { await navigator.share({ title: `${(profile as any)?.name || "Mon profil"} sur Lectoria`, url: link }); return; } catch (err: any) { if (err?.name === "AbortError") return; }
+      try { await navigator.share({ title: `${(profile as any)?.name || "Mon profil"} sur Lisoria`, url: link }); return; } catch (err: any) { if (err?.name === "AbortError") return; }
     }
     copy();
   };
@@ -163,7 +163,7 @@ function Body() {
           {preview ? (
             <PublicProfileView
               data={preview}
-              cta={<><span className="pv-gbtn">Rejoindre Lectoria</span><span className="pv-gbtn pv-alt">Suivre</span></>}
+              cta={<><span className="pv-gbtn">Rejoindre Lisoria</span><span className="pv-gbtn pv-alt">Suivre</span></>}
               overlay={!draft.shareActive ? (
                 <div className="pv-off-overlay"><p>Ce lien n'est pas actif.<small>Active le lien pour que ton profil soit visible.</small></p></div>
               ) : undefined}

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Affiche la couverture d'un livre, ou — quand aucune couverture n'a été
- * trouvée par la recherche (base Lectoria, Google Books, Open Library,
+ * trouvée par la recherche (base Lisoria, Google Books, Open Library,
  * BnF, toutes interrogées avant d'arriver ici) ou que le lien fourni est
  * mort ou invalide — un repli sur une icône de livre sur fond doux
  * plutôt que sur une photo aléatoire sans rapport avec un livre.
@@ -77,7 +77,7 @@ export function BookCover({
     );
   }
   // Repli visuel premium quand aucune couverture n'a pu être trouvée
-  // (base Lectoria, fiche partagée, puis Google Books en direct, toutes
+  // (base Lisoria, fiche partagée, puis Google Books en direct, toutes
   // interrogées avant d'arriver ici) : silhouette de dos de livre sur
   // fond nuit, avec le titre, plutôt qu'une icône générique.
   return (

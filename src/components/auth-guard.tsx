@@ -19,10 +19,10 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!loading) {
       if (!user && !publicRoutes.includes(pathname) && !isSharedProfile(pathname)) {
-        console.log("LECTORIA AuthGuard: Pas d'utilisateur, redirection vers /login");
+        console.log("LISORIA AuthGuard: Pas d'utilisateur, redirection vers /login");
         router.replace("/login");
       } else if (user && publicRoutes.includes(pathname)) {
-        console.log("LECTORIA AuthGuard: Utilisateur déjà connecté, redirection vers /");
+        console.log("LISORIA AuthGuard: Utilisateur déjà connecté, redirection vers /");
         router.replace("/");
       }
     }

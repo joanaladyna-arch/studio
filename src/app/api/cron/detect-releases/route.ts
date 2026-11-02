@@ -30,7 +30,7 @@ function normalize(s: string) {
 
 // Un nom "correspond" si tous ses mots (hors particules courtes) se
 // retrouvent dans le texte candidat, peu importe l'ordre — nécessaire car
-// la BnF liste les auteurs "Nom Prénom" alors que Lectoria stocke "Prénom Nom".
+// la BnF liste les auteurs "Nom Prénom" alors que Lisoria stocke "Prénom Nom".
 function nameMatches(candidate: string, reference: string): boolean {
   const refWords = normalize(reference).split(" ").filter((w) => w.length > 1);
   if (refWords.length === 0) return false;
@@ -291,7 +291,7 @@ export async function GET(req: NextRequest) {
     // Détection "Découvertes du moment" — livres tendance sur Hardcover,
     // indépendamment des auteurs/éditeurs suivis (contrairement à toutes
     // les autres sources de ce cron). Volontairement NON filtrée par
-    // genre : les lectrices de Lectoria ne lisent pas toutes/que de la
+    // genre : les lectrices de Lisoria ne lisent pas toutes/que de la
     // romance ou de la dark romance, et un filtre romance-only ferait
     // tomber ce flux à zéro résultat la plupart des jours (la romance
     // n'est pas toujours en tête des tendances Hardcover, dominées par un

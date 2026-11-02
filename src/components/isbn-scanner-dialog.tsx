@@ -117,7 +117,7 @@ export function IsbnScannerDialog({
         .catch((err: any) => {
           console.error("Scanner Start Error:", err);
           if (!cancelled) {
-            setError("Impossible d'accéder à la caméra. Vérifie que Lectoria y est autorisée dans les réglages de ton navigateur.");
+            setError("Impossible d'accéder à la caméra. Vérifie que Lisoria y est autorisée dans les réglages de ton navigateur.");
             setStarting(false);
             setShowManualEntry(true);
           }

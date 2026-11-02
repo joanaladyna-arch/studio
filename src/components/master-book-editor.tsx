@@ -25,7 +25,7 @@ const TAXONOMY_FIELD_MAP = {
 } as const;
 
 /**
- * Éditeur complet d'une fiche MasterBook (base partagée Lectoria) — couvre
+ * Éditeur complet d'une fiche MasterBook (base partagée Lisoria) — couvre
  * tous les champs : couverture, résumé, genres, tropes, thèmes, etc.
  *
  * Composant volontairement autonome (state interne géré ici) pour être

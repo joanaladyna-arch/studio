@@ -19,7 +19,7 @@ import { collection, query, where, doc, getDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
 /**
- * Un seul gabarit de carte, aligné sur l'identité Lectoria (nuit / crème
+ * Un seul gabarit de carte, aligné sur l'identité Lisoria (nuit / crème
  * / rose signature / cuivre) plutôt qu'un thème pastel différent par
  * genre — l'ancien thème "Romance Douce" (fond rose clair) est ce qui
  * rendait l'export très "girly" indépendamment du livre partagé. Le
@@ -241,8 +241,8 @@ export default function SharePage() {
   };
 
   const fileName = () => mode === "recap"
-    ? `lectoria-mon-annee-${recapStats.year}.png`
-    : `lectoria-${(selectedBook?.title || "partage").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
+    ? `lisoria-mon-annee-${recapStats.year}.png`
+    : `lisoria-${(selectedBook?.title || "partage").toString().toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`;
 
   const handleExport = async () => {
     if (isExporting) return;
@@ -281,8 +281,8 @@ export default function SharePage() {
       if (typeof navigator !== "undefined" && (navigator as any).canShare?.({ files: [file] })) {
         await (navigator as any).share({
           files: [file],
-          title: mode === "recap" ? `Mon année de lecture ${recapStats.year}` : (selectedBook?.title || "Lectoria"),
-          text: mode === "recap" ? `Mon année de lecture ${recapStats.year} — sur Lectoria` : (selectedBook ? `${selectedBook.title} — sur Lectoria` : "Lectoria"),
+          title: mode === "recap" ? `Mon année de lecture ${recapStats.year}` : (selectedBook?.title || "Lisoria"),
+          text: mode === "recap" ? `Mon année de lecture ${recapStats.year} — sur Lisoria` : (selectedBook ? `${selectedBook.title} — sur Lisoria` : "Lisoria"),
         });
       } else {
         const link = document.createElement("a");
@@ -339,7 +339,7 @@ export default function SharePage() {
 
               <div className="relative z-10 flex flex-col h-full">
                 <div className="text-center space-y-1">
-                  <div className="text-[9px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>✦ Lectoria</div>
+                  <div className="text-[9px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>✦ Lisoria</div>
                   <h2 className="text-3xl font-headline italic font-bold">Mon année de lecture</h2>
                   <p className="text-[11px] font-bold tracking-widest" style={{ color: theme.copper }}>{recapStats.year}</p>
                 </div>
@@ -367,7 +367,7 @@ export default function SharePage() {
                 </div>
 
                 <div className="text-center pt-4">
-                  <p className="text-[11px] font-headline italic" style={{ color: theme.accent }}>Lectoria</p>
+                  <p className="text-[11px] font-headline italic" style={{ color: theme.accent }}>Lisoria</p>
                 </div>
               </div>
             </div>
@@ -446,7 +446,7 @@ export default function SharePage() {
               <div className="absolute top-0 right-12 w-1.5 h-11 rounded-b-sm" style={{ background: theme.accent }} />
               
               <div className="relative z-10 space-y-3 w-full flex flex-col items-center">
-                <div className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>Mon Carnet Lectoria</div>
+                <div className="text-[10px] uppercase tracking-[0.4em] font-bold" style={{ color: theme.accent }}>Mon Carnet Lisoria</div>
                 
                 {selectedBook && (
                   <>
@@ -511,7 +511,7 @@ export default function SharePage() {
                           {truncateReview((selectedBook as any).review)}
                         </p>
                         <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: theme.accent }}>
-                          Lire l'avis complet sur Lectoria →
+                          Lire l'avis complet sur Lisoria →
                         </p>
                       </div>
                     ) : getBookQuotes(selectedBook)[0] ? (
@@ -531,14 +531,14 @@ export default function SharePage() {
                           {truncateReview((selectedBook as any).description)}
                         </p>
                         <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: theme.accent }}>
-                          Lire la fiche complète sur Lectoria →
+                          Lire la fiche complète sur Lisoria →
                         </p>
                       </div>
                     ) : null}
                   </>
                 )}
 
-                <div className="pt-1 text-[9px] font-headline italic tracking-widest opacity-30">@Lectoria</div>
+                <div className="pt-1 text-[9px] font-headline italic tracking-widest opacity-30">@Lisoria</div>
               </div>
             </div>
 

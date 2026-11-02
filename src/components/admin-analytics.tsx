@@ -117,7 +117,7 @@ export function AdminAnalytics() {
           <TrendingUp className="h-8 w-8 text-primary" /> Tableau de bord
         </CardTitle>
         <CardDescription className="italic">
-          Qui utilise Lectoria · Quelles recherches sont faites · Quels livres enrichir en priorité
+          Qui utilise Lisoria · Quelles recherches sont faites · Quels livres enrichir en priorité
         </CardDescription>
       </CardHeader>
       <CardContent className="p-10 space-y-6">

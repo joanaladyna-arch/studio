@@ -40,7 +40,7 @@ export function useCollection<T = DocumentData>(query: Query<T> | null, opts?: {
         setError(null);
       },
       async (err) => {
-        console.error("LECTORIA Firestore Collection Error:", err);
+        console.error("LISORIA Firestore Collection Error:", err);
         // On tente de récupérer un chemin pour le contexte d'erreur
         const path = (query as any)._query?.path?.segments?.join('/') || 'query';
         

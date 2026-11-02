@@ -67,7 +67,7 @@ const TREES: Record<Exclude<LoginVariant, "none">, TreeSpec[]> = {
   valentin: [{ src: "arbre-nu", x: 770, base: 655, h: 430 }, { src: "arbre-nu", x: 150, base: 705, h: 540 }],
 };
 
-const NIGHT_KEY = "lectoria-login-night";
+const NIGHT_KEY = "lisoria-login-night";
 const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const rng = (seed: number) => {

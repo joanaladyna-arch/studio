@@ -62,7 +62,7 @@ export function DailyQuoteModal() {
   useEffect(() => {
     if (typeof window === "undefined" || !dailyQuote) return;
     const todayKey = new Date().toISOString().slice(0, 10);
-    const lastSeen = localStorage.getItem("lectoria_daily_quote_seen");
+    const lastSeen = localStorage.getItem("lisoria_daily_quote_seen");
     if (lastSeen !== todayKey) {
       const t = setTimeout(() => setOpen(true), 500);
       return () => clearTimeout(t);
@@ -72,7 +72,7 @@ export function DailyQuoteModal() {
   const dismiss = () => {
     setOpen(false);
     if (typeof window !== "undefined") {
-      localStorage.setItem("lectoria_daily_quote_seen", new Date().toISOString().slice(0, 10));
+      localStorage.setItem("lisoria_daily_quote_seen", new Date().toISOString().slice(0, 10));
     }
   };
 
@@ -86,7 +86,7 @@ export function DailyQuoteModal() {
         </p>
         <p className="font-headline italic text-xl leading-relaxed">"{dailyQuote.text}"</p>
         <p className="text-[10px] font-bold uppercase tracking-widest opacity-50 mt-4">
-          {dailyQuote.isOwn ? `📖 Depuis ton Carnet — ${dailyQuote.author}` : `✦ ${dailyQuote.author} — Petite sélection Lectoria`}
+          {dailyQuote.isOwn ? `📖 Depuis ton Carnet — ${dailyQuote.author}` : `✦ ${dailyQuote.author} — Petite sélection Lisoria`}
         </p>
         {!dailyQuote.isOwn && (
           <button

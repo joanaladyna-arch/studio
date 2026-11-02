@@ -22,7 +22,7 @@ export default function RootLayout({
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    const hasVisited = sessionStorage.getItem("lectoria-visited");
+    const hasVisited = sessionStorage.getItem("lisoria-visited");
     if (hasVisited) {
       setShowSplash(false);
     }
@@ -30,19 +30,19 @@ export default function RootLayout({
 
   const handleSplashFinish = () => {
     setShowSplash(false);
-    sessionStorage.setItem("lectoria-visited", "true");
+    sessionStorage.setItem("lisoria-visited", "true");
   };
 
   return (
     <html lang="fr">
       <head>
-        <title>LECTORIA - Journal de Lecture Personnel</title>
+        <title>LISORIA - Journal de Lecture Personnel</title>
         <meta name="description" content="Ton carnet de lecture précieux et authentique." />
         
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Lectoria" />
+        <meta name="apple-mobile-web-app-title" content="Lisoria" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="theme-color" content="#1B2430" />

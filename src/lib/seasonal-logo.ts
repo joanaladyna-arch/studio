@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getCurrentSeasonalTheme } from "@/lib/seasonal-theme";
 
 /**
- * Logo Lectoria saisonnier : même calendrier que l'écran Bienvenue
+ * Logo Lisoria saisonnier : même calendrier que l'écran Bienvenue
  * (seasonal-theme.ts), donc il change aux mêmes dates. Hors saison
  * (21 avril → 20 juin, 22 → 31 août), c'est le logo bleu "Plume".
  *

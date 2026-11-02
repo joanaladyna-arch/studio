@@ -29,7 +29,7 @@ export function getBookQuotes(book: any): string[] {
 
 /**
  * Tient à jour le compteur dénormalisé `readCount` sur masterBooks ("Lu
- * par X lectrices Lectoria", affiché sur la fiche livre) à chaque
+ * par X lectrices Lisoria", affiché sur la fiche livre) à chaque
  * transition de statut d'un exemplaire personnel — ajout, modification
  * ou suppression. Appelé depuis les 4 écrans qui écrivent un statut sur
  * un livre (add, author, master-book preview, book/[id]) plutôt qu'un
@@ -473,7 +473,7 @@ export function cleanBookTitle(title?: string | null): string {
 /**
  * Avatar par défaut pour un auteur sans photo disponible — choisi de
  * façon déterministe (même nom = toujours le même avatar) parmi les 30
- * illustrations personnalisées de Lectoria (public/avatars/), au lieu
+ * illustrations personnalisées de Lisoria (public/avatars/), au lieu
  * d'une icône générique. Beaucoup d'auteurs indépendants (Wattpad,
  * auto-édition) n'ont aucune photo publique.
  */
@@ -513,7 +513,7 @@ export function languageLabel(lang?: string | null): string {
  * Détermine si un résultat de recherche est en français, pour le
  * filtrage par défaut des résultats d'ajout de livre. Une langue VIDE
  * est considérée comme française par défaut plutôt que rejetée — utile
- * pour ne jamais masquer une fiche Lectoria existante ou un résultat
+ * pour ne jamais masquer une fiche Lisoria existante ou un résultat
  * Apple dont la langue n'est simplement pas renseignée par la source ;
  * seule une langue explicitement AUTRE (anglais, espagnol, allemand...)
  * fait basculer le résultat dans le filtre "autres langues".

@@ -40,7 +40,7 @@ export function CoverAuditManager() {
         toast({
           variant: "destructive",
           title: "Quota Google Books dépassé",
-          description: "Réessaie plus tard (quota gratuit quotidien épuisé) — ce n'est pas propre à Lectoria.",
+          description: "Réessaie plus tard (quota gratuit quotidien épuisé) — ce n'est pas propre à Lisoria.",
         });
       } else {
         toast({ title: "Audit terminé", description: `${data.repaired} couverture(s) réparée(s) sur ${data.missingCover} manquante(s).` });

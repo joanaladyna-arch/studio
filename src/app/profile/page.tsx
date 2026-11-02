@@ -69,7 +69,7 @@ import Link from 'next/link';
 // catégories confondues — du plus léger au plus dévorant, à la demande
 // explicite de l'utilisatrice.
 const READER_TITLES = [
-  { min: 0, label: "Lectrice Lectoria" },
+  { min: 0, label: "Lectrice Lisoria" },
   { min: 10, label: "Lectrice Curieuse" },
   { min: 25, label: "Lectrice Passionnée" },
   { min: 50, label: "Lectrice Assidue" },
@@ -278,7 +278,7 @@ export default function ProfilePage() {
     </div>
   );
 
-  const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Lectoria';
+  const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'Lectrice Lisoria';
   // Pas de repli sur une photo aléatoire externe (picsum.photos) quand la
   // lectrice n'a pas mis d'avatar : ça ajoutait une dépendance réseau
   // superflue qui peut échouer, pour un résultat sans rapport avec elle
@@ -487,7 +487,7 @@ export default function ProfilePage() {
                 </Button>
                 <ThemeBackgroundDialog currentTheme={profile?.themeBackground} />
                 <Button variant="ghost" asChild className={cn("rounded-full h-11 px-5 text-sm md:h-12 md:px-8 font-body font-normal md:text-base transition-colors", isAmbientDark ? "text-[#F5F1E8] hover:bg-white/10" : "text-primary hover:bg-primary/5")}>
-                    <Link href="/guide"><HelpCircle className="h-4 w-4 mr-2.5" /> Comment utiliser Lectoria</Link>
+                    <Link href="/guide"><HelpCircle className="h-4 w-4 mr-2.5" /> Comment utiliser Lisoria</Link>
                 </Button>
               </CollapsibleContent>
             </Collapsible>
@@ -919,7 +919,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       // les objectifs, la bibliothèque ou quoi que ce soit d'autre.
       if (communityVisible) {
         await setDoc(doc(db, 'publicProfiles', user.uid), {
-          name: name || 'Lectrice Lectoria',
+          name: name || 'Lectrice Lisoria',
           avatarUrl: profile?.avatarUrl || '',
           bio,
           favoriteGenres,
@@ -964,7 +964,7 @@ function EditProfileDialog({ profile }: { profile: any }) {
       </DialogTrigger>
       <DialogContent className="max-w-4xl w-[calc(100vw-1rem)] h-[90vh] glass-card border-none flex flex-col p-0 overflow-hidden bg-white/95 backdrop-blur-3xl shadow-2xl">
         <DialogHeader className="p-6 sm:p-8 border-b bg-white/40 shrink-0">
-          <DialogTitle className="font-headline text-3xl sm:text-4xl italic">Identité Lectoria</DialogTitle>
+          <DialogTitle className="font-headline text-3xl sm:text-4xl italic">Identité Lisoria</DialogTitle>
         </DialogHeader>
         
         <div className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-hidden">

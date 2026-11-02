@@ -46,7 +46,7 @@ export function SplashScreen({ onFinish }: { onFinish: () => void }) {
       )}
 
       <div className="relative z-10 flex flex-col items-center max-w-sm animate-in fade-in duration-700">
-        <img src={logoSrc} alt="Lectoria" width={140} height={140} className="mb-10 rounded-[2.2rem] shadow-xl" style={{ width: 140, height: 140 }} />
+        <img src={logoSrc} alt="Lisoria" width={140} height={140} className="mb-10 rounded-[2.2rem] shadow-xl" style={{ width: 140, height: 140 }} />
 
         <h1 className="font-headline text-5xl italic" style={{ color: textColor }}>Bienvenue</h1>
 

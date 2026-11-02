@@ -160,7 +160,7 @@ export function PublicProfileView({
     ...(show.wishlist ? [{ id: "wish", label: "Wishlist", books: data.wishlist }] : []),
     ...(show.pal ? [{ id: "pal", label: "PAL", books: data.pal }] : []),
   ];
-  const name = data.name || "Lectrice Lectoria";
+  const name = data.name || "Lectrice Lisoria";
 
   return (
     <div className="pv-theme pv-guest" data-theme={data.theme} style={themeVars(data.theme)}>

@@ -155,7 +155,7 @@ export default function BookDetailPage() {
   // les modifications en cours — c'était la cause du bug "mes coches
   // disparaissent avant que j'aie pu enregistrer".
   const hasInitialized = useRef(false);
-  // Pour le badge "Lu par X lectrices Lectoria" : bascule vers l'onglet
+  // Pour le badge "Lu par X lectrices Lisoria" : bascule vers l'onglet
   // "Mon Journal" (où vit la section Avis) puis défile jusqu'à elle. Le
   // Tabs n'étant pas contrôlé, on simule un clic sur son déclencheur
   // plutôt que de tout restructurer en state contrôlé pour ce seul lien.
@@ -270,11 +270,11 @@ export default function BookDetailPage() {
     }
   }, [userBook, fetchMasterData]); // userBook en dépendance pour réagir au premier chargement
 
-  // "Éditions" : recherche, dans la base partagée Lectoria, d'autres
+  // "Éditions" : recherche, dans la base partagée Lisoria, d'autres
   // fiches correspondant à la même œuvre (même titre+auteur normalisés,
   // tome inclus pour ne jamais confondre deux tomes d'une série) mais
   // avec un ISBN différent — c'est-à-dire une autre édition ou maison
-  // d'édition. Basé uniquement sur ce que la communauté Lectoria a déjà
+  // d'édition. Basé uniquement sur ce que la communauté Lisoria a déjà
   // référencé, pas un registre mondial exhaustif. Chargé seulement à
   // l'ouverture du panneau, pas à chaque visite de la fiche.
   const findOtherEditions = useCallback(async () => {
@@ -623,7 +623,7 @@ export default function BookDetailPage() {
           if (profile?.communityVisible && hasContent) {
             await setDoc(reviewRef, {
               userId: user.uid,
-              userName: profile?.name || "Lectrice Lectoria",
+              userName: profile?.name || "Lectrice Lisoria",
               avatarUrl: profile?.avatarUrl || "",
               rating: editedData.rating || 0,
               review: ((editedData as any).review || "").toString().trim(),
@@ -857,7 +857,7 @@ export default function BookDetailPage() {
             >
               <Users className="h-4 w-4 text-rose shrink-0" />
               <span>
-                Lu par <strong className="font-bold">{masterBook?.readCount}</strong> lectrice{(masterBook?.readCount || 0) > 1 ? "s" : ""} Lectoria — rendez-vous dans la communauté pour voir leur avis
+                Lu par <strong className="font-bold">{masterBook?.readCount}</strong> lectrice{(masterBook?.readCount || 0) > 1 ? "s" : ""} Lisoria — rendez-vous dans la communauté pour voir leur avis
               </span>
             </button>
           )}
@@ -1575,7 +1575,7 @@ export default function BookDetailPage() {
                         <AvatarImage src={r.avatarUrl} className="object-cover" />
                         <AvatarFallback className="text-[10px] font-headline italic">{(r.userName || "?").charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <span className="font-headline italic text-sm truncate">{r.userName || "Lectrice Lectoria"}</span>
+                      <span className="font-headline italic text-sm truncate">{r.userName || "Lectrice Lisoria"}</span>
                       {r.rating > 0 && (
                         <div className="flex gap-0.5 ml-auto shrink-0">
                           {[1,2,3,4,5].map((s) => <Star key={s} className={cn("h-3 w-3", s <= r.rating ? "text-copper fill-copper" : "text-muted-foreground/15")} />)}

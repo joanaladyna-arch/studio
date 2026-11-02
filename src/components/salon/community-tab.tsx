@@ -11,7 +11,7 @@ import { collection } from "firebase/firestore";
 import { toArray } from "@/lib/utils";
 
 /**
- * Annuaire des lectrices ayant activé "Visible dans la communauté Lectoria"
+ * Annuaire des lectrices ayant activé "Visible dans la communauté Lisoria"
  * (case à cocher dans Modifier le Profil). Lit la collection publique
  * `publicProfiles`, jamais `users` directement — aucune donnée privée
  * (bibliothèque, objectifs, avis) n'y transite.
@@ -61,7 +61,7 @@ export function CommunityTab() {
                 <AvatarFallback className="font-headline italic">{(p.name || "?").charAt(0).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="min-w-0 space-y-1">
-                <p className="font-headline italic text-lg truncate">{p.name || "Lectrice Lectoria"}</p>
+                <p className="font-headline italic text-lg truncate">{p.name || "Lectrice Lisoria"}</p>
                 <div className="flex flex-wrap gap-1">
                   {toArray<string>(p.favoriteGenres).slice(0, 2).map((g) => (
                     <Badge key={g} variant="secondary" className="text-[9px] bg-muted">{g}</Badge>

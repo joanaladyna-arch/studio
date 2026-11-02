@@ -3,8 +3,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'LECTORIA - Journal de Lecture',
-    short_name: 'Lectoria',
+    name: 'LISORIA - Journal de Lecture',
+    short_name: 'Lisoria',
     description: 'Votre réserve littéraire précieuse et authentique.',
     start_url: '/',
     display: 'standalone',

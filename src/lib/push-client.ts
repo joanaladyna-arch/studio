@@ -8,11 +8,11 @@ import { firebaseConfig } from "@/firebase/config";
  * Notifications push (FCM) côté navigateur : la lectrice les active depuis la
  * cloche ; son jeton d'appareil est rangé dans users/{uid}.fcmTokens et le
  * serveur (lib/push-server.ts) s'en sert pour envoyer l'alerte même quand
- * Lectoria n'est pas ouverte. Nécessite NEXT_PUBLIC_FIREBASE_VAPID_KEY
+ * Lisoria n'est pas ouverte. Nécessite NEXT_PUBLIC_FIREBASE_VAPID_KEY
  * (Firebase → Paramètres → Cloud Messaging → certificat Web Push).
  */
 export const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || "";
-const TOKEN_KEY = "lectoria-fcm-token";
+const TOKEN_KEY = "lisoria-fcm-token";
 const SCOPE = "/firebase-cloud-messaging-push-scope";
 
 export type PushState = "unsupported" | "no-key" | "denied" | "off" | "on";

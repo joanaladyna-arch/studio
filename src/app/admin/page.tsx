@@ -349,7 +349,7 @@ export default function AdminPage() {
 
   const isAdmin = user && ADMIN_EMAILS.includes(user.email || "");
   if (!user || !isAdmin) {
-    return <div className="p-20 text-center italic">Accès réservé aux gardiens de Lectoria.</div>;
+    return <div className="p-20 text-center italic">Accès réservé aux gardiens de Lisoria.</div>;
   }
 
   const normalizeContributor = (raw: string): string => {
@@ -378,8 +378,8 @@ export default function AdminPage() {
     const ws = XLSX.utils.aoa_to_sheet([headers, example, [], note]);
     ws["!cols"] = headers.map(() => ({ wch: 22 }));
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Modèle Lectoria");
-    XLSX.writeFile(wb, "modele-import-lectoria.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Modèle Lisoria");
+    XLSX.writeFile(wb, "modele-import-lisoria.xlsx");
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -593,7 +593,7 @@ export default function AdminPage() {
           <Shield className="h-12 w-12 text-primary" />
           <div className="space-y-1">
             <h1 className="text-5xl font-headline italic">Sanctuaire Admin</h1>
-            <p className="text-primary/60 italic text-sm font-medium">Gestion de la base de données centrale Lectoria.</p>
+            <p className="text-primary/60 italic text-sm font-medium">Gestion de la base de données centrale Lisoria.</p>
           </div>
         </div>
       </header>
@@ -695,7 +695,7 @@ export default function AdminPage() {
                   </ScrollArea>
                 </div>
                 <Button onClick={importToFirestore} className="w-full h-16 rounded-[2rem] bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 font-headline italic text-2xl transition-transform active:scale-95">
-                  <CheckCircle2 className="mr-4 h-8 w-8" /> Lancer l'importation dans LECTORIA
+                  <CheckCircle2 className="mr-4 h-8 w-8" /> Lancer l'importation dans LISORIA
                 </Button>
               </div>
             )}

@@ -70,7 +70,7 @@ export default function LoginPage() {
       await setDoc(userRef, {
         uid: firebaseUser.uid,
         email: firebaseUser.email,
-        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Lectrice Lectoria",
+        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || "Lectrice Lisoria",
         photoURL: firebaseUser.photoURL || "",
         provider: provider,
         updatedAt: serverTimestamp(),
@@ -87,7 +87,7 @@ export default function LoginPage() {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await syncUserProfile(userCredential.user, "password");
-      toast({ title: "Bon retour !", description: "Heureux de vous revoir sur Lectoria." });
+      toast({ title: "Bon retour !", description: "Heureux de vous revoir sur Lisoria." });
       router.replace("/");
     } catch (error: any) {
       toast({ variant: "destructive", title: "Erreur de connexion", description: "Identifiants incorrects ou compte inexistant." });
@@ -174,7 +174,7 @@ export default function LoginPage() {
         <section className="ls-card ls-enter" aria-labelledby="login-title">
           <div className="ls-ribbon" aria-hidden="true" />
           <div className="ls-logo">
-            <img src={logoSrc} alt="Lectoria" width={84} height={84} />
+            <img src={logoSrc} alt="Lisoria" width={84} height={84} />
           </div>
           <h1 id="login-title" className="ls-title">Heureux de vous revoir</h1>
           <svg className="ls-flourish" viewBox="0 0 220 12" aria-hidden="true">
@@ -188,7 +188,7 @@ export default function LoginPage() {
                 Vous êtes déjà connecté : <b>{user.email}</b>
               </p>
               <button type="button" className="ls-btn ls-primary" onClick={() => router.replace("/")}>
-                Entrer dans LECTORIA <span className="ls-arrow" aria-hidden="true"><ArrowRight /></span>
+                Entrer dans LISORIA <span className="ls-arrow" aria-hidden="true"><ArrowRight /></span>
               </button>
             </div>
           ) : (

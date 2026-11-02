@@ -85,9 +85,9 @@ export function NuageView({ embedded = false }: { embedded?: boolean }) {
       doc.setFontSize(20); doc.setFont("helvetica", "bold");
       doc.text("Mon Nuage des Mots", 20, 18);
       doc.setFontSize(9); doc.setFont("helvetica", "normal");
-      doc.text(`Lectoria — ${new Date().toLocaleDateString("fr-FR")} — ${manualWords.length} mots`, 20, 27);
+      doc.text(`Lisoria — ${new Date().toLocaleDateString("fr-FR")} — ${manualWords.length} mots`, 20, 27);
       doc.addImage(imgData, "PNG", 15, 33, 265, 164);
-      doc.save("nuage-des-mots-lectoria.pdf");
+      doc.save("nuage-des-mots-lisoria.pdf");
       toast({ title: "PDF téléchargé ✓" });
     } catch {
       toast({ variant: "destructive", title: "Erreur export PDF" });

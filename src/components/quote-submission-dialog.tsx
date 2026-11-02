@@ -93,7 +93,7 @@ export function QuoteSubmissionDialog() {
               </DialogTitle>
             </DialogHeader>
             <p className="text-xs italic opacity-50 -mt-2">
-              Sera examinée par l'équipe Lectoria avant d'être diffusée à toutes les lectrices — privilégie les
+              Sera examinée par l'équipe Lisoria avant d'être diffusée à toutes les lectrices — privilégie les
               citations d'auteurs du domaine public (décédés depuis plus de 70 ans).
             </p>
             <div className="space-y-4 pt-2">

@@ -16,7 +16,7 @@ export type ThemeBackgroundId =
   | "blanc-casse";
 
 export const THEME_BACKGROUNDS: { id: ThemeBackgroundId; label: string; sub: string; gradient: string }[] = [
-  { id: "default", label: "Lectoria", sub: "Par défaut", gradient: "" },
+  { id: "default", label: "Lisoria", sub: "Par défaut", gradient: "" },
   { id: "vert-eau", label: "Vert d'Eau", sub: "Frais", gradient: "linear-gradient(155deg, #EAF7F2 0%, #D3EEE4 55%, #EAF7F2 100%)" },
   { id: "saumon", label: "Saumon", sub: "Doux", gradient: "linear-gradient(155deg, #FDECE4 0%, #F9D6C4 55%, #FDECE4 100%)" },
   { id: "jaune-clair", label: "Jaune Clair", sub: "Lumineux", gradient: "linear-gradient(155deg, #FBF7E3 0%, #F4EBB8 55%, #FBF7E3 100%)" },

@@ -84,7 +84,7 @@ export async function emitActivity(
   try {
     await addDoc(collection(db, "activity"), {
       uid: user.uid,
-      name: profile?.name || "Lectrice Lectoria",
+      name: profile?.name || "Lectrice Lisoria",
       avatarUrl: profile?.avatarUrl || "",
       type: ev.type,
       title: ev.title,

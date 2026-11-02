@@ -35,7 +35,7 @@ export function PublicProfileSync() {
       try {
         const data = await buildShareDoc({ uid: user.uid, profile, books: books as any[], saved: saved as any[], settings });
         const hash = JSON.stringify(data);
-        const key = `lectoria-share-${settings.shareToken}`;
+        const key = `lisoria-share-${settings.shareToken}`;
         let previous = lastHash.current;
         if (!previous) { try { previous = sessionStorage.getItem(key) || ""; } catch { /* ignoré */ } }
         if (cancelled || hash === previous) return;

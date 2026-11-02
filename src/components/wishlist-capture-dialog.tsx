@@ -255,8 +255,8 @@ export function WishlistCaptureDialog({
   kind?: CaptureKind;
 }) {
   const labels = kind === "pal"
-    ? { title: "Capturer ma PAL", nom: "La PAL de", sans: "Ma PAL", pied: "Ma PAL sur Lectoria", file: "lectoria-pal" }
-    : { title: "Capturer ma wishlist", nom: "La wishlist de", sans: "Ma wishlist", pied: "Ma wishlist sur Lectoria", file: "lectoria-wishlist" };
+    ? { title: "Capturer ma PAL", nom: "La PAL de", sans: "Ma PAL", pied: "Ma PAL sur Lisoria", file: "lisoria-pal" }
+    : { title: "Capturer ma wishlist", nom: "La wishlist de", sans: "Ma wishlist", pied: "Ma wishlist sur Lisoria", file: "lisoria-wishlist" };
   const { toast } = useToast();
   const logoSrc = useSeasonalLogo();
   const themes = useMemo(buildThemes, []);

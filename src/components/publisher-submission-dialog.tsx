@@ -115,7 +115,7 @@ export function PublisherSubmissionDialog() {
             </div>
             <div className="space-y-2">
               <p className="font-headline italic text-2xl">Proposition envoyée</p>
-              <p className="text-sm italic opacity-60">Elle sera examinée avant toute publication. Merci pour votre intérêt pour Lectoria !</p>
+              <p className="text-sm italic opacity-60">Elle sera examinée avant toute publication. Merci pour votre intérêt pour Lisoria !</p>
             </div>
             <Button onClick={() => setOpen(false)} className="rounded-2xl h-12 px-8 italic">Fermer</Button>
           </div>
@@ -127,7 +127,7 @@ export function PublisherSubmissionDialog() {
               </DialogTitle>
             </DialogHeader>
             <p className="text-xs italic opacity-50 -mt-2">
-              Votre proposition sera examinée par l'équipe Lectoria avant toute publication — aucun contenu n'apparaît automatiquement.
+              Votre proposition sera examinée par l'équipe Lisoria avant toute publication — aucun contenu n'apparaît automatiquement.
             </p>
             <div className="space-y-4 pt-2">
               <Select value={type} onValueChange={(v: any) => setType(v)}>

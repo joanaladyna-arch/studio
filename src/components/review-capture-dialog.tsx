@@ -195,7 +195,7 @@ function Sheet({ book, coverSrc, text, index, total, theme, a4, show, quote, nam
         </p>
       </div>
       <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", gap: 10, fontSize: 11, letterSpacing: ".12em", textTransform: "uppercase", opacity: 0.7 }}>
-        <span>{show.name && name ? `Avis de ${name} · Lectoria` : "Lectoria"}</span>
+        <span>{show.name && name ? `Avis de ${name} · Lisoria` : "Lisoria"}</span>
         <span>{total > 1 ? `${index + 1} / ${total}` : dateLabel}</span>
       </div>
     </div>
@@ -294,7 +294,7 @@ export function ReviewCaptureDialog({ open, onOpenChange, book, defaultName }: {
     ? `PDF · A4 · ${parts.length} page${parts.length > 1 ? "s" : ""}`
     : `${format.toUpperCase()} · 1080 × ${Math.round((innerH || A4_H) * (1080 / SHEET_W))} px · ${parts.length > 1 ? `${parts.length} images` : "une seule image"}`;
 
-  const fileBase = `lectoria-avis-${slugify(book.title || "livre") || "livre"}`;
+  const fileBase = `lisoria-avis-${slugify(book.title || "livre") || "livre"}`;
 
   const buildFiles = async (): Promise<OutFile[]> => {
     setOffscreen(true);
@@ -421,7 +421,7 @@ export function ReviewCaptureDialog({ open, onOpenChange, book, defaultName }: {
                 {book.rankLabel && <ToggleRow title="Palme de classement" sub={book.rankLabel} checked={show.palme} onChange={set("palme")} />}
                 {book.quotes.length > 0 && <ToggleRow title="Citation du livre" sub="Celle que tu as enregistrée" checked={show.quote} onChange={set("quote")} />}
                 {(book.isPepite || book.genres.length > 0) && <ToggleRow title="Pépite et genres" sub="Les petites pastilles" checked={show.tags} onChange={set("tags")} />}
-                <ToggleRow title="Mon prénom" sub="« Avis de … · Lectoria »" checked={show.name} onChange={set("name")} />
+                <ToggleRow title="Mon prénom" sub="« Avis de … · Lisoria »" checked={show.name} onChange={set("name")} />
               </div>
               {show.quote && book.quotes.length > 1 && (
                 <select aria-label="Citation affichée" value={quoteIdx} onChange={(e) => setQuoteIdx(Number(e.target.value))} className="mt-2 w-full h-10 rounded-xl border border-primary/15 bg-white px-3 text-sm min-w-0">

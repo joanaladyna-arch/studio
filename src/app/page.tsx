@@ -67,14 +67,14 @@ export default function Home() {
   const [showBellHint, setShowBellHint] = useState(false);
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!localStorage.getItem("lectoria_bell_hint_seen")) {
+    if (!localStorage.getItem("lisoria_bell_hint_seen")) {
       const t = setTimeout(() => setShowBellHint(true), 800);
       return () => clearTimeout(t);
     }
   }, []);
   const dismissBellHint = () => {
     setShowBellHint(false);
-    if (typeof window !== "undefined") localStorage.setItem("lectoria_bell_hint_seen", "1");
+    if (typeof window !== "undefined") localStorage.setItem("lisoria_bell_hint_seen", "1");
   };
 
   const userName = profile?.name || user?.displayName || user?.email?.split('@')[0] || 'cher lecteur';

@@ -71,7 +71,7 @@ function ProposeBook({ requestId, ownerUid, onDone }: { requestId: string; owner
     try {
       await addDoc(collection(db, "recoRequests", requestId, "answers"), {
         uid: user.uid,
-        name: (profile as any)?.name || "Lectrice Lectoria",
+        name: (profile as any)?.name || "Lectrice Lisoria",
         avatarUrl: (profile as any)?.avatarUrl || "",
         title: picked.title, author: picked.author, cover: picked.cover, masterBookId: picked.id,
         note: note.trim().slice(0, 120),
@@ -258,7 +258,7 @@ export function RecoTab() {
     try {
       await addDoc(collection(db, "recoRequests"), {
         uid: user.uid,
-        name: (profile as any)?.name || "Lectrice Lectoria",
+        name: (profile as any)?.name || "Lectrice Lisoria",
         avatarUrl: (profile as any)?.avatarUrl || "",
         text: text.trim().slice(0, 140),
         tags,

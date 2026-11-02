@@ -50,7 +50,7 @@ export function AdminModeProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     try {
-      setAdminModeState(sessionStorage.getItem("lectoria-admin-mode") === "on");
+      setAdminModeState(sessionStorage.getItem("lisoria-admin-mode") === "on");
     } catch {
       // sessionStorage indisponible (mode privé strict) : on reste à OFF.
     }
@@ -59,7 +59,7 @@ export function AdminModeProvider({ children }: { children: React.ReactNode }) {
   const setAdminMode = (on: boolean) => {
     setAdminModeState(on);
     try {
-      sessionStorage.setItem("lectoria-admin-mode", on ? "on" : "off");
+      sessionStorage.setItem("lisoria-admin-mode", on ? "on" : "off");
     } catch {
       // Ignoré : l'état reste au moins valable en mémoire pour la session.
     }

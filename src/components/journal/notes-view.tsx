@@ -122,7 +122,7 @@ export function NotesView({ embedded = false }: { embedded?: boolean }) {
       doc.setFontSize(22); doc.setFont("helvetica", "bold");
       doc.text("Mes notes de lecture", 20, y); y += 10;
       doc.setFontSize(9); doc.setFont("helvetica", "normal");
-      doc.text(`Lectoria — ${new Date().toLocaleDateString("fr-FR")} — ${entries.length} notes`, 20, y); y += 15;
+      doc.text(`Lisoria — ${new Date().toLocaleDateString("fr-FR")} — ${entries.length} notes`, 20, y); y += 15;
 
       notesByBook.forEach(([bookTitle, bookEntries]: [string, any[]]) => {
         if (y > 250) { doc.addPage(); y = 20; }

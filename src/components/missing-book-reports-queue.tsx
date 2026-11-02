@@ -63,7 +63,7 @@ export function MissingBookReportsQueue() {
         await addDoc(collection(db, "notifications"), {
           type: "book_added",
           title: "Livre ajouté !",
-          body: `"${report.title}" que tu avais signalé est maintenant disponible sur Lectoria.`,
+          body: `"${report.title}" que tu avais signalé est maintenant disponible sur Lisoria.`,
           link: "/add",
           targetUid: report.createdBy,
           read: false,

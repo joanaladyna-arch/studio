@@ -84,7 +84,7 @@ export default function AddBookPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setLastSearch(localStorage.getItem("lectoria_last_search"));
+      setLastSearch(localStorage.getItem("lisoria_last_search"));
     }
   }, []);
 
@@ -116,7 +116,7 @@ export default function AddBookPage() {
         : searchVal;
 
     try {
-      // 1 & 2. Recherche Master Database (Lectoria) et Google Books en
+      // 1 & 2. Recherche Master Database (Lisoria) et Google Books en
       // parallèle : ces deux sources sont indépendantes, les attendre en
       // série n'apporte rien et double la latence perçue par l'utilisatrice.
       //
@@ -203,7 +203,7 @@ export default function AddBookPage() {
         allResults = [...masterSettled.value];
       } else {
         console.error("Master Search Error:", masterSettled.reason);
-        // On continue même si la base Lectoria échoue
+        // On continue même si la base Lisoria échoue
       }
 
       if (googleSettled.status === "fulfilled") {
@@ -217,7 +217,7 @@ export default function AddBookPage() {
 
       // BnF : plus jamais utilisée pour ajouter des résultats à la liste,
       // uniquement pour compléter un résumé manquant sur les résultats
-      // déjà trouvés par Google Books, Apple Books ou la base Lectoria.
+      // déjà trouvés par Google Books, Apple Books ou la base Lisoria.
       // Ciblée sur les tout premiers résultats (les plus pertinents) pour
       // ne pas multiplier les appels réseau sur une longue liste.
       const missingDescription = allResults.filter((r) =>
@@ -303,7 +303,7 @@ export default function AddBookPage() {
       // Books, Open Library) sans vraie couverture n'est plus proposé du
       // tout à l'ajout — mieux vaut ne pas l'afficher que de laisser la
       // lectrice ajouter un livre qu'elle sait déjà sans image. Les
-      // résultats déjà dans la base Lectoria ("master") restent affichés
+      // résultats déjà dans la base Lisoria ("master") restent affichés
       // tels quels : ils existent déjà, les cacher ne réglerait rien.
       //
       // Ancienne "garantie couverture" retirée : elle devinait une URL
@@ -353,7 +353,7 @@ export default function AddBookPage() {
       // recherche" — en local uniquement (pas de valeur pour la partager
       // entre appareils, et ça évite une écriture Firestore superflue).
       if (typeof window !== "undefined" && searchValOverride === undefined) {
-        localStorage.setItem("lectoria_last_search", searchVal);
+        localStorage.setItem("lisoria_last_search", searchVal);
         setLastSearch(searchVal);
       }
     } finally {
@@ -613,7 +613,7 @@ export default function AddBookPage() {
   };
 
   // Par défaut, n'affiche que les résultats français (ou de langue non
-  // précisée — surtout les fiches Lectoria et Apple, qui ne fournissent
+  // précisée — surtout les fiches Lisoria et Apple, qui ne fournissent
   // pas toujours cette info, donc on ne les masque jamais à tort). Le
   // toggle "Afficher toutes les langues" révèle le reste sans relancer
   // de recherche, puisque tout est déjà chargé en mémoire.
@@ -627,7 +627,7 @@ export default function AddBookPage() {
     <div className="space-y-12 animate-paper pb-32">
       <header className="text-center space-y-4 pt-8">
         <h1 className={cn("text-3xl sm:text-4xl md:text-6xl font-headline italic", isAmbientDark && "text-[#F5F1E8]")}>Nouvelles Pépites</h1>
-        <p className={cn("italic", isAmbientDark ? "text-[#F5F1E8]/70" : "text-primary/60")}>Recherchez dans la base Lectoria ou sur le web.</p>
+        <p className={cn("italic", isAmbientDark ? "text-[#F5F1E8]/70" : "text-primary/60")}>Recherchez dans la base Lisoria ou sur le web.</p>
       </header>
 
       {isAdmin && (
@@ -881,7 +881,7 @@ export default function AddBookPage() {
                   </Badge>
                   {book.source === 'master' && (
                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-600 border-none text-[8px] mt-2">
-                      Base Lectoria
+                      Base Lisoria
                     </Badge>
                   )}
                 </div>

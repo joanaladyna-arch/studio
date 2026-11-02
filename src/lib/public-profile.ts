@@ -196,7 +196,7 @@ export async function buildShareDoc(args: {
 
   return {
     uid,
-    name: String(profile?.name || "Lectrice Lectoria").slice(0, 60),
+    name: String(profile?.name || "Lectrice Lisoria").slice(0, 60),
     avatarUrl: String(profile?.avatarUrl || ""),
     bio: String(profile?.bio || "").slice(0, 300),
     favoriteGenres: toArray<string>(profile?.favoriteGenres).slice(0, 12),

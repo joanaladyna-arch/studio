@@ -29,7 +29,7 @@ export function PushToggle() {
     try {
       const next = on ? await enablePush(db, user.uid) : await disablePush(db, user.uid);
       setState(next);
-      if (on && next === "on") toast({ title: "Alertes activées", description: "Tu seras prévenue sur cet appareil, même quand Lectoria est fermée." });
+      if (on && next === "on") toast({ title: "Alertes activées", description: "Tu seras prévenue sur cet appareil, même quand Lisoria est fermée." });
       if (on && next === "denied") toast({ variant: "destructive", title: "Alertes refusées", description: "Tu peux les autoriser dans les réglages de ton navigateur." });
     } catch (err) {
       console.error("Push toggle:", err);
@@ -43,7 +43,7 @@ export function PushToggle() {
     <div className="border-t border-primary/5 px-5 py-3 flex items-center justify-between gap-3">
       <div className="min-w-0">
         <p className="text-xs font-semibold flex items-center gap-1.5"><BellRing className="h-3.5 w-3.5" /> Alertes sur cet appareil</p>
-        <p className="text-[10px] text-muted-foreground leading-snug">{hints[state] || "Même quand Lectoria est fermée."}</p>
+        <p className="text-[10px] text-muted-foreground leading-snug">{hints[state] || "Même quand Lisoria est fermée."}</p>
       </div>
       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Switch checked={state === "on"} disabled={state === "no-key" || state === "denied"} onCheckedChange={toggle} aria-label="Alertes sur cet appareil" />}
     </div>

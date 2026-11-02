@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
  * Petit bouton "(i)" assez visible pour être repéré par toutes les
  * lectrices, qui ouvre une explication au tap (pas seulement au survol
  * — le survol seul ne fonctionne pas sur mobile/tablette, l'essentiel
- * du terrain de jeu de Lectoria).
+ * du terrain de jeu de Lisoria).
  */
 export function InfoBadge({ text }: { text: string }) {
   return (

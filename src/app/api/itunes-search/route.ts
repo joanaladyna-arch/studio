@@ -13,7 +13,7 @@ import { cleanDescriptionHtml } from "@/lib/utils";
  * visiteuses selon leur navigateur — même logique que pour la BnF.
  *
  * Échec systématiquement silencieux (tableau vide) : source bonus en
- * plus de la base Lectoria, Google Books, BnF et Open Library, jamais un
+ * plus de la base Lisoria, Google Books, BnF et Open Library, jamais un
  * point de blocage.
  */
 export async function GET(req: NextRequest) {

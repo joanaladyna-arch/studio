@@ -155,7 +155,7 @@ export default function StatsPage() {
   }, [books]);
 
   const annualGoal = profile?.annualGoal || 24;
-  const userName = profile?.name || user?.displayName || "Lectrice Lectoria";
+  const userName = profile?.name || user?.displayName || "Lectrice Lisoria";
   const [isExporting, setIsExporting] = useState(false);
 
   // jsPDF est chargé dynamiquement (import() plutôt qu'en haut de
@@ -173,7 +173,7 @@ export default function StatsPage() {
       docPdf.setFont("helvetica", "italic");
       docPdf.setFontSize(11);
       docPdf.setTextColor(150, 120, 140);
-      docPdf.text("LECTORIA", 105, 20, { align: "center" });
+      docPdf.text("LISORIA", 105, 20, { align: "center" });
 
       docPdf.setFont("helvetica", "bold");
       docPdf.setFontSize(24);
@@ -217,7 +217,7 @@ export default function StatsPage() {
       docPdf.setFont("helvetica", "italic");
       docPdf.setFontSize(9);
       docPdf.setTextColor(180, 170, 180);
-      docPdf.text("Généré depuis Lectoria, votre journal de lecture.", 105, 280, { align: "center" });
+      docPdf.text("Généré depuis Lisoria, votre journal de lecture.", 105, 280, { align: "center" });
 
       docPdf.save(`bilan-lecture-${year}.pdf`);
     } catch (err) {

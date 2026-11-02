@@ -11,7 +11,7 @@ export function FirebaseErrorListener() {
   useEffect(() => {
     let lastShown = 0;
     const handlePermissionError = (error: any) => {
-      console.error("LECTORIA permission:", error?.message || error);
+      console.error("LISORIA permission:", error?.message || error);
       // Une seule barre à la fois : plusieurs écoutes refusées en même temps
       // (ex. juste après la connexion) n'en font plus qu'une.
       if (Date.now() - lastShown < 8000) return;
